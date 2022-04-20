@@ -18,6 +18,7 @@ class SegmentTree
     @size = size
 
     @fixed_value = [nil, initial_value]  # nothing is stored at 0. The root of the tree is at index 1
+    @increments = [nil, 0] # "add k to values on (l...r)"
 
     @root = 1
   end
@@ -27,42 +28,55 @@ class SegmentTree
     value_at(idx, @root, 0, @size)
   end
 
-  # Elements in the interval tl...tr are now v
+  # Elements in the interval tl...tr now take value v
   def set(tl, tr, value)
     set_value_on = lambda do |node, l, r|
-      if tl <= l  && r <= tr
+      if tl <= l && r <= tr
         @fixed_value[node] = value
       else
         raise "Bad interval (#{l}...#{r}) trying to set values on (#{tl}...#{tr})" if r - l == 1
 
-        if @fixed_value[node]
-          push(node)
-        end
+        push(node, @fixed_value)
 
         mid = middle(l, r)
-        if tr <= mid
-          set_value_on.call(left_child(node), l, mid)
-        elsif mid <= tl
-          set_value_on.call(right_child(node), mid, r)
-        else
-          set_value_on.call(left_child(node), l, mid)
-          set_value_on.call(right_child(node), mid, r)
-        end
+        set_value_on.call(left_child(node), l, mid) if tl < mid
+        set_value_on.call(right_child(node), mid, r) if mid < tr
       end
     end
 
     set_value_on.call(@root, 0, @size)
   end
 
+  # Elements in the interval tl...tr have values incremented by delta
+  def add(tl, tr, delta)
+    increase_value_on = lambda do |node, l, r|
+      if tl <= l && r <= tr
+        @increments[node] += delta
+      else
+        raise "Bad interval (#{l}...#{r}) trying to increment values on (#{tl}...#{tr})" if r - l == 1
+
+        push(node, @increments)
+
+        mid = middle(l, r)
+        increase_value_on.call(left_child(node), l, mid) if tl < mid
+        increase_value.call(right_child(node), mid, r) if mid < tr
+      end
+    end
+
+    increase_value_on.call(@root, 0, @size)
+  end
+
   private
 
-  # Push the fixed value from node down to its children
-  def push(node)
-    v = @fixed_value[node]
-    @fixed_value[left_child(node)] = v
-    @fixed_value[right_child(node)] = v
+  # Push the value, if any, from node down to its children
+  def push(node, values)
+    v = values[node]
+    return unless v
 
-    @fixed_value[node] = nil
+    values[left_child(node)] = v
+    values[right_child(node)] = v
+
+    values[node] = nil
   end
 
   def value_at(idx, node, l, r)
