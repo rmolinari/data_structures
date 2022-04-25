@@ -1,6 +1,7 @@
 require 'test/unit'
 require_relative 'heap'
 require_relative 'weak_heap'
+require_relative 'weak_heap_insert_buffer'
 
 require 'byebug'
 
@@ -9,6 +10,7 @@ class HeapTest < Test::Unit::TestCase
   def test_heap
     check_heap_sort(Heap)
     check_heap_sort(WeakHeap)
+    check_heap_sort(WeakHeapInsertBuffer)
   end
 
   # Do a simple heap sort and check that things are OK
