@@ -4,6 +4,7 @@ require 'byebug'
 require 'set'
 
 require_relative 'heap'
+require_relative 'weak_heap'
 
 # Some simple harness code to experiment with different Hash implementations
 # Scope and such
@@ -36,7 +37,7 @@ class Harness
   def heapsorts(heap_makers)
     metrics = {}
     [1, 2, 3, 4, 5].each do |multiple|
-      size = multiple * 10**6
+      size = multiple * 10**5
       data = (1..size).to_a.shuffle
 
       heap_makers.each do |label, maker|
@@ -207,13 +208,15 @@ class Harness
   end
 end
 
-if false
+if true
   Harness.new.heapsorts(
     {
       binary_addressable: (-> { Heap.new(metrics: true) }),
       binary: (-> { Heap.new(addressable: false, metrics: true) }),
       binary_addressable_knuth: (-> { Heap.new(knuth: true, metrics: true) }),
-      binary_knuth: (-> { Heap.new(addressable: false, knuth: true, metrics: true) })
+      binary_knuth: (-> { Heap.new(addressable: false, knuth: true, metrics: true) }),
+      weak_addressable: (-> { WeakHeap.new(metrics: true) }),
+      weak: (-> { WeakHeap.new(addressable: false, metrics: true) })
     }
   )
 end
@@ -222,20 +225,24 @@ end
 # g = Harness.r_mat_graph_external(100, 20)
 # byebug
 
-Harness.new.shortest_paths(
-  {
-    binary_addressable: (-> { Heap.new(metrics: true) }),
-    binary_addressable_knuth: (-> { Heap.new(knuth: true, metrics: true) }),
-    binary: (-> { Heap.new(addressable: false, metrics: true) }),
-    binary_knuth: (-> { Heap.new(addressable: false, knuth: true, metrics: true) })
-  },
-  lambda do |graph_size|
-    # edge_count = Math.sqrt(graph_size).ceil / 3
-    edge_count = 2 * Math.log(graph_size).ceil
-    t = Time.now
-    print "generating graph of size #{graph_size} and about #{edge_count} outgoing edges per node..."
-    g = Harness.r_mat_graph_external(graph_size, edge_count)
-    puts "...done in #{Time.now - t} s"
-    [0, g]
-  end
-)
+if false
+  Harness.new.shortest_paths(
+    {
+      binary_addressable: (-> { Heap.new(metrics: true) }),
+      binary_addressable_knuth: (-> { Heap.new(knuth: true, metrics: true) }),
+      binary: (-> { Heap.new(addressable: false, metrics: true) }),
+      binary_knuth: (-> { Heap.new(addressable: false, knuth: true, metrics: true) }),
+      weak_addressable: (-> { WeakHeap.new(metrics: true) }),
+      weak: (-> { WeakHeap.new(addressable: false, metrics: true) })
+    },
+    lambda do |graph_size|
+      # edge_count = Math.sqrt(graph_size).ceil / 3
+      edge_count = 2 * Math.log(graph_size).ceil
+      t = Time.now
+      print "generating graph of size #{graph_size} and about #{edge_count} outgoing edges per node..."
+      g = Harness.r_mat_graph_external(graph_size, edge_count)
+      puts "...done in #{Time.now - t} s"
+      [0, g]
+    end
+  )
+end
