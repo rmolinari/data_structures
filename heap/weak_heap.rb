@@ -225,7 +225,10 @@ class WeakHeap
   # For debugging
   private def check_heap_property
     (ROOT...@size).each do |idx|
-      check_bound(right_child(idx), idx)
+      next if idx == ROOT
+
+      da = d_ancestor(idx)
+      raise "Heap property violated at descendant #{idx} of #{da}" if @data[idx].priority < @data[da].priority
     end
   end
 

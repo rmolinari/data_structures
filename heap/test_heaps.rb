@@ -13,19 +13,23 @@ class HeapTest < Test::Unit::TestCase
     check_heap_sort(WeakHeapInsertBuffer)
   end
 
+  def test_weak_heap_insert_buffer
+    # This data exercised a bug
+    data = [654,333,878,744,553,539,354,147,35,383,446,866,782,151,91,438]
+    check_heap_sort(WeakHeapInsertBuffer, data)
+  end
+
   # Do a simple heap sort and check that things are OK
-  private def check_heap_sort(heap_klass)
-    data = [
-      32, 5, 43, 49, 8, 15, 29, 50, 13, 25, 46, 48, 2, 14, 10, 35, 9, 18, 36, 40, 11, 21, 33, 4, 42, 20, 17, 19, 22, 38, 24, 23, 16,
-      28, 7, 3, 39, 34, 12, 41, 37, 6, 31, 26, 1, 30, 45, 47, 44, 27
-    ]
-    heap = heap_klass.new(debug: true)
+  private def check_heap_sort(heap_klass, data = nil)
+    data ||= (0...1000).to_a.shuffle
+
+    heap = heap_klass.new(debug: !true)
 
     data.each do |v|
       heap.insert(v, v)
     end
 
-    # Now change all the priorities
+    # # Now change all the priorities
     data.each do |v|
       heap.update(v, -v)
     end

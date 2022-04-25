@@ -5,6 +5,7 @@ require 'set'
 
 require_relative 'heap'
 require_relative 'weak_heap'
+require_relative 'weak_heap_insert_buffer'
 
 # Some simple harness code to experiment with different Hash implementations
 # Scope and such
@@ -37,7 +38,7 @@ class Harness
   def heapsorts(heap_makers)
     metrics = {}
     [1, 2, 3, 4, 5].each do |multiple|
-      size = multiple * 10**5
+      size = multiple * 10**6
       data = (1..size).to_a.shuffle
 
       heap_makers.each do |label, maker|
@@ -54,7 +55,7 @@ class Harness
     end
 
     # Yuck!
-    headers = metrics.values.map {|h| h.values }.flatten.map(&:keys).flatten.uniq
+    headers = metrics.values.map(&:values).flatten.map(&:keys).flatten.uniq
     metrics.each do |label, sub_metrics|
       output_stats(label, sub_metrics, headers)
       puts
@@ -152,7 +153,7 @@ class Harness
       end
       puts
     end
-    headers = metrics.values.map {|h| h.values }.flatten.map(&:keys).flatten.uniq
+    headers = metrics.values.map(&:values).flatten.map(&:keys).flatten.uniq
     metrics.each do |label, sub_metrics|
       output_stats(label, sub_metrics, headers)
       puts
@@ -197,7 +198,7 @@ class Harness
 
     edges = []
     Open3.popen3(cmd) do |stdout, stderr, _status, _thread|
-      while line = stderr.gets
+      while (line = stderr.gets)
         from, to = line.split.map(&:to_i)
         edges[from] ||= Set.new
         edges[from] << to
@@ -216,7 +217,9 @@ if true
       binary_addressable_knuth: (-> { Heap.new(knuth: true, metrics: true) }),
       binary_knuth: (-> { Heap.new(addressable: false, knuth: true, metrics: true) }),
       weak_addressable: (-> { WeakHeap.new(metrics: true) }),
-      weak: (-> { WeakHeap.new(addressable: false, metrics: true) })
+      weak: (-> { WeakHeap.new(addressable: false, metrics: true) }),
+      weak_buffered_addressable: (-> { WeakHeapInsertBuffer.new(metrics: true) }),
+      weak_buffered: (-> { WeakHeapInsertBuffer.new(addressable: false, metrics: true) })
     }
   )
 end
@@ -233,7 +236,9 @@ if false
       binary: (-> { Heap.new(addressable: false, metrics: true) }),
       binary_knuth: (-> { Heap.new(addressable: false, knuth: true, metrics: true) }),
       weak_addressable: (-> { WeakHeap.new(metrics: true) }),
-      weak: (-> { WeakHeap.new(addressable: false, metrics: true) })
+      weak: (-> { WeakHeap.new(addressable: false, metrics: true) }),
+      weak_buffered_addressable: (-> { WeakHeapInsertBuffer.new(metrics: true) }),
+      weak_buffered: (-> { WeakHeapInsertBuffer.new(addressable: false, metrics: true) })
     },
     lambda do |graph_size|
       # edge_count = Math.sqrt(graph_size).ceil / 3

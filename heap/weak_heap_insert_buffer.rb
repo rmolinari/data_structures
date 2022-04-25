@@ -13,7 +13,7 @@
 # - #empty?
 #   - O(1)
 # - #insert
-#   - This becomes O(1) (amortized) if we can implement bulk insertion
+#   - O(1) (amortized)
 # - #top
 #   - return the highest-priority element
 #   - O(1)
@@ -105,7 +105,6 @@ class WeakHeapInsertBuffer
     end
 
     @size += 1
-
     check_heap_property if @debug
   end
 
@@ -156,7 +155,7 @@ class WeakHeapInsertBuffer
 
       if @buffer_min
         count(:comparison)
-        @min = @buffer_min if @data[@buffer_min].priority < @data[ROOT].priority
+        @min = @data[@buffer_min].priority < @data[ROOT].priority ? @buffer_min : ROOT
       end
     end
 
@@ -259,7 +258,7 @@ class WeakHeapInsertBuffer
   # See Edelkamp et al, section 3, especially Fig 9.
   private def bulk_insert
     right = @size - 1
-    left = [@main_size + 1, right / 2].max
+    left = [@main_size, right / 2].max
     @main_size = @size
     while right > left + 1
       left >>= 1
@@ -350,21 +349,22 @@ class WeakHeapInsertBuffer
     @metrics[stat] += 1
   end
 
-  # For debugging
   private def check_heap_property
-    (ROOT...@main_size).each do |idx|
-      check_bound(right_child(idx), idx)
-    end
+    x, y = heap_property_violation
+    raise "Heap property violated at descendant #{y} of #{x}" if x
 
     raise "@min does not point to the minimal value" if @min.positive? && @data[ROOT].priority < @data[@min].priority
   end
 
-  # The priorities of the element and idx and all its decendants should be no smaller than the priority of the value at i
-  private def check_bound(idx, i)
-    return if idx >= @main_size
-    raise "Heap property violated at descendant #{idx} of #{i}" if @data[idx].priority < @data[i].priority
+  # For debugging. Return a [idx, decendant] pair that violates the weak heap proeprty if there is such, and nil otherwise
+  private def heap_property_violation()
+    (ROOT...@main_size).each do |idx|
+      next if idx == ROOT
 
-    check_bound(left_child(idx), i)
-    check_bound(right_child(idx), i)
+      da = d_ancestor(idx)
+
+      return [da, idx] if @data[idx].priority < @data[da].priority
+    end
+    nil
   end
 end
