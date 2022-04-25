@@ -209,7 +209,7 @@ class Harness
   end
 end
 
-if true
+if false
   Harness.new.heapsorts(
     {
       binary_addressable: (-> { Heap.new(metrics: true) }),
@@ -228,7 +228,7 @@ end
 # g = Harness.r_mat_graph_external(100, 20)
 # byebug
 
-if false
+if true
   Harness.new.shortest_paths(
     {
       binary_addressable: (-> { Heap.new(metrics: true) }),

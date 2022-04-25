@@ -246,7 +246,7 @@ class WeakHeapInsertBuffer
     k = 2 * j + 1 - @r[j] # right child node
     return if k >= @main_size # no right child so nothing to do
 
-    while k < @main_size && 2 * k + @r[k] < @main_size
+    while 2 * k + @r[k] < @main_size
       k = 2 * k + @r[k] # follow left children down spine of right subtree
     end
     until k == j
@@ -316,6 +316,7 @@ class WeakHeapInsertBuffer
   #
   # Return true if we didn't have to swap them
   private def join(idx1, idx2)
+    count(:comparison)
     if @data[idx2].priority < @data[idx1].priority
       swap(idx1, idx2)
       @r[idx2] = 1 - @r[idx2]

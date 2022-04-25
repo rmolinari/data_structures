@@ -23,6 +23,9 @@
 #   - tell the heap that the priority of a particular item has changed
 #   - O(log N)
 #
+# The idea was to find a faster data structure for the priority queue in Dijkstra, but this "weak" approach is no quicker in
+# practice than a plain, nonaddressable binary heap. It appears to be slightly faster than the binary heap for heapsort, presumably
+# because in that case we add so many elements to an already large heap.
 class WeakHeap
   # The root is at 0. Remember that the root node has no left subtree.
   ROOT = 0
@@ -137,6 +140,7 @@ class WeakHeap
     while j != ROOT
       i = d_ancestor(j)
       break if join(i, j)
+
       j = i
     end
 
@@ -155,8 +159,8 @@ class WeakHeap
     count(:sift_down)
 
     k = 2 * j + 1 - @r[j] # right child node
-    while 2 * k + @r[k] < @size
-      k = 2 * k + @r[k] # follow left children down spine of right subtree
+    while (l = 2 * k + @r[k]) < @size
+      k = l # follow left children down spine of right subtree
     end
     until k == j
       join(j, k)
