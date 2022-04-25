@@ -72,8 +72,10 @@ class Heap
   end
 
   # Remove and return item with the maximum priority
-  def pop
-    result = top
+  #
+  # If both, then also return the priority
+  def pop(both: false)
+    result = @data[ROOT]
     @index_of.delete(result) if @addressable
 
     assign(@data[@size], ROOT)
@@ -85,7 +87,9 @@ class Heap
 
     count(:pop)
 
-    result
+    return result.item unless both
+
+    [result.item, result.priority]
   end
 
   # The priority of element has changed
@@ -105,6 +109,10 @@ class Heap
 
     count(:update)
     check_heap_property if @debug
+  end
+
+  def addressable?
+    @addressable
   end
 
   def metrics
@@ -169,8 +177,10 @@ class Heap
         j = idx
         idx = parent(idx)
 
+        break if j == ROOT
+
         count(:comparison)
-        break if j == ROOT || @data[idx].priority <= x.priority
+        break if @data[idx].priority <= x.priority
 
         assign(@data[idx], j)
       end
@@ -199,9 +209,9 @@ class Heap
 
   # Put the pair in the given heap location
   private def assign(pair, idx)
+    count(:assign)
     @data[idx] = pair
     @index_of[pair.item] = idx if @addressable
-    count(:assign)
   end
 
   private def parent(idx)

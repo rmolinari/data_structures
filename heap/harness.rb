@@ -95,19 +95,59 @@ class Harness
     metrics
   end
 
+  def dijkstra_no_update(start, neighbors, heap)
+    start_t = Time.now
+    distance_to = Hash.new(INFINITY)
+    distance_to[start] = 0
+
+    unvisited = heap
+    unvisited.insert(start, 0)
+
+    loop do
+      break if unvisited.empty?
+      break if distance_to[unvisited.top] == INFINITY
+
+      node, k = unvisited.pop(both: true)
+      d = distance_to[node]
+      next unless k < d
+
+      distance_to[node] = k
+
+      neighbors[node].each do |v|
+        total = 1 + d
+        old_distance = distance_to[v]
+        next unless total < old_distance
+
+        unvisited.insert(v, total)
+        distance_to[v] = total
+      end
+    end
+    metrics = heap.metrics
+    metrics[:elapsed] = Time.now - start_t
+    metrics
+  end
+
   def shortest_paths(heap_makers, graph_maker)
     metrics = {}
     [1, 2, 3, 4, 5].each do |multiple|
-      size = multiple * 50_000
+      size = multiple * 100_000
       start, neighbors = graph_maker.call(size) # make a desired sort of graph
 
       heap_makers.each do |label, heap_maker|
-        print "Using heap #{label} with Dijkstra to find all-nodes shortest in graph of #{size}..."
+        if heap_maker.call.addressable?
+          label1 = "#{label}_dec"
+          print "Using heap #{label1} with Dijkstra to find all-nodes shortest in graph of #{size}..."
+          metrics[label1] ||= {}
+          metrics[label1][size] = dijkstra(start, neighbors, heap_maker.call)
+          puts "done in #{metrics[label1][size][:elapsed]} s"
+        end
 
-        metrics[label] ||= {}
-        metrics[label][size] = dijkstra(start, neighbors, heap_maker.call)
+        label2 = "#{label}_nodec"
+        print "Using heap #{label2} with no-decrement Dijkstra to find all-nodes shortest in graph of #{size}..."
+        metrics[label2] ||= {}
+        metrics[label2][size] = dijkstra(start, neighbors, heap_maker.call)
 
-        puts "done in #{metrics[label][size][:elapsed]} s"
+        puts "done in #{metrics[label2][size][:elapsed]} s"
       end
       puts
     end
@@ -186,9 +226,12 @@ Harness.new.shortest_paths(
   {
     binary_addressable: (-> { Heap.new(metrics: true) }),
     binary_addressable_knuth: (-> { Heap.new(knuth: true, metrics: true) }),
+    binary: (-> { Heap.new(addressable: false, metrics: true) }),
+    binary_knuth: (-> { Heap.new(addressable: false, knuth: true, metrics: true) })
   },
   lambda do |graph_size|
-    edge_count = Math.sqrt(graph_size).ceil / 3
+    # edge_count = Math.sqrt(graph_size).ceil / 3
+    edge_count = 2 * Math.log(graph_size).ceil
     t = Time.now
     print "generating graph of size #{graph_size} and about #{edge_count} outgoing edges per node..."
     g = Harness.r_mat_graph_external(graph_size, edge_count)

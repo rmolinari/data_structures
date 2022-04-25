@@ -1,0 +1,9 @@
+inherit_from:
+  - ~/.rubocop.yml
+
+AllCops:
+  TargetRubyVersion: 3.1
+
+Naming/MethodParameterName:
+  MinNameLength: 1
+  AllowedNames: [at, by, id, in, x, y, z, i, j, k]
