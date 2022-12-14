@@ -14,6 +14,8 @@
 Pair = Struct.new(:x, :y)
 
 class PrioritySearchTree
+  INFINITY = Float::INFINITY
+
   # The array of pairs is turned into a PST in-place without cloning. So clone before passing it in, if you care.
   #
   # Each element must respond to #x and #y. Use Pair (above) if you like.
@@ -21,13 +23,80 @@ class PrioritySearchTree
     @data = data
     @size = @data.size
 
-    constructPST
+    construct_pst
 
     # puts "Validating tree structure..."
     # verify_properties
   end
 
-  private def constructPST
+  # Find the "highest" (max-y) point that is "northeast" of (x, y).
+  #
+  # That is, the point p* in Q = [x, infty) X [y, infty) with the largest y value, or (infty, -infty) if there is no point in that
+  # quadrant.
+  #
+  # Algorithm is from De et al. section 3.1
+  def highest_ne(x0, y0)
+    # From the paper:
+    #
+    #   The algorithm uses two variables best and p, which satisfy the following invariant
+    #
+    #     - If Q intersect P is nonempty then p* in {best} union T_p
+    #     - If Q intersect P is empty then p* = best
+    #
+    # Here, P is the set of points in our data structure and T_p is the subtree rooted at p
+    best = Pair.new(INFINITY, -INFINITY)
+    p = root # root of the whole tree AND the pair stored there
+    # pair_p = val_at(p)
+
+    # From the paper:
+    #   takes as input a point t and does the following: if t \in Q and y(t) > y(best) then it assignes best = t
+    #
+    # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
+    in_q = lambda do |node|
+      t = val_at(node)
+      t.x >= x0 && t.y >= y0
+    end
+
+    update_highest = lambda do |node|
+      if in_q.call(node)
+        t = val_at(node)
+        if t.y > best.y
+          best = t
+        end
+      end
+    end
+
+    # TODO: make the logic more efficient. But since we only have O(log n) steps we won't actually gain much.
+    until leaf?(p)
+      if in_q.call(p)
+        update_highest.call(p)
+        p = left(p)
+      elsif val_at(p).y < y0
+        # TODO: doesn't this mean we are done? Because of the max-heap property on y, nothing in the subtree can be in Q.
+        return best
+        # p = left(p)
+      elsif one_child?(p)
+        p = left(p)
+      elsif val_at(right(p)).x <= x0
+        p = right(p)
+      elsif val_at(left(p)).x >= x0
+        higher = left(p)
+        if val_at(right(p)).y > val_at(left(p)).y
+          higher = right(p)
+        end
+        p = higher
+      elsif val_at(right(p)).y < y0
+        p = left(p)
+      else
+        update_highest.call(right(p))
+        p = left(p)
+      end
+    end
+    update_highest.call(p) # try the leaf
+    best
+  end
+
+  private def construct_pst
     # We follow the algorithm in the paper by De, Maheshwari et al. Note that indexing is from 1 there. For now we pretend that that
     # is the case here, too.
     h = Math.log2(@size).floor
@@ -69,12 +138,13 @@ class PrioritySearchTree
   ########################################
   # Indexing the data structure as though it were from 1, even though the underlying @data is indexed from zero.
 
-  private def val_at(idx)
-    @data[idx - 1]
+  # First element and root of the tree structure
+  private def root
+    1
   end
 
-  private def root
-    0
+  private def val_at(idx)
+    @data[idx - 1]
   end
 
   # Indexing is from 1
@@ -88,6 +158,14 @@ class PrioritySearchTree
 
   private def right(i)
     1 + (i << 1)
+  end
+
+  private def leaf?(i)
+    left(i) > @size
+  end
+
+  private def one_child?(i)
+    left(i) <= @size && right(i) > @size
   end
 
   private def swap(index1, index2)
@@ -130,7 +208,7 @@ class PrioritySearchTree
     # Left subtree has x values less than all of the right subtree
     (1..@size).each do |node|
       next if right(node) >= @size
-
+p
       left_max = max_x_in_subtree(left(node))
       right_min = min_x_in_subtree(right(node))
 
