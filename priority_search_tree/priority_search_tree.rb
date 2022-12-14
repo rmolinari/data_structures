@@ -66,28 +66,39 @@ class PrioritySearchTree
       end
     end
 
-    # TODO: make the logic more efficient. But since we only have O(log n) steps we won't actually gain much.
+    # We could make this code more efficient. But since we only have O(log n) steps we won't actually gain much so let's keep it
+    # readable and close to the paper's pseudocode for now.
     until leaf?(p)
       if in_q.call(p)
+        # p \in Q and nothing in its subtree can beat it because of the max-heap
         update_highest.call(p)
-        p = left(p)
-      elsif val_at(p).y < y0
-        # TODO: doesn't this mean we are done? Because of the max-heap property on y, nothing in the subtree can be in Q.
         return best
+
+        # p = left(p) <- from paper
+      elsif val_at(p).y < y0
+        # p is too low for Q, so the entire subtree is too low as well
+        return best
+
         # p = left(p)
       elsif one_child?(p)
+        # With just one child we need to check it
         p = left(p)
       elsif val_at(right(p)).x <= x0
+        # right(p) might be in Q, but nothing in the left subtree can be, by the PST property on x.
         p = right(p)
       elsif val_at(left(p)).x >= x0
+        # Both children are in Q, so try the higher of them. Note that nothing in either subtree will beat this one.
         higher = left(p)
         if val_at(right(p)).y > val_at(left(p)).y
           higher = right(p)
         end
         p = higher
       elsif val_at(right(p)).y < y0
+        # Nothing in the right subtree is in Q, but maybe we'll find something in the left
         p = left(p)
       else
+        # At this point we know that right(p) \in Q so we need to check it. Nothing in its subtree can beat it so we don't need to
+        # look there. But there might be something better in the left subtree.
         update_highest.call(right(p))
         p = left(p)
       end

@@ -24,7 +24,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_highest_ne
-    20.times do
+    100.times do
       x0 = rand(@size)
       y0 = rand(@size)
       check_a_highest_ne(x0, y0)
