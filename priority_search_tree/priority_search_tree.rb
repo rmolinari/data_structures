@@ -48,34 +48,33 @@ class PrioritySearchTree
     p = root # root of the whole tree AND the pair stored there
     # pair_p = val_at(p)
 
+    in_q = lambda do |pair|
+      pair.x >= x0 && pair.y >= y0
+    end
+
     # From the paper:
+    #
     #   takes as input a point t and does the following: if t \in Q and y(t) > y(best) then it assignes best = t
     #
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
-    in_q = lambda do |node|
-      t = val_at(node)
-      t.x >= x0 && t.y >= y0
-    end
-
     update_highest = lambda do |node|
-      if in_q.call(node)
-        t = val_at(node)
-        if t.y > best.y
-          best = t
-        end
+      t = val_at(node)
+      if in_q.call(t) and t.y > best.y
+        best = t
       end
     end
 
     # We could make this code more efficient. But since we only have O(log n) steps we won't actually gain much so let's keep it
     # readable and close to the paper's pseudocode for now.
     until leaf?(p)
-      if in_q.call(p)
+      p_val = val_at(p)
+      if in_q.call(p_val)
         # p \in Q and nothing in its subtree can beat it because of the max-heap
         update_highest.call(p)
         return best
 
         # p = left(p) <- from paper
-      elsif val_at(p).y < y0
+      elsif p_val.y < y0
         # p is too low for Q, so the entire subtree is too low as well
         return best
 
