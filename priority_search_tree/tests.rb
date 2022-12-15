@@ -31,12 +31,28 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
+  def test_leftmost_ne
+    100.times do
+      x0 = rand(@size)
+      y0 = rand(@size)
+      check_a_leftmost_ne(x0, y0)
+    end
+  end
+
   private def check_a_highest_ne(x0, y0)
     # puts "Calculating highest_ne(#{x0}, #{y0})"
     highest = @data.select{ |pair| pair.x >= x0 && pair.y >= y0 }.max_by(&:y) || Pair.new(INFINITY, -INFINITY)
     calc_highest = @tree.highest_ne(x0, y0)
 
     assert_equal highest, calc_highest
+  end
+
+  private def check_a_leftmost_ne(x0, y0)
+    # puts "Calculating leftmost_ne(#{x0}, #{y0})"
+    leftmost = @data.select{ |pair| pair.x >= x0 && pair.y >= y0 }.min_by(&:x) || Pair.new(INFINITY, -INFINITY)
+    calc_leftmost = @tree.leftmost_ne(x0, y0)
+
+    assert_equal leftmost, calc_leftmost
   end
 
   private def raw_data(size)

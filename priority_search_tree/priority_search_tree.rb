@@ -46,7 +46,6 @@ class PrioritySearchTree
     # Here, P is the set of points in our data structure and T_p is the subtree rooted at p
     best = Pair.new(INFINITY, -INFINITY)
     p = root # root of the whole tree AND the pair stored there
-    # pair_p = val_at(p)
 
     in_q = lambda do |pair|
       pair.x >= x0 && pair.y >= y0
@@ -59,7 +58,7 @@ class PrioritySearchTree
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
     update_highest = lambda do |node|
       t = val_at(node)
-      if in_q.call(t) and t.y > best.y
+      if in_q.call(t) && t.y > best.y
         best = t
       end
     end
@@ -103,6 +102,117 @@ class PrioritySearchTree
       end
     end
     update_highest.call(p) # try the leaf
+    best
+  end
+
+  # Let Q = [x0, infty) X [y0, infty) be the northeast "quadrant" defined by the point (x0, y0) and let P be the points in this data
+  # structure. Define p* as
+  #
+  # - (infty, infty) f Q \intersect P is empty and
+  # - the leftmost (min-x) point in Q \intersect P otherwise
+  #
+  # This method returns p*.
+  #
+  # From De et al:
+  #
+  #   The algorithm uses three variables best, p, and q which satisfy the folling invariant:
+  #
+  #     - if Q \intersect P is empty then p* = best
+  #     - if Q \intersect P is nonempty then  p* \in {best} \union T(p) \union T(q)
+  #     - p and q are at the same level of T and x(p) <= x(q)
+  def leftmost_ne(x0, y0)
+    best = Pair.new(INFINITY, INFINITY)
+    p = q = root
+
+    in_q = lambda do |pair|
+      pair.x >= x0 && pair.y >= y0
+    end
+
+    # From the paper:
+    #
+    #   takes as input a point t and does the following: if t \in Q and x(t) < x(best) then it assignes best = t
+    #
+    # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
+    update_leftmost = lambda do |node|
+      t = val_at(node)
+      if in_q.call(t) && t.x < best.x
+        best = t
+      end
+    end
+
+    until leaf?(p)
+      update_leftmost.call(p)
+      update_leftmost.call(q)
+
+      # SO many cases!
+      #
+      # We can make this more efficient by storing values accessed more than once. But we only run the loop lg(N) times so gains
+      # would be limited. Leave the code easier to read and close to the paper's pseudocode unless we have reason to change it.
+      if p == q
+        if one_child?(p)
+          p = q = left(p)
+        else
+          q = right(p)
+          p = left(p)
+        end
+      else
+        # p != q
+        if leaf?(q)
+          q = p # p itself is just one layer above the leaves, or is itself a leave
+        elsif one_child?(q)
+          if val_at(left(q)).y < y0
+            q = right(p)
+            p = left(p)
+          elsif val_at(right(p)).y < y0
+            p = left(p)
+            q = left(q)
+          elsif val_at(left(q)).x < x0
+            p = q = left(q)
+          elsif val_at(right(p)).x < x0
+            p = right(p)
+            q = left(q)
+          else
+            q = right(p)
+            p = left(p)
+          end
+        else
+          # q has two children
+          #
+          # TODO: isn't this a test whether right(p) \in Q ?
+          # if val_at(right(p)).x >= x0 && val_at(right(p)).y >= y0
+          if in_q.call(val_at(right(p)))
+            q = right(p)
+            p = left(p)
+          elsif val_at(right(p)).x < x0
+            if val_at(left(q)).x < x0
+              p = left(q)
+              q = right(q)
+            elsif val_at(left(q)).y < y0
+              p = right(p)
+              q = right(q)
+            else
+              p = right(p)
+              q = left(q)
+            end
+          else
+            # x(p_r) >= x0 and y(p_r) < y0
+            if val_at(left(p)).y < y0
+              p = left(q)
+              q = right(q)
+            else
+              p = left(p)
+              if val_at(left(q)).y >= y0
+                q = left(q)
+              else
+                q = right(q)
+              end
+            end
+          end
+        end
+      end
+    end
+    update_leftmost.call(p)
+    update_leftmost.call(q)
     best
   end
 
