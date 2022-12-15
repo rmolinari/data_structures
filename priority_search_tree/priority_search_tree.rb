@@ -150,7 +150,8 @@ class PrioritySearchTree
       # We can make this more efficient by storing values accessed more than once. But we only run the loop lg(N) times so gains
       # would be limited. Leave the code easier to read and close to the paper's pseudocode unless we have reason to change it.
       #
-      # ...actually, the code asthetics bothered me, so I have included a little bit of value caching.
+      # ...actually, the code asthetics bothered me, so I have included a little bit of value caching. But I've left the nesting of
+      # the logic to match the paper's code.
       if p == q
         if one_child?(p)
           p = q = left(p)
