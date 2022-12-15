@@ -1,6 +1,7 @@
 require 'set'
 require 'test/unit'
 require_relative 'priority_search_tree'
+require_relative 'minmax_priority_search_tree'
 
 require 'byebug'
 
@@ -19,13 +20,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   # Construction appears to be fine for now
-  def _test_construction
+  def _test_pst_construction
     data = raw_data(@size)
     puts "Building the tree..."
     PrioritySearchTree.new(data.shuffle, verify: true)
   end
 
-  def test_highest_ne
+  def test_pst_highest_ne
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
@@ -33,12 +34,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
-  def test_leftmost_ne
+  def test_pst_leftmost_ne
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
       check_a_leftmost_ne(x0, y0)
     end
+  end
+
+  def test_minmax_pst_construction
+    data = raw_data(@size)
+    puts "Building the minmax PST tree..."
+    MinmaxPrioritySearchTree.new(data.shuffle, verify: true)
   end
 
   private def check_a_highest_ne(x0, y0)
