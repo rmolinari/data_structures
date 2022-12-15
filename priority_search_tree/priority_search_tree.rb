@@ -149,6 +149,8 @@ class PrioritySearchTree
       #
       # We can make this more efficient by storing values accessed more than once. But we only run the loop lg(N) times so gains
       # would be limited. Leave the code easier to read and close to the paper's pseudocode unless we have reason to change it.
+      #
+      # ...actually, the code asthetics bothered me, so I have included a little bit of value caching.
       if p == q
         if one_child?(p)
           p = q = left(p)
@@ -161,15 +163,16 @@ class PrioritySearchTree
         if leaf?(q)
           q = p # p itself is just one layer above the leaves, or is itself a leave
         elsif one_child?(q)
-          if val_at(left(q)).y < y0
+          q_left_val = val_at(left(q))
+          if q_left_val.y < y0
             q = right(p)
             p = left(p)
-          elsif val_at(right(p)).y < y0
+          elsif (p_right_val = val_at(right(p))).y < y0
             p = left(p)
             q = left(q)
-          elsif val_at(left(q)).x < x0
+          elsif q_left_val.x < x0
             p = q = left(q)
-          elsif val_at(right(p)).x < x0
+          elsif p_right_val.x < x0
             p = right(p)
             q = left(q)
           else
@@ -178,17 +181,16 @@ class PrioritySearchTree
           end
         else
           # q has two children
-          #
-          # TODO: isn't this a test whether right(p) \in Q ?
-          # if val_at(right(p)).x >= x0 && val_at(right(p)).y >= y0
-          if in_q.call(val_at(right(p)))
+          p_right_val = val_at(right(p))
+          if in_q.call(p_right_val)
             q = right(p)
             p = left(p)
-          elsif val_at(right(p)).x < x0
-            if val_at(left(q)).x < x0
+          elsif p_right_val.x < x0
+            q_left_val = val_at(left(q))
+            if q_left_val.x < x0
               p = left(q)
               q = right(q)
-            elsif val_at(left(q)).y < y0
+            elsif q_left_val.y < y0
               p = right(p)
               q = right(q)
             else
