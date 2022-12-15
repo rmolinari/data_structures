@@ -19,14 +19,15 @@ class PrioritySearchTree
   # The array of pairs is turned into a PST in-place without cloning. So clone before passing it in, if you care.
   #
   # Each element must respond to #x and #y. Use Pair (above) if you like.
-  def initialize(data)
+  def initialize(data, verify: false)
     @data = data
     @size = @data.size
 
     construct_pst
+    return unless verify
 
-    # puts "Validating tree structure..."
-    # verify_properties
+    puts "Validating tree structure..."
+    verify_properties
   end
 
   # Find the "highest" (max-y) point that is "northeast" of (x, y).
