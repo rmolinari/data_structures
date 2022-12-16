@@ -31,7 +31,13 @@
 # [3] De, Maheshwari, Nandy, Smid, _An in-place min-max priority search tree_, Computational Geometry, v46 (2013), pp 310-327.
 # [4] Atkinson, Sack, Santoro, Strothotte, _Min-max heaps and generalized priority queues_, Commun. ACM 29 (10) (1986), pp 996-1000.
 
-Pair = Struct.new(:x, :y)
+require 'must_be'
+
+Pair = Struct.new(:x, :y) do
+  def fmt
+    "(#{x},#{y})"
+  end
+end
 
 class MinmaxPrioritySearchTree
   INFINITY = Float::INFINITY
@@ -130,21 +136,21 @@ class MinmaxPrioritySearchTree
   # Let Q = [x0, infty) X [y0, infty) be the northeast "quadrant" defined by the point (x0, y0) and let P be the points in this data
   # structure. Define p* as
   #
-  # - (infty, infty) f Q \intersect P is empty and
-  # - the leftmost (min-x) point in Q \intersect P otherwise
+  # - (infty, infty) if Q \intersect P is empty and
+  # - the leftmost (i.e., min-x) point in Q \intersect P otherwise
   #
   # This method returns p*.
   #
   # From De et al:
   #
-  #   The algorithm uses three variables best, p, and q which satisfy the folling invariant:
+  #   [t]he variables best, p, and q satisfy the folling invariant:
   #
-  #     - if Q \intersect P is empty then p* = best
   #     - if Q \intersect P is nonempty then  p* \in {best} \union T(p) \union T(q)
+  #     - if Q \intersect P is empty then p* = best
   #     - p and q are at the same level of T and x(p) <= x(q)
+  #
+  # Here T(x) is the subtree rooted at x
   def leftmost_ne(x0, y0)
-    raise "Write me!"
-
     best = Pair.new(INFINITY, INFINITY)
     p = q = root
 
@@ -152,9 +158,23 @@ class MinmaxPrioritySearchTree
       pair.x >= x0 && pair.y >= y0
     end
 
+    # A tree node or one of its children is in Q. (That is, the points corresonding to one of those nodes is in Q)
+    node_or_a_child_in_q = lambda do |node|
+      t = val_at(node)
+      return true if in_q.call(t)
+      return false if leaf?(node)
+
+      left_t = val_at(left(node))
+      return true if in_q.call(left_t)
+      return false if one_child?(node)
+
+      right_t = val_at(right(node))
+      in_q.call(right_t)
+    end
+
     # From the paper:
     #
-    #   takes as input a point t and does the following: if t \in Q and x(t) < x(best) then it assignes best = t
+    #   takes as input a point t \in P and updates best as follows: if t \in Q and x(t) < x(best) then it assignes best = t
     #
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
     update_leftmost = lambda do |node|
@@ -165,16 +185,13 @@ class MinmaxPrioritySearchTree
     end
 
     until leaf?(p)
+      byebug if $do_it
       update_leftmost.call(p)
       update_leftmost.call(q)
 
-      # SO many cases!
-      #
-      # We can make this more efficient by storing values accessed more than once. But we only run the loop lg(N) times so gains
-      # would be limited. Leave the code easier to read and close to the paper's pseudocode unless we have reason to change it.
-      #
-      # ...actually, the code asthetics bothered me, so I have included a little bit of value caching. But I've left the nesting of
-      # the logic to match the paper's code.
+      # minmax_in_subtree(left(4))
+
+      # Although this is complicated, it is less branchy than the earlier version for the (max) PST
       if p == q
         if one_child?(p)
           p = q = left(p)
@@ -185,54 +202,104 @@ class MinmaxPrioritySearchTree
       else
         # p != q
         if leaf?(q)
-          q = p # p itself is just one layer above the leaves, or is itself a leave
+          q = p # p itself is just one layer above the leaves, or is itself a leaf
         elsif one_child?(q)
-          q_left_val = val_at(left(q))
-          if q_left_val.y < y0
-            q = right(p)
-            p = left(p)
-          elsif (p_right_val = val_at(right(p))).y < y0
-            p = left(p)
-            q = left(q)
-          elsif q_left_val.x < x0
+          # Note that p has two children
+          if val_at(left(q)).x < x0
             p = q = left(q)
-          elsif p_right_val.x < x0
+          elsif val_at(right(p)).x < x0
             p = right(p)
             q = left(q)
           else
+            # BUG IN PAPER.
+            #
+            # So, x(q_l) >= x0 and x(p_r) >= x0. But how can we be sure that the child of q isn't the winner?. Should we be trying
+            # it in this case?
+            #
+            # Yes: otherwise it never gets checked.
+
+            update_leftmost.call(left(q))
             q = right(p)
             p = left(p)
           end
         else
-          # q has two children
-          p_right_val = val_at(right(p))
-          if in_q.call(p_right_val)
-            q = right(p)
-            p = left(p)
-          elsif p_right_val.x < x0
-            q_left_val = val_at(left(q))
-            if q_left_val.x < x0
-              p = left(q)
-              q = right(q)
-            elsif q_left_val.y < y0
-              p = right(p)
-              q = right(q)
+          # p and q both have two children
+          # p_right_val = val_at(right(p))
+
+          # BUG IN PAPER.
+          #
+          # Define c as the paper does:
+          #
+          #   (c1, c2, c3, c4) = (left(p), right(p), left(q), right(q))
+          #
+          # Because of the PST property on x and the invariant x(p) <= x(q) we know that
+          #
+          #   x(c1) <= x(c2) <= x(c3) <= x(c4)
+          #
+          # Similarly, the sets of values x(T(ci)) are pairwise ordered in the same sense.
+          #
+          # Suppose further that x(ci) <= x0 <= x(c(i+i)). Then we know several things
+          #
+          #   - there might be a "winner" (point in Q) in T(ci), perhaps ci itself.
+          #   - there are not any winners in T(cj) for j < i, becasue the x-values there aren't big enough
+          #   - any winner in ck, for k >= i, will be the left of and thus beat any winner in c(k+1), because of the ordering of
+          #     x-values
+          #
+          # If x(c4) <= x0 then the rightmost subtree T(c4) is the only one worth checking and we set p = q = c4.
+          # If x(c1) > x0 then we take i = 0 and ignore the logic on ci in what follows.
+          #
+          # Pretend for the moment that we are using a MaxPST instead of a MinmaxPST. Then we can look at y values to learn more.
+          #
+          #   - if y(ci) >= y0 then we need to search T(ci), so we will update p = ci
+          #   - but if y(ci) < y0 then there are no winners in T(ci) because the y-values are too small.
+          #   - similarly, if y(c(i+i)) >= y0 then we need to search T(c(i+1)). Indeed c(i+1) itself is in Q and beats any winner in
+          #     subtrees further to the right
+          #   - so, let k > i be minimal such that y(ck) >= y0, if there is any. Note that ck is itself a winner. Then
+          #     - if y(ci) >= y0,
+          #       - set p = ci, and q = ck (or q = ci if there is no such k)
+          #     - otherwise (T(ci) has no winners because its y-values are too small)
+          #       - if k is defined set p = q = ck. Otherwise HALT (there are no more winners)
+          #
+          # But we are working with a MinmaxPST rather than a MaxPST, so we have to work harder. If c1, ..., c4 (the children of p
+          # and q) are in a "max-level" of the tree - that is, an even level - then the logic above still applies. But if they are
+          # at a min level things are trickier. If ci is a winner anyway, then we can safely set p = ci. But for more information we
+          # need to go another layer down.
+          #
+          # The paper's knows that we need to look a further layer down, but the logic is too simplistic. It looks at cj for j > i
+          # and checks if cj or either of its children are in Q. But that's not good enough. For the same reason that in a MaxPST we
+          # may need to explore below T(ci) even if ci isn't in Q, we may need to decend through one of the grandchilden of p or q
+          # even if that grandchild isn't in Q.
+          #
+          # Getting a bit handwavey especially over what happens near the leaves...
+          #
+          # Consider the children d1, d2, ..., dm, of ci, ..., c4 (and so grandchildren of p and q). They are at a max-level and so
+          # the logic described applies to the dk. If ci happens to be a winner we can set p = ci and work out what to do with q by
+          # looking at the children of c(i+1), ..., c4. Otherwise we look at all the dj values (up to 8 of them), apply the logic
+          # above to work out that we want to head for, say, p = ds and q = dt, and in this cycle update p = parent(ds), q =
+          # parent(dt).  (We also need to submit the values c(i+1)..c4 to UpdateLeftmost.)
+          #
+          # In other words, we can use the MaxPST logic on d1,...,dm to decide where we need to go, and then step to the relevant
+          # parents among the cj.
+
+          c = [nil, left(p), right(p), left(q), right(q)]
+          if x0 < val_at(c[1]).x
+            big_v = c[1..4].select { |node| node_or_a_child_in_q.call(node) }
+            if big_v.empty?
+              q = c[1]
             else
-              p = right(p)
-              q = left(q)
+              q = big_v.min_by { |i| val_at(i).x } # leftmost point in V
             end
+            p = q
+          elsif x0 >= val_at(c[4]).x
+            p = q = c[4]
           else
-            # x(p_r) >= x0 and y(p_r) < y0
-            if val_at(left(p)).y < y0
-              p = left(q)
-              q = right(q)
+            i = (1..3).find { |j| val_at(c[j]).x <= x0 && x0 < val_at(c[j+1]).x }.must_be
+            p = c[i]
+            big_v = c[(i+1)..4].select { |node| node_or_a_child_in_q.call(node) }
+            if big_v.empty?
+              q = c[i+1]
             else
-              p = left(p)
-              if val_at(left(q)).y >= y0
-                q = left(q)
-              else
-                q = right(q)
-              end
+              q = big_v.min_by { |i| val_at(i).x } # leftmost point in V
             end
           end
         end
@@ -243,6 +310,7 @@ class MinmaxPrioritySearchTree
     best
   end
 
+  # O(n log^2 n)
   private def construct_pst
     # We follow the algorithm in [3]. Indexing is from 1 there and we follow that here. The algorithm is almost exactly the same as
     # for the (max) PST.
@@ -379,6 +447,8 @@ class MinmaxPrioritySearchTree
 
       raise "Left-right property of x-values violated at #{node}" unless left_max < right_min
     end
+
+    nil
   end
 
   private def max_x_in_subtree(root)
@@ -392,12 +462,12 @@ class MinmaxPrioritySearchTree
   # Return min_x, max_x, min_y, max_y in subtree rooted at and including root
   private def minmax_in_subtree(root)
     @minmax_vals ||= []
-    @minmax_vals[root] ||= calc_minmax_at(root)
+    @minmax_vals[root] ||= calc_minmax_at(root).freeze
   end
 
   # No memoization
   private def calc_minmax_at(root)
-    return [INFINITY, -INFINITY, INFINITY, -INFINITY] if root >= @size
+    return [INFINITY, -INFINITY, INFINITY, -INFINITY] if root > @size
 
     pair = val_at(root)
 
@@ -405,7 +475,7 @@ class MinmaxPrioritySearchTree
 
     left = left(root)
     left_min_max = minmax_in_subtree(left)
-    return left_min_max if one_child?(left)
+    return left_min_max if one_child?(root)
 
     right = right(root)
     right_min_max = minmax_in_subtree(right)
@@ -418,103 +488,16 @@ class MinmaxPrioritySearchTree
     ]
   end
 
+  private def output_quasi_dot
+    (2..@size).to_a.reverse.map do |node|
+      "#{val_at(parent(node)).fmt} -- #{val_at(node).fmt}"
+    end.join("\n")
+  end
+
+  private def pair_to_s
+  end
+
   ########################################
   # Dead code
 
-  # Let's try implementing Knuth's heapsort algorithm 5.2.3-A
-  #
-  # This is much slower than the simple sort-the-slice approach, surely because
-  #   1) it's written in Ruby, rather than C, and
-  #   2) I use a bunch of lambdas, which we call zillions of times
-  #
-  # Let's not bother with this approach, as it's reasonable to assume that the Ruby framework has thought carefully about array
-  # sorting and array-slice assignment.
-  private def heapsort_subarray(left, right)
-    return if right <= left # nothing to do
-
-    # Knuth's algorithm sorts elements at indices 1, 2, ..., N. We will follow this, so let's use these helpers for now
-    base_index_for = ->(idx) { idx + left - 1 } # idx 1 corresponds to left
-    record_at = ->(idx) { val_at base_index_for.call(idx) }
-    key_at = ->(idx) { record_at[idx].x }
-    # another offset by 1 for the 0- vs 1-based. TODO: make this DRIER
-    set_record_at = ->(idx, val) { @data[base_index_for[idx] - 1] = val }
-
-    # Step H1 - Initialize
-    size = (right - left + 1) # Knuth calls this N
-    l = (size / 2) + 1
-    r = size
-
-    i = j = record = key = nil # scope
-    state = :h2
-    loop do
-      # byebug
-      case state
-      when :h2
-        # Step H2 - Decrease l or r
-
-        # "If l > 1 we are in the process of transofrming the input file into a heap; on the other hand if l = 1, the Keys K1 K2
-        # ... KN presently constitute a heap"
-        if l > 1
-          l -= 1
-          record = record_at[l] # Knuth calls this R
-          key = record.x # Knuth calls this K
-        else
-          record = record_at[r]
-          key = record.x
-          set_record_at.call(r, record_at[1])
-          r -= 1
-
-          if r == 1
-            set_record_at.call(1, record)
-            return
-          end
-        end
-        state = :h3
-      when :h3
-        # "At this point we have
-        #     K(k/2) >= K(k) for l < (k/2) < k <= r;
-        # and record R(k) is in its final position for r < k < N. Steps H3-H8 are called the _siftup algorithm_; their effect is
-        # equivalent to setting R(l) = R and then rearranging R(l),...R(r) so that [the inequality above] holds also for l = k/2""
-
-        # Step H3 - Prepare for the siftup
-        j = l
-        state = :h4
-      when :h4
-        # Step H4 - Advance downwards
-        i = j
-        j *= 2
-        # "In the following steps we have i = (j/2).floor"
-        state = if j < r
-                  :h5
-                elsif j == r
-                  :h6
-                else
-                  :h8
-                end
-      when :h5
-        # Step H5 - Find larger child
-        if key_at[j] < key_at[j + 1]
-          j += 1
-        end
-        state = :h6
-      when :h6
-        # Step H6 - Larger than K?
-        state = if key >= key_at[j]
-                  :h8
-                else
-                  :h7
-                end
-      when :h7
-        # Step H7 - Move it up
-        set_record_at.call(i, record_at[j])
-        state = :h4
-      when :h8
-        # Step H8 - Store R
-        set_record_at.call(i, record) # "This terminates the siftup algirithm initiated in step H3"
-        state = :h2
-      else
-        raise "Bad machine state #{state}"
-      end
-    end
-  end
 end
