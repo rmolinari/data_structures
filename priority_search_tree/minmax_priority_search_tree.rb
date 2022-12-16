@@ -184,8 +184,66 @@ class MinmaxPrioritySearchTree
       end
     end
 
+    # Generalize the c1,...,c4 idea from the paper in line with the BUG 2 IN PAPER notes, below.
+    #
+    # Given: 0 or more nodes n1, ..., nk in the tree. All are at the same level, which is a "max level" in our MinmaxPST, such that
+    # x(n1) <= x(n2) <= ... <= x(nk). (Note: it is expected that the nj are either children or grandchildren of p and q, though we
+    # don't check that.)
+    #
+    # If k = 0 return nil. Otherwise...
+    #
+    # We return two values p_goal, q_goal (possibly equal) from among the nj such that
+    #
+    #    - p_goal is not to the right of q_goal in the tree and so, in particular x(p_goal) <= x(q_goal)
+    #    - if and when the auction reaches p = p_goal and q = q_goal the algorithm invariant will be satisfied.
+    #
+    # As a special case, we return nil if we detect that none of the subtrees T(nj) contain any points in Q. This is a sign to
+    # terminate the algorithm.
+    #
+    # See the notes at "BUG 2 IN PAPER" below for more details about what is going on.
+    determine_goal_nodes = lambda do |nodes|
+      node_count = nodes.size
+      return nil if node_count.zero?
+
+      if val_at(nodes.last).x <= x0
+        # Only the rightmost subtree can possibly have any "winners" (values in Q). Here we are using the assumption that all the
+        # x-values are distinct.
+        return [nodes.last, nodes.last]
+      end
+
+      if val_at(nodes.first).x > x0
+        # All subtrees have x-values large enough to provide elements of Q. Since we are at a max-level the y-values help us work
+        # out which subtree to focus on.
+        big_v = nodes.select { |node| val_at(node).y >= y0 }
+        if big_v.empty?
+          # Because we are a max-y level, we can tell that none of the subtrees contain anything in Q.
+          return nil
+        end
+
+        # Otherwise we explore the leftmost subtree.
+        p = q = big_v.first
+        return [p, q]
+      end
+
+      values = nodes.map { |n| val_at(n) }
+
+      # Otherwise x(n1) <= x0 < x(nk). Thus i is well-defined.
+      i = (0...node_count).select { |j| values[j].x <= x0 && x0 < values[j + 1].x }.min
+
+      # these nodes all have large-enough x-values and so this finds the ones in the set Q.
+      q = nodes[(i + 1)..].select { |node| val_at(node).y >= y0 }.min # could be nil
+      p = nodes[i] if values[i].y >= y0 # The leftmost subtree is worth exploring if the y-value is big enough. Otherwise not
+      p ||= q # if nodes[i] is no good we send p along with q
+      q ||= p # but if there was no worthwhile value for q we should send it along with p
+
+      return nil unless p
+
+      [p, q]
+    end
+
     until leaf?(p)
-      byebug if $do_it
+      level = Math.log2(p).floor # TODO: don't calculate log every time!
+
       update_leftmost.call(p)
       update_leftmost.call(q)
 
@@ -211,7 +269,7 @@ class MinmaxPrioritySearchTree
             p = right(p)
             q = left(q)
           else
-            # BUG IN PAPER.
+            # BUG 1 IN PAPER.
             #
             # So, x(q_l) >= x0 and x(p_r) >= x0. But how can we be sure that the child of q isn't the winner?. Should we be trying
             # it in this case?
@@ -226,7 +284,7 @@ class MinmaxPrioritySearchTree
           # p and q both have two children
           # p_right_val = val_at(right(p))
 
-          # BUG IN PAPER.
+          # BUG 2 IN PAPER.
           #
           # Define c as the paper does:
           #
@@ -246,7 +304,7 @@ class MinmaxPrioritySearchTree
           #     x-values
           #
           # If x(c4) <= x0 then the rightmost subtree T(c4) is the only one worth checking and we set p = q = c4.
-          # If x(c1) > x0 then we take i = 0 and ignore the logic on ci in what follows.
+          # If x(c1) > x0 then we take i = 0 and ignore the logic on ci in what follows and setting p = q.
           #
           # Pretend for the moment that we are using a MaxPST instead of a MinmaxPST. Then we can look at y values to learn more.
           #
@@ -262,8 +320,7 @@ class MinmaxPrioritySearchTree
           #
           # But we are working with a MinmaxPST rather than a MaxPST, so we have to work harder. If c1, ..., c4 (the children of p
           # and q) are in a "max-level" of the tree - that is, an even level - then the logic above still applies. But if they are
-          # at a min level things are trickier. If ci is a winner anyway, then we can safely set p = ci. But for more information we
-          # need to go another layer down.
+          # at a min level things are trickier and we need to go another layer down.
           #
           # The paper's knows that we need to look a further layer down, but the logic is too simplistic. It looks at cj for j > i
           # and checks if cj or either of its children are in Q. But that's not good enough. For the same reason that in a MaxPST we
@@ -281,27 +338,53 @@ class MinmaxPrioritySearchTree
           # In other words, we can use the MaxPST logic on d1,...,dm to decide where we need to go, and then step to the relevant
           # parents among the cj.
 
-          c = [nil, left(p), right(p), left(q), right(q)]
-          if x0 < val_at(c[1]).x
-            big_v = c[1..4].select { |node| node_or_a_child_in_q.call(node) }
-            if big_v.empty?
-              q = c[1]
-            else
-              q = big_v.min_by { |i| val_at(i).x } # leftmost point in V
+          c = [left(p), right(p), left(q), right(q)]
+          if level.odd?
+            # the elements of c are at an even level, and hence their y values are maxima for the subtrees. We can learn what we
+            # need to know from them
+            p, q = determine_goal_nodes.call(c)
+            if p && !q
+              # byebug
+              # determine_goal_nodes.call(c)
+              raise 'bad logic'
             end
-            p = q
-          elsif x0 >= val_at(c[4]).x
-            p = q = c[4]
           else
-            i = (1..3).find { |j| val_at(c[j]).x <= x0 && x0 < val_at(c[j+1]).x }.must_be
-            p = c[i]
-            big_v = c[(i+1)..4].select { |node| node_or_a_child_in_q.call(node) }
-            if big_v.empty?
-              q = c[i+1]
-            else
-              q = big_v.min_by { |i| val_at(i).x } # leftmost point in V
+            # They are at an odd level and we need to go down a further level. We also need to submit the elements of c to
+            # update_leftmost, just in case
+            c.each { |n| update_leftmost.call(n) }
+
+            d = c.map { [left(_1), right(_1)]}.flatten.select { |n| n <= @size }
+            p, q = determine_goal_nodes.call(d)
+            if p && !q
+              # byebug
+              # determine_goal_nodes.call(c)
+              raise 'bad logic'
             end
           end
+
+          return best unless p # nothing more to do
+
+          # Logic from the paper...
+          # if x0 < val_at(c[1]).x
+          #   big_v = c[1..4].select { |node| node_or_a_child_in_q.call(node) }
+          #   if big_v.empty?
+          #     q = c[1]
+          #   else
+          #     q = big_v.min_by { |i| val_at(i).x } # leftmost point in V
+          #   end
+          #   p = q
+          # elsif x0 >= val_at(c[4]).x
+          #   p = q = c[4]
+          # else
+          #   i = (1..3).find { |j| val_at(c[j]).x <= x0 && x0 < val_at(c[j+1]).x }.must_be
+          #   p = c[i]
+          #   big_v = c[(i+1)..4].select { |node| node_or_a_child_in_q.call(node) }
+          #   if big_v.empty?
+          #     q = c[i+1]
+          #   else
+          #     q = big_v.min_by { |i| val_at(i).x } # leftmost point in V
+          #   end
+          # end
         end
       end
     end
