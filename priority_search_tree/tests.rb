@@ -1,5 +1,7 @@
 require 'set'
 require 'test/unit'
+require 'timeout'
+
 require_relative 'priority_search_tree'
 require_relative 'minmax_priority_search_tree'
 
@@ -12,11 +14,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     # puts "In setup..."
     @size = (ENV['test_size'] || 100_000).to_i
     @pairs_by_x = raw_data(@size)
-    @tree = PrioritySearchTree.new(@pairs_by_x.shuffle)
-    @minmax_tree = MinmaxPrioritySearchTree.new(@pairs_by_x.shuffle)
-
     @pairs_by_y = @pairs_by_x.sort_by(&:y)
 
+    # @tree = PrioritySearchTree.new(@pairs_by_x.shuffle)
+    # @minmax_tree = MinmaxPrioritySearchTree.new(@pairs_by_x.shuffle)
     # puts "done"
   end
 
@@ -31,7 +32,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check_a_highest_ne(x0, y0, @tree)
+      check_a_highest_ne(x0, y0, max_pst)
     end
   end
 
@@ -39,7 +40,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check_a_leftmost_ne(x0, y0, @tree)
+      check_a_leftmost_ne(x0, y0, max_pst)
     end
   end
 
@@ -54,7 +55,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check_a_leftmost_ne(x0, y0, @minmax_tree)
+      check_a_leftmost_ne(x0, y0, minmax_pst)
     end
   end
 
@@ -69,22 +70,37 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         x0 = rand(@size)
         y0 = rand(@size)
 
+        timeout = false
+
         actual_leftmost = pairs.select { |p| p.x >= x0 && p.y >= y0 }.min_by(&:x) || Pair.new(INFINITY, INFINITY)
-        calc_leftmost = pst.leftmost_ne(x0, y0)
 
-        if actual_leftmost != calc_leftmost
-          puts "x0 = #{x0}"
-          puts "y0 = #{y0}"
-          pair_data = pairs.map { |p| "[#{p.x},#{p.y}]" }.join(', ')
-          puts "data = #{pair_data}"
-
-          assert_equal actual_leftmost, calc_leftmost
+        begin
+          calc_leftmost = Timeout::timeout(0.5) {
+            pst.leftmost_ne(x0, y0)
+          }
+        rescue Timeout::Error
+          puts "*\n*\n"
+          puts "* >>>>>>>TIMEOUT<<<<<<<<"
+          puts "*\n*\n"
+          timeout = true
         end
+
+        next if !timeout && actual_leftmost == calc_leftmost
+
+        puts "x0 = #{x0}"
+        puts "y0 = #{y0}"
+        pair_data = pairs.map { |p| "[#{p.x},#{p.y}]" }.join(', ')
+        puts "data = #{pair_data}"
+
+        assert_equal actual_leftmost, calc_leftmost
       end
-    else
+      elsefg
       check_one = lambda do |data, x0:, y0:, actual_leftmost:|
-        pst = MinmaxPrioritySearchTree.new(data.map { |x, y| Pair.new(x, y) })
-        calc_leftmost = pst.leftmost_ne(x0, y0)
+        pst = calc_leftmost = nil
+        Timeout::timeout($debug_it ? 1e10 : 1) {
+          pst = MinmaxPrioritySearchTree.new(data.map { |x, y| Pair.new(x, y) })
+          calc_leftmost = pst.leftmost_ne(x0, y0)
+        }
         assert_equal actual_leftmost, calc_leftmost
       end
 
@@ -95,7 +111,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         actual_leftmost: Pair.new(6, 6)
       )
 
-      $do_it = true
       check_one.call(
         [
           [20,32], [1,1], [17,2], [2,31], [15,26], [24,30], [30,29], [5,4], [9,10], [11,18], [16,3], [19,8], [22,11], [28,5],
@@ -105,11 +120,22 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         x0: 4, y0: 11,
         actual_leftmost: Pair.new(4, 15)
       )
+
+      data = [[10,11], [5,2], [11,1], [2,8], [4,9], [8,10], [9,7], [1,5], [3,3], [6,6], [7,4]]
+      check_one.call(data, x0: 3, y0: 9, actual_leftmost: Pair.new(4, 9))
     end
   end
 
   ########################################
   # Helpers
+
+  private def max_pst
+    @max_pst ||= PrioritySearchTree.new(@pairs_by_x.shuffle)
+  end
+
+  private def minmax_pst
+    @minmax_pst ||= MinmaxPrioritySearchTree.new(@pairs_by_x.shuffle)
+  end
 
   private def check_a_highest_ne(x0, y0, pst)
     # puts "Calculating highest_ne(#{x0}, #{y0})"
