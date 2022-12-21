@@ -10,6 +10,9 @@
 # search tree_, 23rd Annual Canadian Conference on Computational Geometry.
 #
 # But I don't really understand the algorithm from the description. So I'm coding it up so I can see what is going on.
+#
+# For a while I started implementing the Min-max Priority Search Tree (see that file) but got very confused by the Highest3Sided
+# algorithm. So for now I'm coming back here to see if I can work out the version for this (simpler) data structure.
 
 Pair = Struct.new(:x, :y)
 
@@ -220,6 +223,127 @@ class PrioritySearchTree
     best
   end
 
+  # From the paper:
+  #
+  #    The three real numbers x0, x1, and y0 define the three-sided range Q = [x0,x1] X [y0,∞). If Q \intersect P̸ is not \empty,
+  #    define p* to be the highest point of P in Q. If Q \intersect P = \empty, define p∗ to be the point (infty, -infty).
+  #    Algorithm Highest3Sided(x0,x1,y0) returns the point p∗.
+  #
+  #    The algorithm uses two bits L and R, and three variables best, p, and q. As before, best stores the highest point in Q found
+  #    so far. The bit L indicates whether or not p∗ may be in the subtree of p; if L=1, then p is to the left of Q. Similarly, the
+  #    bit R indicates whether or not p∗ may be in the subtree of q; if R=1, then q is to the right of Q.
+  def highest_3_sided(x0, x1, y0)
+    best = Point..new(INFINITY, -INFINITY)
+    p = q = left = right = nil
+
+    root_val = val_at(root)
+
+    x_range = (x0..y0)
+
+    in_q = lambda do |pair|
+      x_range.cover?(pair.x) && pair.y >= y0
+    end
+
+    # From the paper:
+    #
+    #   takes as input a point t and does the following: if t \in Q and x(t) < x(best) then it assignes best = t
+    #
+    # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
+    update_highest = lambda do |node|
+      t = val_at(node)
+      if in_q.call(t) && t.y > best.y
+        best = t
+      end
+    end
+
+    # "Input: a node p such that x(p) < x0""
+    #
+    # TODO: understand what is going on here so I can implement check_right
+    #
+    # Step-by-step it is pretty straightforward. As the paper says
+    #
+    #   [E]ither p moves one level down thin the tree T or the bit L is set to 0. In addition, the point q either stays the same or
+    #   it become a child of (the original) p.
+    check_left = lambda do
+      if leaf?(p)
+        left = false # Question: did p ever get checked as a potential winner?
+      elsif one_child?(p)
+        if x_range.cover? val_at(left(p)).x
+          update_highest.call(left(p))
+          left = false # can't do y-better in the subtree
+        elsif val_at(left(p)).x < x0
+          p = left(p)
+        else
+          # x(p_l) > x1, so it is q's turn to take over
+          q = left(p)
+          right = true
+          left = false
+        end
+      else
+        # p has two children
+        if val_at(left(p)).x < x0
+          if val_at(right(p)).x < x0
+            p = right(p)
+          elsif val_at(right(p)).x <= x1
+            update_highest(right(p))
+            p = left(p)
+          else
+            # x(p_r) > x1, so q needs to take it
+            q = right(p)
+            p = left(p)
+            right = true
+          end
+        elsif val_at(left(p)).x <= x1
+          update_highest(left(p))
+          left = false # we won't do better in T(p_l)
+          if val_at(right(p)).x > x1
+            q = right(p)
+            right = true
+          else
+            update_highest(right(p))
+            # Question: why don't we update p or q here. Don't we get stuck in a loop now? Oh! We set left = false just above.
+          end
+        else
+          q = right(p)
+          left = false
+          right = true
+        end
+      end
+    end
+
+    # If the root value is in the region Q, the max-heap property on y means we can't do better
+    return root_val if x_range.cover? root_val.x
+
+    if root_val.x < x0
+      p = root
+      left = true
+      right = false
+    else
+      q = root
+      left = false
+      right = true
+    end
+
+    val = ->(sym) { sym == :l ? p : q }
+
+    while l || r
+      set_I = []
+      set_I << :left if left
+      set_I << :right if right
+      z = set_I.min_by { |s| level(val.call(s)) }
+      if z == :l
+        check_left.call(p)
+      else
+        check_right.call(q)
+      end
+    end
+
+    best
+  end
+
+  ########################################
+  # Build the initial stucture
+
   private def construct_pst
     # We follow the algorithm in the paper by De, Maheshwari et al. Note that indexing is from 1 there. For now we pretend that that
     # is the case here, too.
@@ -282,6 +406,15 @@ class PrioritySearchTree
 
   private def right(i)
     1 + (i << 1)
+  end
+
+  private def level(i)
+    l = 0
+    while i > root
+      i >>= 1
+      l += 1
+    end
+    l
   end
 
   private def leaf?(i)
