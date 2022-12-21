@@ -13,10 +13,13 @@
 #
 # For a while I started implementing the Min-max Priority Search Tree (see that file) but got very confused by the Highest3Sided
 # algorithm. So for now I'm coming back here to see if I can work out the version for this (simpler) data structure.
+#
+# Since there is an alternate data structure that is a "min-max priority search tree" we call this one a "max priority search tree"
+# or MaxPST.
 
 Pair = Struct.new(:x, :y)
 
-class PrioritySearchTree
+class MaxPrioritySearchTree
   INFINITY = Float::INFINITY
 
   # The array of pairs is turned into a PST in-place without cloning. So clone before passing it in, if you care.

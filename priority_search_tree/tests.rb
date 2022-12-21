@@ -2,7 +2,7 @@ require 'set'
 require 'test/unit'
 require 'timeout'
 
-require_relative 'priority_search_tree'
+require_relative 'max_priority_search_tree'
 require_relative 'minmax_priority_search_tree'
 
 require 'byebug'
@@ -11,14 +11,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   INFINITY = Float::INFINITY
 
   def setup
-    # puts "In setup..."
     @size = (ENV['test_size'] || 100_000).to_i
     @pairs_by_x = raw_data(@size)
     @pairs_by_y = @pairs_by_x.sort_by(&:y)
-
-    # @tree = PrioritySearchTree.new(@pairs_by_x.shuffle)
-    # @minmax_tree = MinmaxPrioritySearchTree.new(@pairs_by_x.shuffle)
-    # puts "done"
   end
 
   ########################################
@@ -28,7 +23,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   def _test_pst_construction
     data = raw_data(@size)
     puts "Building the tree..."
-    PrioritySearchTree.new(data.shuffle, verify: true)
+    MaxPrioritySearchTree.new(data.shuffle, verify: true)
   end
 
   def test_pst_highest_ne
@@ -81,7 +76,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_one = lambda do |data, method_params, actual_highest|
       pst = calc_highest = nil
       Timeout::timeout(need_debug? ? 1e10 : 1) do
-        pst = PrioritySearchTree.new(data.map { |x, y| Pair.new(x, y) })
+        pst = MaxPrioritySearchTree.new(data.map { |x, y| Pair.new(x, y) })
         calc_highest = pst.highest_3_sided(*method_params)
       end
       assert_equal actual_highest, calc_highest
@@ -157,7 +152,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_max_find_bad_input_for_highest_3_sided
-    search_for_bad_inputs(PrioritySearchTree, :highest_3_sided) do |pairs|
+    search_for_bad_inputs(MaxPrioritySearchTree, :highest_3_sided) do |pairs|
       x0 = rand(@size)
       x1 = x0 + 1 + rand(@size - x0)
       y0 = rand(@size)
@@ -222,7 +217,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # Helpers
 
   private def max_pst
-    @max_pst ||= PrioritySearchTree.new(@pairs_by_x.shuffle)
+    @max_pst ||= MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
   end
 
   private def minmax_pst
