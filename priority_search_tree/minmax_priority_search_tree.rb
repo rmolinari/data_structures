@@ -289,113 +289,113 @@ class MinmaxPrioritySearchTree
   # Otherwise, p* is the point in P_Q with maximal y value.
   #
   # This method returns p*
-  def highest_3_sided_up(x0, x1, y0)
-    best = Pair.new(INFINITY, -INFINITY)
+  # def highest_3_sided_up(x0, x1, y0)
+  #   best = Pair.new(INFINITY, -INFINITY)
 
-    in_q = lambda do |pair|
-      pair.x >= x0 && pair.x <= x1 && pair.y >= y0
-    end
+  #   in_q = lambda do |pair|
+  #     pair.x >= x0 && pair.x <= x1 && pair.y >= y0
+  #   end
 
-    # From the paper:
-    #
-    #   takes as input a point t and does the following: if t \in Q and y(t) > y(best) then it assignes best = t
-    #
-    # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
-    #
-    # The algorithm is complicated. From the paper:
-    #
-    #   Since Q is bounded by two vertical sides, we use four index variables p, p', q and q' to guide the search path. In addition,
-    #   we use four bits L, L', R and R'; these correspond to the subtrees of T rooted at the nodes p, p', q, and q', respectively;
-    #   if a bit is equal to one, then the corresonding node is referred to as an _active node_ (for example, if L = 1 then p is an
-    #   active node), and the subtree rooted at that node may contain a candidate point for p*. So the search is required to be
-    #   performed in the subtree rooted at all active nodes. More formally, at any instant of time the variables satisfy the folling
-    #   invariants:
-    #
-    #     - If L  = 1 the x(p) < x0.
-    #     - If L' = 1 then x0 <= x(p') <= x1.
-    #     - If R  = 1 then x(q) > x1.
-    #     - If R' = 1 then x0 <= x(q') <= x1.
-    #     - If L' = 1 and R' = 1 then x(p') <= x(q').
-    #     - If P_Q is non-empty then p* = best or p* is in the subtree rooted at any one of the active nodes.
-    #
-    # There are more details in the paper
-    update_highest = lambda do |node|
-      t = val_at(node)
-      if in_q.call(t) && t.y > best.y
-        best = t
-      end
-    end
+  #   # From the paper:
+  #   #
+  #   #   takes as input a point t and does the following: if t \in Q and y(t) > y(best) then it assignes best = t
+  #   #
+  #   # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
+  #   #
+  #   # The algorithm is complicated. From the paper:
+  #   #
+  #   #   Since Q is bounded by two vertical sides, we use four index variables p, p', q and q' to guide the search path. In addition,
+  #   #   we use four bits L, L', R and R'; these correspond to the subtrees of T rooted at the nodes p, p', q, and q', respectively;
+  #   #   if a bit is equal to one, then the corresonding node is referred to as an _active node_ (for example, if L = 1 then p is an
+  #   #   active node), and the subtree rooted at that node may contain a candidate point for p*. So the search is required to be
+  #   #   performed in the subtree rooted at all active nodes. More formally, at any instant of time the variables satisfy the folling
+  #   #   invariants:
+  #   #
+  #   #     - If L  = 1 the x(p) < x0.
+  #   #     - If L' = 1 then x0 <= x(p') <= x1.
+  #   #     - If R  = 1 then x(q) > x1.
+  #   #     - If R' = 1 then x0 <= x(q') <= x1.
+  #   #     - If L' = 1 and R' = 1 then x(p') <= x(q').
+  #   #     - If P_Q is non-empty then p* = best or p* is in the subtree rooted at any one of the active nodes.
+  #   #
+  #   # There are more details in the paper
+  #   update_highest = lambda do |node|
+  #     t = val_at(node)
+  #     if in_q.call(t) && t.y > best.y
+  #       best = t
+  #     end
+  #   end
 
-    ex_update_highest = lambda do |node|
-      update_highest.call(node)
-      update_highest.call(left(node)) unless leaf?(node)
-      update_highest.call(right(node)) unless one_child?(node)
-    end
+  #   ex_update_highest = lambda do |node|
+  #     update_highest.call(node)
+  #     update_highest.call(left(node)) unless leaf?(node)
+  #     update_highest.call(right(node)) unless one_child?(node)
+  #   end
 
-    if val_at(root).x < x0
-      p = root
-      l = true
-      l_prime = r = r_prime = false
-    elsif val_at(root).x < x1
-      p_prime = root
-      l_prime = true
-      l = r = r_prime = false
-    else
-      q = root
-      r = true
-      l = l_prime = r_prime = false
-    end
+  #   if val_at(root).x < x0
+  #     p = root
+  #     l = true
+  #     l_prime = r = r_prime = false
+  #   elsif val_at(root).x < x1
+  #     p_prime = root
+  #     l_prime = true
+  #     l = r = r_prime = false
+  #   else
+  #     q = root
+  #     r = true
+  #     l = l_prime = r_prime = false
+  #   end
 
-    set_z = lambda do
-      r = []
-      r << p if l
-      r << p_prime if l_prime
-      r << q if r
-      r << q_prime if r_primg
-      r
-    end
+  #   set_z = lambda do
+  #     r = []
+  #     r << p if l
+  #     r << p_prime if l_prime
+  #     r << q if r
+  #     r << q_prime if r_primg
+  #     r
+  #   end
 
-    check_left = lambda do
-      if leaf?(p)
-        l = false
-      elsif one_child?(p)
-        p_l_x = val_at(left(p))
-        if x0 <= p_l_x && p_l_x <= x1
-          update_highest.call(left(p))
-          if l_prime && r_prime
-            ex_update_highest.call(p_prime)
-          elsif l_prime
-            q_prime = p_prime
-            r_prime = true
-          end
-          p_prime = left(p)
-          l_prime = true
-          l = false
-        elsif p_l_x < x0
-          p = left(p)
-        else
-          q = left(p)
-          r = true
-          l = false
-        end
-      else
-        # p has two children
+  #   check_left = lambda do
+  #     if leaf?(p)
+  #       l = false
+  #     elsif one_child?(p)
+  #       p_l_x = val_at(left(p))
+  #       if x0 <= p_l_x && p_l_x <= x1
+  #         update_highest.call(left(p))
+  #         if l_prime && r_prime
+  #           ex_update_highest.call(p_prime)
+  #         elsif l_prime
+  #           q_prime = p_prime
+  #           r_prime = true
+  #         end
+  #         p_prime = left(p)
+  #         l_prime = true
+  #         l = false
+  #       elsif p_l_x < x0
+  #         p = left(p)
+  #       else
+  #         q = left(p)
+  #         r = true
+  #         l = false
+  #       end
+  #     else
+  #       # p has two children
 
-    end
+  #   end
 
-    while l || l_prime || r || r_prime
-      z_star = set_z.call.min_by(4) { level(_1) }
-      if z_star.include? p_prime
-        check_left_in(p_prime)
-      elsif z_star.include? q_prime
-        check_right_in(q_prime)
-      elsif z_star.include? p
-        check_left(p)
-      else
-        check_right(q)
-      end
-    end
-  end
+  #   while l || l_prime || r || r_prime
+  #     z_star = set_z.call.min_by(4) { level(_1) }
+  #     if z_star.include? p_prime
+  #       check_left_in(p_prime)
+  #     elsif z_star.include? q_prime
+  #       check_right_in(q_prime)
+  #     elsif z_star.include? p
+  #       check_left(p)
+  #     else
+  #       check_right(q)
+  #     end
+  #   end
+  # end
 
   # Find the "highest" (max-y) point that is "northeast" of (x, y).
   #

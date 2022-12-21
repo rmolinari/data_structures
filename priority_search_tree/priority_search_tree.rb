@@ -233,12 +233,10 @@ class PrioritySearchTree
   #    so far. The bit L indicates whether or not p∗ may be in the subtree of p; if L=1, then p is to the left of Q. Similarly, the
   #    bit R indicates whether or not p∗ may be in the subtree of q; if R=1, then q is to the right of Q.
   def highest_3_sided(x0, x1, y0)
-    best = Point..new(INFINITY, -INFINITY)
+    best = Pair.new(INFINITY, -INFINITY)
     p = q = left = right = nil
 
-    root_val = val_at(root)
-
-    x_range = (x0..y0)
+    x_range = (x0..x1)
 
     in_q = lambda do |pair|
       x_range.cover?(pair.x) && pair.y >= y0
@@ -274,7 +272,6 @@ class PrioritySearchTree
         elsif val_at(left(p)).x < x0
           p = left(p)
         else
-          # x(p_l) > x1, so it is q's turn to take over
           q = left(p)
           right = true
           left = false
@@ -285,7 +282,7 @@ class PrioritySearchTree
           if val_at(right(p)).x < x0
             p = right(p)
           elsif val_at(right(p)).x <= x1
-            update_highest(right(p))
+            update_highest.call(right(p))
             p = left(p)
           else
             # x(p_r) > x1, so q needs to take it
@@ -294,25 +291,85 @@ class PrioritySearchTree
             right = true
           end
         elsif val_at(left(p)).x <= x1
-          update_highest(left(p))
+          update_highest.call(left(p))
           left = false # we won't do better in T(p_l)
           if val_at(right(p)).x > x1
             q = right(p)
             right = true
           else
-            update_highest(right(p))
-            # Question: why don't we update p or q here. Don't we get stuck in a loop now? Oh! We set left = false just above.
+            update_highest.call(right(p))
           end
         else
-          q = right(p)
+          q = left(p)
           left = false
           right = true
         end
       end
     end
 
+    # Do "on the right" with q what check_left does on the left with p
+    #
+    # We know that x(q) > x1
+    #
+    # TODO: can we share logic between check_left and check_right? At first glance they are too different to parameterize but maybe
+    # the bones can be shared.
+    #
+    # We either push q further down the tree or make right = false. We might also make p a child of (original) q. We never change
+    # left from true to false
+    check_right = lambda do
+      if leaf?(q)
+        right = false
+      elsif one_child?(q)
+        if x_range.cover? val_at(left(q)).x
+          update_highest.call(left(q))
+          right = false # can't do y-better in the subtree
+        elsif val_at(left(q)).x < x0
+          p = left(q)
+          left = true
+          right = false
+        else
+          q = left(q)
+        end
+      else
+        # q has two children
+        if val_at(left(q)).x < x0
+          left = true
+          if val_at(right(q)).x < x0
+            p = right(q)
+            right = false
+          elsif val_at(right(q)).x <= x1
+            update_highest.call(right(q))
+            p = left(q)
+            right = false
+          else
+            # x(q_r) > x1
+            p = left(q)
+            q = right(q)
+            # left = true
+          end
+        elsif val_at(left(q)).x <= x1
+          update_highest.call(left(q))
+          if val_at(right(q)).x > x1
+            q = right(q)
+          else
+            update_highest.call(right(q))
+            right = false
+          end
+        else
+          q = left(q)
+        end
+      end
+    end
+
+    root_val = val_at(root)
+
     # If the root value is in the region Q, the max-heap property on y means we can't do better
-    return root_val if x_range.cover? root_val.x
+    if x_range.cover? root_val.x
+      # If y(root) is large enough then the root is the winner because of the max heap property in y. And if it isn't large enough
+      # then no other point in the tree can be high enough either
+      left = right = false
+      best = root_val if root_val.y >= y0
+    end
 
     if root_val.x < x0
       p = root
@@ -324,17 +381,18 @@ class PrioritySearchTree
       right = true
     end
 
-    val = ->(sym) { sym == :l ? p : q }
+    val = ->(sym) { sym == :left ? p : q }
 
-    while l || r
+    # byebug if $do_it
+    while left || right
       set_I = []
       set_I << :left if left
       set_I << :right if right
       z = set_I.min_by { |s| level(val.call(s)) }
-      if z == :l
-        check_left.call(p)
+      if z == :left
+        check_left.call
       else
-        check_right.call(q)
+        check_right.call
       end
     end
 
