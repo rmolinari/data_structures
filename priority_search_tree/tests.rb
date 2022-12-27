@@ -1,3 +1,6 @@
+require 'simplecov'
+SimpleCov.start
+
 require 'set'
 require 'test/unit'
 require 'timeout'

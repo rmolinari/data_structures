@@ -770,7 +770,7 @@ class MaxPrioritySearchTree
     # Left subtree has x values less than all of the right subtree
     (1..@size).each do |node|
       next if right(node) >= @size
-p
+
       left_max = max_x_in_subtree(left(node))
       right_min = min_x_in_subtree(right(node))
 
