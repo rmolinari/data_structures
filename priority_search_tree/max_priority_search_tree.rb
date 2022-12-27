@@ -633,7 +633,7 @@ class MaxPrioritySearchTree
 
       left_val = val_at(left(p_in))
       if one_child?(p_in)
-        if x0 <= left_val.x && left_val.x <= x1
+        if x_range.cover? left_val.x
           p_in = left(p_in)
         elsif left_val.x < x0
           # We aren't in the [x0, x1] zone any more and have moved out to the left
@@ -786,6 +786,81 @@ class MaxPrioritySearchTree
       else
         # x(q_l) > x1
         q = left(q)
+      end
+    end
+
+    # Given: q' is active and satisfied x0 <= x(q') <= x1
+    enumerate_right_in = lambda do
+      raise 'right_in should be true if we call enumerate_right_in' unless right_in
+
+      if val_at(q_in).y >= y0
+        report.call(q_in)
+      end
+
+      return if leaf?(q_in)
+
+      left_val = val_at(left(q_in))
+      if one_child?(q_in)
+        if x_range.cover? left_val.x
+          q_in = left(q_in)
+        elsif left_val.x < x0
+          # We have moved out to the left
+          p = left(q_in)
+          left_in = false
+          left = true
+        else
+          # We have moved out to the right
+          q = left(q_in)
+          left_in = false
+          right = true
+        end
+        return
+      end
+
+      # q' has two children
+      right_val = val_at(right(q_in))
+      if left_val.x < x0
+        raise 'p_in cannot be active, by the value in the left child of q_in' if left_in
+
+        if right_val.x < x0
+          p = right(q_in)
+        elsif right_val.x <= x1
+          p = left(q_in)
+          p_in = right(q_in) # should this be q_in = right(q_in) ??
+          left_in = true
+        else
+          p = left(q_in)
+          q = right(q_in)
+          right = true
+        end
+        right_in = false
+        left = true
+      elsif left_val.x <= x1
+        if right_val.x > x1
+          if left_in
+            q_in = left(q_in)
+          else
+            p_in = left(q_in)
+            left_in = true
+            right_in = false
+          end
+          q = right(q_in)
+          right = true
+        else
+          if left_in
+            explore.call(left(q_in))
+            q_in = right(q_in)
+          else
+            p_in = left(q_in)
+            left_in = true
+            q_in = right(q_in)
+          end
+          right = false
+        end
+      else
+        q = left(q_in)
+        right_in = false
+        right = true
       end
     end
 
