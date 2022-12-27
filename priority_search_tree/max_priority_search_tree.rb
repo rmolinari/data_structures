@@ -441,6 +441,201 @@ class MaxPrioritySearchTree
   end
 
   ########################################
+  # Enumerate 3 sided
+
+  # From the paper
+  #
+  #  "Given three real numbers x0, x1, and y0 define the three sided range Q = [x0, x1] X [y0, infty). Algorithm Enumerage3Sided(x0,
+  #   x1,y0) returns all elements of Q \intersect P. The algorithm uses the same approach as algorithm Highest3Sided. Besides the
+  #   two bits L and R it uses two additional bits L' and R'. Each of these four bits ... corresponds to a subtree of T rooted at
+  #   the points p, p', q, and q', respectively; if the bit is equal to one, then the subtree may contain points that are in the
+  #   query range Q.
+  #
+  #   The following variant will be maintained:
+  #
+  #   - If L = 1 then x(p) < x0.
+  #   - If L' = 1 then x0 <= x(p') <= x1.
+  #   - If R = 1 then x(q) > x1.
+  #   - If R' = 1 then x0 <= x(q') <= x1.
+  #   - If L' = 1 and R' = 1 then x(p') <= x(q').
+  #   - All points in Q \intersect P [other than those in the subtrees of the currently active search nodes] have been reported.""
+
+  def enumerate_3_sided(x0, x1, y0)
+    x_range = x0..x1
+    # Instead of using primes we use "_in"
+    left = left_in = right_in = right = false
+    p = p_in = q_in = q = nil
+
+
+    result = []
+
+    # Note: for now just accumulate the values in an array and return it.
+    report = ->(node) { result << val_at(node) }
+
+    # "reports all points in T_t whose y-coordinates are at least y0"
+    #
+    # We follow the logic from the min-max paper, leaving out the need to worry about the parity of the leval and the min- or max-
+    # switching.
+    explore = lambda do |t|
+      current = t
+      state = 0
+      while current != t || state != 2
+        case state
+        when 0
+          # State 0: we have arrived at this node for the first time
+          # look at current and perhaps descend to left child
+          # Isn't this pre-order?
+          if val_at(current).y >= y0
+            report.call(current)
+          end
+          if !leaf?(current) && val_at(left(current)).y >= y0
+            current = left(current)
+          else
+            state = 1
+          end
+        when 1
+          # State 1: we've already handled this node and its left subtree. Should we descend to the right subtree?
+          if two_children?(current) && val_at(right(current)).y >= y0
+            current = right(current)
+            state = 0
+          else
+            state = 2
+          end
+        when 2
+          # State 2: we're done with this node and its subtrees. Go back up a level, having set state correctly for the logic at the
+          # parent node.
+          if left_child?(current)
+            state = 1
+          end
+          current = parent(current)
+        else
+          raise "Explore(t) state is somehow #{state} rather than 0, 1, or 2."
+        end
+      end
+    end
+
+    # Handle the next step of the subtree at p
+    #
+    # I need to go through this with paper, pencil, and some diagrams.
+    enumerate_left = lambda do
+      if leaf(p)
+        left = false
+      elsif one_child?(p)
+        if x_range.cover? val_at(left(p)).x
+          if left_in && right_in
+            # Idea: because x(q_in) <= x1, p_in and its subtree are squeezed inside [x0, x1] by p and q_in. Thus we can exhaust p_in
+            # and its subtree merely by looking and the y-values.
+            explore.call(p_in)
+          elsif left_in
+            q_in = p_in
+            right_in = true
+          end
+          p_in = left(p)
+          left_in = true
+          left = false
+        elsif val_in(left(p)) < x0
+          p = left(p)
+        else
+          q = left(p)
+          right = true
+          left = false
+        end
+      else
+        # p has two children
+        if val_at(left(p)).x < x0
+          if val_at(right(p)).x < x0
+            p = right(p)
+          elsif val_at(right(p)).x <= x1
+            if left_in && right_in
+              # right(p) is inside [x0, x1] and so it at q_in squeeze all of p_in inside that interval too.
+              explore.call(p_in)
+            elsif left_in
+              q_in = p_in
+              right_in = true
+            end
+            p_in = right(p)
+            p = left(p)
+            left_in = true
+          else
+            q = right(p)
+            p = left(p)
+            right = true
+          end
+        elsif val_at(left(p)).x <= x1
+          if val_at(right(p)) > x1
+            q = right(p)
+            p_in = left(p)
+            left = false
+            left_in = right_in = true
+          else
+            # p_l lies inside [x0, x1], so if also q_in is active, p_r and p_in and both squeezed in [x0, x1]
+            if left_in && right_in
+              explore(p_in)
+              explore(right(p))
+            elsif left_in
+              # p_in squeezes right(p) inside [x0, x1]
+              explore(right(p))
+              q_in = p_in
+              right_in = true
+            elsif right_in
+              # Now q_in squeezes right(p) inside [x0, x1]
+              explore(right(p))
+              left_in = true
+            else
+              q_in = right(p)
+              left_in = right_in = true
+            end
+            p_in = left(p)
+            left = false
+          end
+        else
+          q = left(p)
+          left = false
+          right = true
+        end
+      end
+    end
+
+    val = ->(sym) { { left: p, left_in: p_in, right_in: q_in, right: q }[sym] }
+
+    root_val = val_at(root)
+    if root_val.y < y0
+      # no hope, no op
+    elsif root_val.x < x0
+      p = root
+      left = true
+    elsif root_val.x <= x1 # Possible bug in paper, which tests "< x1"
+      p_in = root
+      left_in = true
+    else
+      q = root
+      right = 1
+    end
+
+    while left || left_in || right_in || right
+      set_i = []
+      set_i << :left if left
+      set_i << :left_in if left_in
+      set_i << :right_in if right_in
+      set_i << :right if right
+      z = set_i.min_by { |sym| level(val.call(sym)) }
+      case z
+      when :left
+        enumerate_left.call
+      when :left_in
+        enumerate_left_in.call
+      when :right_in
+        enumerate_right_in.call
+      when :right
+        enumerate_right.call
+      else
+        raise "bad symbol #{z}"
+      end
+    end
+    result
+  end
+
+  ########################################
   # Build the initial stucture
 
   private def construct_pst
@@ -515,12 +710,24 @@ class MaxPrioritySearchTree
     l
   end
 
+  # i has no children
   private def leaf?(i)
     left(i) > @size
   end
 
+  # i has exactly one child (the left)
   private def one_child?(i)
     left(i) <= @size && right(i) > @size
+  end
+
+  # i has two children
+  private def two_children?(i)
+    right(i) <= @size
+  end
+
+  # i is the left child of its parent.
+  private def left_child?(i)
+    i > 1 && (i % 2).zero?
   end
 
   private def swap(index1, index2)
