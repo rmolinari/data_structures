@@ -190,7 +190,7 @@ class MaxPrioritySearchTree
       else
         # p != q
         if leaf?(q)
-          q = p # p itself is just one layer above the leaves, or is itself a leave
+          q = p # p itself is just one layer above the leaves, or is itself a leaf
         elsif one_child?(q)
           q_left_val = val_at(left(q))
           if q_left_val.y < y0
@@ -302,8 +302,8 @@ class MaxPrioritySearchTree
     #
     # Step-by-step it is pretty straightforward. As the paper says
     #
-    #   [E]ither p moves one level down thin the tree T or the bit L is set to 0. In addition, the point q either stays the same or
-    #   it become a child of (the original) p.
+    #   [E]ither p moves one level down in the tree T or the bit L is set to 0. In addition, the point q either stays the same or it
+    #   become a child of (the original) p.
     check_left = lambda do
       if leaf?(p)
         left = false # Question: did p ever get checked as a potential winner?
@@ -445,20 +445,42 @@ class MaxPrioritySearchTree
 
   # From the paper
   #
-  #  "Given three real numbers x0, x1, and y0 define the three sided range Q = [x0, x1] X [y0, infty). Algorithm Enumerage3Sided(x0,
-  #   x1,y0) returns all elements of Q \intersect P. The algorithm uses the same approach as algorithm Highest3Sided. Besides the
-  #   two bits L and R it uses two additional bits L' and R'. Each of these four bits ... corresponds to a subtree of T rooted at
-  #   the points p, p', q, and q', respectively; if the bit is equal to one, then the subtree may contain points that are in the
-  #   query range Q.
+  #    "Given three real numbers x0, x1, and y0 define the three sided range Q = [x0, x1] X [y0, infty). Algorithm
+  #     Enumerage3Sided(x0, x1,y0) returns all elements of Q \intersect P. The algorithm uses the same approach as algorithm
+  #     Highest3Sided. Besides the two bits L and R it uses two additional bits L' and R'. Each of these four bits ... corresponds
+  #     to a subtree of T rooted at the points p, p', q, and q', respectively; if the bit is equal to one, then the subtree may
+  #     contain points that are in the query range Q.
   #
-  #   The following variant will be maintained:
+  #     The following variant will be maintained:
   #
-  #   - If L = 1 then x(p) < x0.
-  #   - If L' = 1 then x0 <= x(p') <= x1.
-  #   - If R = 1 then x(q) > x1.
-  #   - If R' = 1 then x0 <= x(q') <= x1.
-  #   - If L' = 1 and R' = 1 then x(p') <= x(q').
-  #   - All points in Q \intersect P [other than those in the subtrees of the currently active search nodes] have been reported.""
+  #     - If L = 1 then x(p) < x0.
+  #     - If L' = 1 then x0 <= x(p') <= x1.
+  #     - If R = 1 then x(q) > x1.
+  #     - If R' = 1 then x0 <= x(q') <= x1.
+  #     - If L' = 1 and R' = 1 then x(p') <= x(q').
+  #     - All points in Q \intersect P [other than those in the subtrees of the currently active search nodes] have been reported.""
+  #
+  #
+  # My high-level understanding of the algorithm
+  # --------------------------------------------
+  #
+  # We need to find all elements of Q \intersect P, so it isn't enough, as it was in highest_3_sided simply to keep track of p and
+  # q. We need to track four nodes, p, p', q', and q which are (with a little handwaving) respectively
+  #
+  # - the rightmost node to the left of Q' = [x0, x1] X [-infinity, infinity],
+  # - the leftmost node inside Q',
+  # - the rightmost node inside Q', and
+  # - the leftmost node to the right of Q'.
+  #
+  # Tracking these is enough. Subtrees of things to the left of p can't have anything in Q by the x-value properties of the PST, and
+  # likewise with things to the right of q.
+  #
+  # And we don't need to track any more nodes inside Q'. If we had r with p' <~ r <~ q' (where s <~ t represents "t is to the right
+  # of s"), then all of the subtree rooted at r lies inside Q', and we can visit all of its elements of Q \intersect P via the
+  # routine Explore(), which is what we do whenever we need to. The node r is thus exhausted, and we can forget about it.
+  #
+  # So the algorithm is actually quite simple. There is a large amount of code here because of the many cases that need to be
+  # handled at each update.
 
   def enumerate_3_sided(x0, x1, y0)
     x_range = x0..x1
@@ -466,10 +488,11 @@ class MaxPrioritySearchTree
     left = left_in = right_in = right = false
     p = p_in = q_in = q = nil
 
-
     result = []
 
     # Note: for now just accumulate the values in an array and return it.
+    #
+    # TODO: provide for a block to yield to and return a Set when there isn't a block.
     report = ->(node) { result << val_at(node) }
 
     # "reports all points in T_t whose y-coordinates are at least y0"
@@ -591,6 +614,72 @@ class MaxPrioritySearchTree
         else
           q = left(p)
           left = false
+          right = true
+        end
+      end
+    end
+
+    # Given: p' satisfied x0 <= x(p') <= x1. (Our p_in is the paper's p')
+    enumerate_left_in = lambda do
+      if val_at(p_in).y >= y0
+        report.call(p_in)
+      end
+
+      return if leaf?(p_in) # nothing more to do
+
+      left_val = val_at(left(p_in))
+      if one_child?(p_in)
+        if x0 <= left_val.x && left_val.x <= x1
+          p_in = left(p_in)
+        elsif left_val.x < x0
+          # We aren't in the [x0, x1] zone any more and have moved out to the left
+          p = left(p_in)
+          left_in = false
+          left = true
+        else
+          # similar, but we've moved out to the right. Note that left(p_in) is the leftmost node to the right of Q.
+          q = left(p_in)
+          left_in = flase
+          right = true
+        end
+      else
+        # p' has two children
+        right_val = val_at(right(p_in))
+        if left_val.x < x0
+          if right_val.x < x0
+            p = right(p_in)
+            left = true
+            left_in = false
+          elsif right_val.x <= x1
+            p = left(p_in)
+            p_in = right(p_in)
+            left = true
+          else
+            p = left(p_in)
+            q = right(p_in)
+            left = true
+            left_in = false
+            right = true
+            raise 'q_in cannot be active, by the value in the right child of p_in!' if right_in
+          end
+        elsif left_val.x <= x1
+          if right_val.x > x1
+            raise 'q_in cannot be active, by the value in the right child of p_in!' if right_in
+
+            q = right(p_in)
+            p_in = left(p_in)
+            right = true
+          elsif right_in
+            explore.call(right(p_in))
+            p_in = left(p_in)
+          else
+            q_in = right(p_in)
+            p_in = left(p_in)
+            right_in = true
+          end
+        else
+          q = left(p_in)
+          left_in = false
           right = true
         end
       end

@@ -22,10 +22,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   ########################################
   # Tests for the (vanilla) MaxPST
 
-  # Construction appears to be fine for now
-  def _test_pst_construction
+  # Construct the data structure and validate that the key properties are actually satisifed.
+  def test_pst_construction
     data = raw_data(@size)
-    puts "Building the tree..."
     MaxPrioritySearchTree.new(data.shuffle, verify: true)
   end
 
