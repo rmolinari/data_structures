@@ -541,9 +541,12 @@ class MaxPrioritySearchTree
     #
     # I need to go through this with paper, pencil, and some diagrams.
     enumerate_left = lambda do
-      if leaf(p)
+      if leaf?(p)
         left = false
-      elsif one_child?(p)
+        return
+      end
+
+      if one_child?(p)
         if x_range.cover? val_at(left(p)).x
           if left_in && right_in
             # Idea: because x(q_in) <= x1, p_in and its subtree are squeezed inside [x0, x1] by p and q_in. Thus we can exhaust p_in
@@ -556,66 +559,67 @@ class MaxPrioritySearchTree
           p_in = left(p)
           left_in = true
           left = false
-        elsif val_in(left(p)) < x0
+        elsif val_at(left(p)).x < x0
           p = left(p)
         else
           q = left(p)
           right = true
           left = false
         end
-      else
-        # p has two children
-        if val_at(left(p)).x < x0
-          if val_at(right(p)).x < x0
-            p = right(p)
-          elsif val_at(right(p)).x <= x1
-            if left_in && right_in
-              # right(p) is inside [x0, x1] and so it at q_in squeeze all of p_in inside that interval too.
-              explore.call(p_in)
-            elsif left_in
-              q_in = p_in
-              right_in = true
-            end
-            p_in = right(p)
-            p = left(p)
-            left_in = true
-          else
-            q = right(p)
-            p = left(p)
-            right = true
+        return
+      end
+
+      # p has two children
+      if val_at(left(p)).x < x0
+        if val_at(right(p)).x < x0
+          p = right(p)
+        elsif val_at(right(p)).x <= x1
+          if left_in && right_in
+            # right(p) is inside [x0, x1] and so it at q_in squeeze all of p_in inside that interval too.
+            explore.call(p_in)
+          elsif left_in
+            q_in = p_in
+            right_in = true
           end
-        elsif val_at(left(p)).x <= x1
-          if val_at(right(p)) > x1
-            q = right(p)
-            p_in = left(p)
-            left = false
-            left_in = right_in = true
-          else
-            # p_l lies inside [x0, x1], so if also q_in is active, p_r and p_in and both squeezed in [x0, x1]
-            if left_in && right_in
-              explore(p_in)
-              explore(right(p))
-            elsif left_in
-              # p_in squeezes right(p) inside [x0, x1]
-              explore(right(p))
-              q_in = p_in
-              right_in = true
-            elsif right_in
-              # Now q_in squeezes right(p) inside [x0, x1]
-              explore(right(p))
-              left_in = true
-            else
-              q_in = right(p)
-              left_in = right_in = true
-            end
-            p_in = left(p)
-            left = false
-          end
+          p_in = right(p)
+          p = left(p)
+          left_in = true
         else
-          q = left(p)
-          left = false
+          q = right(p)
+          p = left(p)
           right = true
         end
+      elsif val_at(left(p)).x <= x1
+        if val_at(right(p)) > x1
+          q = right(p)
+          p_in = left(p)
+          left = false
+          left_in = right_in = true
+        else
+          # p_l lies inside [x0, x1], so if also q_in is active, p_r and p_in and both squeezed in [x0, x1]
+          if left_in && right_in
+            explore(p_in)
+            explore(right(p))
+          elsif left_in
+            # p_in squeezes right(p) inside [x0, x1]
+            explore(right(p))
+            q_in = p_in
+            right_in = true
+          elsif right_in
+            # Now q_in squeezes right(p) inside [x0, x1]
+            explore(right(p))
+            left_in = true
+          else
+            q_in = right(p)
+            left_in = right_in = true
+          end
+          p_in = left(p)
+          left = false
+        end
+      else
+        q = left(p)
+        left = false
+        right = true
       end
     end
 
@@ -682,6 +686,106 @@ class MaxPrioritySearchTree
           left_in = false
           right = true
         end
+      end
+    end
+
+    # This is "just like" enumerate left, but handles q instead of p.
+    #
+    # The paper doesn't given an implementation, but it should be pretty symmetric. Can we share any logic with enumerate_left?
+    #
+    # Q: why is my implementation more complicated than enumerate_left? I must be missing something.
+    enumerate_right = lambda do
+      if leaf?(q)
+        right = false
+        return
+      end
+
+      if one_child?(q)
+        if x_range.cover? val_at(left(q)).x
+          if left_in && right_in
+            explore.call(q_in) # squeezed between p_in and left(q)
+          elsif right_in
+            p_in = q_in
+            left_in = true
+          end
+          q_in = left(q)
+          right_in = true
+          right = false
+        elsif val_at(left(q)).x < x0
+          p = left(q)
+          left = true
+          right = false
+        else
+          q = left(q)
+        end
+        return
+      end
+
+      # q has two children. Cases!
+      if val_at(left(q)).x < x0
+        if val_at(right(q)).x < x0
+          p = left(q)
+          right = false
+          left = true
+        elsif val_at(right(q)).x <= x1
+          if left_in && right_in
+            explore.call(p_in)
+            p_in = q_in
+          elsif right_in
+            p_in = q_in
+            left_in = true
+          end
+          q_in = right(q)
+          p = left(q)
+          right_in = true
+          right = false
+          left = true # are these three assignments correct?
+        else
+          p = left(q)
+          q = right(q)
+          left = true
+        end
+      elsif val_at(left(q)).x <= x1
+        if val_at(right(q)).x > x1
+          if left_in && right_in
+            # q_in squeezed between p_in and left(q)
+            explore.call(q_in)
+            q_in = left(q)
+          elsif left_in
+            q_in = left(q)
+            right_in = true
+          elsif right_in
+            p_in = q_in
+            q_in = left(q)
+            left_in = true
+          end
+          q = right(q)
+        else
+          # q_l and q_r are both in Q'
+          if left_in && right_in
+            # both of these squeezed between p_in and q_r
+            explore.call(q_in)
+            explore.call(left(q))
+            q_in = right(q)
+          elsif left_in
+            explore.call(left(q))
+            q_in = right(q)
+            right_in = true
+          elsif right_in
+            p_in = q_in
+            left_in = true
+            explore_call(left(q))
+            q_in = right(q)
+          else
+            p_in = left(q)
+            q_in = right(q)
+            left_in = right_in = true
+          end
+          right = false
+        end
+      else
+        # x(q_l) > x1
+        q = left(q)
       end
     end
 
