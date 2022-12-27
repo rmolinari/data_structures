@@ -251,6 +251,15 @@ class MaxPrioritySearchTree
   #    The algorithm uses two bits L and R, and three variables best, p, and q. As before, best stores the highest point in Q found
   #    so far. The bit L indicates whether or not p∗ may be in the subtree of p; if L=1, then p is to the left of Q. Similarly, the
   #    bit R indicates whether or not p∗ may be in the subtree of q; if R=1, then q is to the right of Q.
+  #
+  # Although there are a lot of lines and cases the overall idea is simple. We maintain in p the rightmost node at its level that is
+  # to the left of the area Q. Likewise, q is the leftmost node that is the right of Q. The logic just updated this data at each
+  # step. The helper check_left updates p and check_right updates q. We don't need to maintain any state inside the region Q because
+  # the max-heap property means that if we ever find a node r in Q we check it for best and then ignore its subtree (which cannot
+  # beat r on y-value).
+  #
+  # Sometimes we don't have a relevant node to the left or right of Q. The booleans L and R (which we call left and right) track
+  # whether p and q are defined at the moment.
   def highest_3_sided(x0, x1, y0)
     best = Pair.new(INFINITY, -INFINITY)
     p = q = left = right = nil
