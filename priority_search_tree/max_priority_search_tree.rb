@@ -17,6 +17,8 @@
 # Since there is an alternate data structure that is a "min-max priority search tree" we call this one a "max priority search tree"
 # or MaxPST.
 
+require 'set'
+
 Pair = Struct.new(:x, :y)
 
 class MaxPrioritySearchTree
@@ -488,9 +490,9 @@ class MaxPrioritySearchTree
     left = left_in = right_in = right = false
     p = p_in = q_in = q = nil
 
-    result = []
+    result = Set.new
 
-    # Note: for now just accumulate the values in an array and return it.
+    # NOTE: for now just accumulate the values in an array and return it.
     #
     # TODO: provide for a block to yield to and return a Set when there isn't a block.
     report = ->(node) { result << val_at(node) }
@@ -590,7 +592,7 @@ class MaxPrioritySearchTree
           right = true
         end
       elsif val_at(left(p)).x <= x1
-        if val_at(right(p)) > x1
+        if val_at(right(p)).x > x1
           q = right(p)
           p_in = left(p)
           left = false
@@ -629,7 +631,10 @@ class MaxPrioritySearchTree
         report.call(p_in)
       end
 
-      return if leaf?(p_in) # nothing more to do
+      if leaf?(p_in) # nothing more to do
+        left_in = false
+        return
+      end
 
       left_val = val_at(left(p_in))
       if one_child?(p_in)
@@ -643,7 +648,7 @@ class MaxPrioritySearchTree
         else
           # similar, but we've moved out to the right. Note that left(p_in) is the leftmost node to the right of Q.
           q = left(p_in)
-          left_in = flase
+          left_in = false
           right = true
         end
       else
@@ -797,7 +802,10 @@ class MaxPrioritySearchTree
         report.call(q_in)
       end
 
-      return if leaf?(q_in)
+      if leaf?(q_in)
+        right_in = false
+        return
+      end
 
       left_val = val_at(left(q_in))
       if one_child?(q_in)
@@ -866,6 +874,7 @@ class MaxPrioritySearchTree
 
     val = ->(sym) { { left: p, left_in: p_in, right_in: q_in, right: q }[sym] }
 
+    byebug if $do_it
     root_val = val_at(root)
     if root_val.y < y0
       # no hope, no op
@@ -881,6 +890,7 @@ class MaxPrioritySearchTree
     end
 
     while left || left_in || right_in || right
+      byebug if $do_it
       set_i = []
       set_i << :left if left
       set_i << :left_in if left_in

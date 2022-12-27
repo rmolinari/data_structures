@@ -73,53 +73,51 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   ########################################
   # Some regression tests on inputs found to be bad during testing
 
+  private def check_one_case(klass, method, data, *method_params, expected_val)
+    calculated_val = Timeout::timeout(need_debug? ? 1e10 : 1) do
+      pst = klass.new(data.map { |x, y| Pair.new(x, y) })
+      calculated_val = pst.send(method, *method_params)
+    end
+    assert_equal expected_val, calculated_val
+  end
+
   def test_bad_inputs_for_max_highest_3_sided
-    # TODO: share common logic with #test_bad_inputs_for_minmax_leftmost_ne
-    check_one = lambda do |data, method_params, actual_highest|
-      pst = calc_highest = nil
-      Timeout::timeout(need_debug? ? 1e10 : 1) do
-        pst = MaxPrioritySearchTree.new(data.map { |x, y| Pair.new(x, y) })
-        calc_highest = pst.highest_3_sided(*method_params)
-      end
-      assert_equal actual_highest, calc_highest
+    check_one = lambda do |data, *method_params, actual_highest|
+      check_one_case(MaxPrioritySearchTree, :highest_3_sided, data, *method_params, actual_highest)
     end
 
     # Early versions of code couldn't even handle these!
-    check_one.call([[1, 1]], [0, 1, 0], Pair.new(1, 1))
+    check_one.call([[1, 1]], 0, 1, 0, Pair.new(1, 1))
 
     check_one.call(
       [[4,5], [1,4], [5,2], [2,1], [3,3]],
-      [2, 3, 2],
+      2, 3, 2,
       Pair.new(3, 3)
     )
 
     check_one.call(
       [[8,8], [1,7], [6,5], [2,6], [4,3], [5,1], [7,2], [3,4]],
-      [3, 5, 0], Pair.new(3, 4)
+      3, 5, 0,
+      Pair.new(3, 4)
     )
 
     # $do_it = true
     check_one.call(
       [[7,8], [1,5], [5,7], [2,3], [4,1], [6,6], [8,4], [3,2]],
-      [3, 4, 1], Pair.new(3, 2)
+      3, 4, 1,
+      Pair.new(3, 2)
     )
   end
 
   def test_bad_inputs_for_minmax_leftmost_ne
-    check_one = lambda do |data, x0:, y0:, actual_leftmost:|
-      pst = calc_leftmost = nil
-      Timeout::timeout(need_debug? ? 1e10 : 1) do
-        pst = MinmaxPrioritySearchTree.new(data.map { |x, y| Pair.new(x, y) })
-        calc_leftmost = pst.leftmost_ne(x0, y0)
-      end
-      assert_equal actual_leftmost, calc_leftmost
+    check_one = lambda do |data, *method_params, actual_leftmost|
+      check_one_case(MinmaxPrioritySearchTree, :leftmost_ne, data, *method_params, actual_leftmost)
     end
-
     # Some inputs on which the code was found to be buggy
     check_one.call(
       [[4,10], [2,1], [8,2], [3,5], [7,7], [9,9], [10,8], [1,4], [5,3], [6,6]],
-      x0: 5, y0: 6,
-      actual_leftmost: Pair.new(6, 6)
+      5, 6,
+      Pair.new(6, 6)
     )
 
     check_one.call(
@@ -128,12 +126,22 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         [31,7], [3,21], [6,9], [7,22], [8,28], [10,25], [12,23], [13,19], [14,6], [18,27], [21,13], [23,14], [25,24], [26,12],
         [27,17], [29,20], [32,16], [4,15]
       ],
-      x0: 4, y0: 11,
-      actual_leftmost: Pair.new(4, 15)
+      4, 11,
+      Pair.new(4, 15)
     )
 
     data = [[10,11], [5,2], [11,1], [2,8], [4,9], [8,10], [9,7], [1,5], [3,3], [6,6], [7,4]]
-    check_one.call(data, x0: 3, y0: 9, actual_leftmost: Pair.new(4, 9))
+    check_one.call(data, 3, 9, Pair.new(4, 9))
+  end
+
+  def test_bad_inputs_for_max_enumerate_3_sided
+    check_one = lambda do |data, *method_params, actual_val|
+      check_one_case(MaxPrioritySearchTree, :enumerate_3_sided, data, *method_params, actual_val)
+    end
+
+    # These had timeouts in early code
+    check_one.call([[1,1]],        0, 1, 0, Set.new([Pair.new(1, 1)]))
+    check_one.call([[2,2], [1,1]], 0, 1, 1, Set.new([Pair.new(1, 1)]))
   end
 
   ########################################
@@ -161,6 +169,17 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       actual_highest = pairs.select { |p| x0 <= p.x && p.x <= x1 && p.y >= y0 }.max_by(&:y) || Pair.new(INFINITY, -INFINITY)
 
       [[x0, x1, y0], actual_highest]
+    end
+  end
+
+  def test_max_find_bad_input_for_enumerate_3_sided
+    search_for_bad_inputs(MaxPrioritySearchTree, :enumerate_3_sided) do |pairs|
+      x0 = rand(@size)
+      x1 = x0 + 1 + rand(@size - x0)
+      y0 = rand(@size)
+      actual_set = Set.new(pairs.select { |p| x0 <= p.x && p.x <= x1 && p.y >= y0 } || [])
+
+      [[x0, x1, y0], actual_set]
     end
   end
 
