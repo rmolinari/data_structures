@@ -177,6 +177,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # It is a no-op unless the environment variable find_bad is set
   private def search_for_bad_inputs(klass, method)
+    return unless find_bad_inputs?
+
     BAD_INPUT_SEARCH_ATTEMPT_LIMIT.times do
       pairs = raw_data(@size).shuffle
       method_params, expected_value = yield(pairs)

@@ -36,6 +36,9 @@ class MaxPrioritySearchTree
     verify_properties
   end
 
+  ########################################
+  # Highest NE
+
   # A small scope in which to put helper code for the highest_ne algorithm. EXPERIMENTAL.
   #
   # This idea, if it is feasible, may help break up long methods like highest_3_sided that have more complicated helper functions.
@@ -127,6 +130,9 @@ class MaxPrioritySearchTree
     helper.update_highest(helper.p) # try the leaf
     helper.best
   end
+
+  ########################################
+  # Leftmost NE
 
   # Let Q = [x0, infty) X [y0, infty) be the northeast "quadrant" defined by the point (x0, y0) and let P be the points in this data
   # structure. Define p* as
@@ -242,6 +248,9 @@ class MaxPrioritySearchTree
     best
   end
 
+  ########################################
+  # Highest 3 Sided
+
   # From the paper:
   #
   #    The three real numbers x0, x1, and y0 define the three-sided range Q = [x0,x1] X [y0,∞). If Q \intersect P̸ is not \empty,
@@ -254,9 +263,14 @@ class MaxPrioritySearchTree
   #
   # Although there are a lot of lines and cases the overall idea is simple. We maintain in p the rightmost node at its level that is
   # to the left of the area Q. Likewise, q is the leftmost node that is the right of Q. The logic just updated this data at each
-  # step. The helper check_left updates p and check_right updates q. We don't need to maintain any state inside the region Q because
-  # the max-heap property means that if we ever find a node r in Q we check it for best and then ignore its subtree (which cannot
-  # beat r on y-value).
+  # step. The helper check_left updates p and check_right updates q.
+  #
+  # A couple of simple observations that show why maintaining just these two points is enough.
+  #
+  # - We know that x(p) < x0. This tells us nothing about the x values in the sutrees of p (which is why we need to check various
+  #   cases), it doess tell us that everything to the left of p has values of x that are too small to bother with.
+  # - We don't need to maintain any state inside the region Q because the max-heap property means that if we ever find a node r in Q
+  #   we check it for best and then ignore its subtree (which cannot beat r on y-value).
   #
   # Sometimes we don't have a relevant node to the left or right of Q. The booleans L and R (which we call left and right) track
   # whether p and q are defined at the moment.
@@ -411,12 +425,11 @@ class MaxPrioritySearchTree
 
     val = ->(sym) { sym == :left ? p : q }
 
-    # byebug if $do_it
     while left || right
-      set_I = []
-      set_I << :left if left
-      set_I << :right if right
-      z = set_I.min_by { |s| level(val.call(s)) }
+      set_i = []
+      set_i << :left if left
+      set_i << :right if right
+      z = set_i.min_by { |s| level(val.call(s)) }
       if z == :left
         check_left.call
       else
@@ -436,7 +449,6 @@ class MaxPrioritySearchTree
     h = Math.log2(@size).floor
     a = @size - (2**h - 1) # the paper calls it A
     sort_subarray(1, @size)
-    # byebug
 
     (0...h).each do |i|
       pow_of_2 = 2**i
@@ -600,7 +612,6 @@ p
     i = j = record = key = nil # scope
     state = :h2
     loop do
-      # byebug
       case state
       when :h2
         # Step H2 - Decrease l or r
