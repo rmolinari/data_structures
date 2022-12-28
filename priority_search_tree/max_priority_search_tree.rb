@@ -843,13 +843,14 @@ class MaxPrioritySearchTree
       elsif left_val.x <= x1
         if right_val.x > x1
           if left_in
+            q = right(q_in)
             q_in = left(q_in)
           else
+            q = right(q_in)
             p_in = left(q_in)
             left_in = true
             right_in = false
           end
-          q = right(q_in)
           right = true
         else
           if left_in
@@ -860,7 +861,6 @@ class MaxPrioritySearchTree
             left_in = true
             q_in = right(q_in)
           end
-          right = false
         end
       else
         q = left(q_in)
@@ -871,7 +871,6 @@ class MaxPrioritySearchTree
 
     val = ->(sym) { { left: p, left_in: p_in, right_in: q_in, right: q }[sym] }
 
-    byebug if $do_it
     root_val = val_at(root)
     if root_val.y < y0
       # no hope, no op
@@ -887,7 +886,6 @@ class MaxPrioritySearchTree
     end
 
     while left || left_in || right_in || right
-      byebug if $do_it
       set_i = []
       set_i << :left if left
       set_i << :left_in if left_in
