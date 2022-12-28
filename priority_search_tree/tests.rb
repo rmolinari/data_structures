@@ -53,6 +53,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
+  def test_pst_enumerate_3_sided
+    100.times do
+      x0 = rand(@size)
+      x1 = x0 + 1 + rand(@size - x0)
+      y0 = rand(@size)
+      check_an_enumerate_3_sided(x0, x1, y0, max_pst)
+    end
+  end
+
   ########################################
   # Tests for the MinmaxPST
   def test_minmax_pst_construction
@@ -284,6 +293,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     calc_highest = pst.highest_3_sided(x0, x1, y0)
 
     assert_equal highest, calc_highest
+  end
+
+  private def check_an_enumerate_3_sided(x0, x1, y0, pst)
+    expected_vals = Set.new(ne_quadrant(x0, y0).reject { |pair| pair.x > x1 } || [])
+    calculated_vals = pst.enumerate_3_sided(x0, x1, y0)
+
+    assert_equal expected_vals, calculated_vals
   end
 
   private def raw_data(size)

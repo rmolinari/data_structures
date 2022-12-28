@@ -891,7 +891,6 @@ class MaxPrioritySearchTree
       set_i << :left_in if left_in
       set_i << :right_in if right_in
       set_i << :right if right
-      byebug if set_i.any? { |s| val.call(s).nil? }
       z = set_i.min_by { |sym| level(val.call(sym)) }
       case z
       when :left
