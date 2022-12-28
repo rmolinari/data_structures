@@ -21,6 +21,8 @@ require 'set'
 
 Pair = Struct.new(:x, :y)
 
+class LogicError < StandardError; end
+
 class MaxPrioritySearchTree
   INFINITY = Float::INFINITY
 
@@ -34,7 +36,6 @@ class MaxPrioritySearchTree
     construct_pst
     return unless verify
 
-    puts "Validating tree structure..."
     verify_properties
   end
 
@@ -300,8 +301,6 @@ class MaxPrioritySearchTree
 
     # "Input: a node p such that x(p) < x0""
     #
-    # TODO: understand what is going on here so I can implement check_right
-    #
     # Step-by-step it is pretty straightforward. As the paper says
     #
     #   [E]ither p moves one level down in the tree T or the bit L is set to 0. In addition, the point q either stays the same or it
@@ -534,7 +533,7 @@ class MaxPrioritySearchTree
           end
           current = parent(current)
         else
-          raise "Explore(t) state is somehow #{state} rather than 0, 1, or 2."
+          raise LogicError, "Explore(t) state is somehow #{state} rather than 0, 1, or 2."
         end
       end
     end
@@ -607,10 +606,6 @@ class MaxPrioritySearchTree
             explore.call(right(p))
             q_in = p_in
             right_in = true
-          elsif right_in
-            # Now q_in squeezes right(p) inside [x0, x1]
-            explore.call(right(p))
-            left_in = true
           else
             q_in = right(p)
             left_in = right_in = true
@@ -625,6 +620,15 @@ class MaxPrioritySearchTree
       end
     end
 
+    # Helper to maintain invariant that right_in is not true if left_in is false. We have just set left_in to false after handling p_in
+    perhaps_move_q_in = lambda do
+      return unless right_in
+
+      p_in = q_in
+      left_in = true
+      right_in = false
+    end
+
     # Given: p' satisfied x0 <= x(p') <= x1. (Our p_in is the paper's p')
     enumerate_left_in = lambda do
       if val_at(p_in).y >= y0
@@ -633,6 +637,7 @@ class MaxPrioritySearchTree
 
       if leaf?(p_in) # nothing more to do
         left_in = false
+        perhaps_move_q_in.call
         return
       end
 
@@ -644,9 +649,12 @@ class MaxPrioritySearchTree
           # We aren't in the [x0, x1] zone any more and have moved out to the left
           p = left(p_in)
           left_in = false
+          perhaps_move_q_in.call
           left = true
         else
           # similar, but we've moved out to the right. Note that left(p_in) is the leftmost node to the right of Q.
+          raise 'q_in should not be active (by the val of left(p_in))' if right_in
+
           q = left(p_in)
           left_in = false
           right = true
@@ -659,21 +667,22 @@ class MaxPrioritySearchTree
             p = right(p_in)
             left = true
             left_in = false
+            perhaps_move_q_in.call
           elsif right_val.x <= x1
             p = left(p_in)
             p_in = right(p_in)
             left = true
           else
+            raise LogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
             p = left(p_in)
             q = right(p_in)
             left = true
             left_in = false
             right = true
-            raise 'q_in cannot be active, by the value in the right child of p_in!' if right_in
           end
         elsif left_val.x <= x1
           if right_val.x > x1
-            raise 'q_in cannot be active, by the value in the right child of p_in!' if right_in
+            raise LogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
 
             q = right(p_in)
             p_in = left(p_in)
@@ -687,6 +696,7 @@ class MaxPrioritySearchTree
             right_in = true
           end
         else
+          raise LogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
           q = left(p_in)
           left_in = false
           right = true
@@ -709,12 +719,15 @@ class MaxPrioritySearchTree
         if x_range.cover? val_at(left(q)).x
           if left_in && right_in
             explore.call(q_in) # squeezed between p_in and left(q)
-          elsif right_in
-            p_in = q_in
+            q_in = left(q)
+          elsif left_in
+            q_in = left(q)
+          else
+            p_in = left(q)
             left_in = true
+            right_in = false
           end
-          q_in = left(q)
-          right_in = true
+
           right = false
         elsif val_at(left(q)).x < x0
           p = left(q)
@@ -728,8 +741,8 @@ class MaxPrioritySearchTree
 
       # q has two children. Cases!
       if val_at(left(q)).x < x0
-        raise 'p_in should not be active, based on the value at left(q)' if left_in
-        raise 'q_in should not be active, based on the value at left(q)' if right_in
+        raise LogicError, 'p_in should not be active, based on the value at left(q)' if left_in
+        raise LogicError, 'q_in should not be active, based on the value at left(q)' if right_in
 
         left = true
         if val_at(right(q)).x < x0
@@ -753,10 +766,6 @@ class MaxPrioritySearchTree
           elsif left_in
             q_in = left(q)
             right_in = true
-          elsif right_in
-            p_in = q_in
-            q_in = left(q)
-            left_in = true
           else
             p_in = left(q)
             left_in = true
@@ -773,11 +782,6 @@ class MaxPrioritySearchTree
             explore.call(left(q))
             q_in = right(q)
             right_in = true
-          elsif right_in
-            p_in = q_in
-            left_in = true
-            explore.call(left(q))
-            q_in = right(q)
           else
             p_in = left(q)
             q_in = right(q)
@@ -793,7 +797,7 @@ class MaxPrioritySearchTree
 
     # Given: q' is active and satisfied x0 <= x(q') <= x1
     enumerate_right_in = lambda do
-      raise 'right_in should be true if we call enumerate_right_in' unless right_in
+      raise LogicError, 'right_in should be true if we call enumerate_right_in' unless right_in
 
       if val_at(q_in).y >= y0
         report.call(q_in)
@@ -825,7 +829,7 @@ class MaxPrioritySearchTree
       # q' has two children
       right_val = val_at(right(q_in))
       if left_val.x < x0
-        raise 'p_in cannot be active, by the value in the left child of q_in' if left_in
+        raise LogicError, 'p_in cannot be active, by the value in the left child of q_in' if left_in
 
         if right_val.x < x0
           p = right(q_in)
@@ -871,6 +875,7 @@ class MaxPrioritySearchTree
 
     val = ->(sym) { { left: p, left_in: p_in, right_in: q_in, right: q }[sym] }
 
+    byebug if $do_it
     root_val = val_at(root)
     if root_val.y < y0
       # no hope, no op
@@ -886,12 +891,16 @@ class MaxPrioritySearchTree
     end
 
     while left || left_in || right_in || right
+      byebug if $do_it
+      raise LogicError, 'It should not be that q_in is active but p_in is not' if right_in && !left_in
+
       set_i = []
       set_i << :left if left
       set_i << :left_in if left_in
       set_i << :right_in if right_in
       set_i << :right if right
       z = set_i.min_by { |sym| level(val.call(sym)) }
+      byebug if $do_it
       case z
       when :left
         enumerate_left.call
@@ -902,7 +911,7 @@ class MaxPrioritySearchTree
       when :right
         enumerate_right.call
       else
-        raise "bad symbol #{z}"
+        raise LogicError, "bad symbol #{z}"
       end
     end
     result
@@ -1037,7 +1046,7 @@ class MaxPrioritySearchTree
   def verify_properties
     # It's a max-heap in y
     (2..@size).each do |node|
-      raise "Heap property violated at child #{node}" unless val_at(node).y < val_at(parent(node)).y
+      raise LogicError, "Heap property violated at child #{node}" unless val_at(node).y < val_at(parent(node)).y
     end
 
     # Left subtree has x values less than all of the right subtree
@@ -1047,7 +1056,7 @@ class MaxPrioritySearchTree
       left_max = max_x_in_subtree(left(node))
       right_min = min_x_in_subtree(right(node))
 
-      raise "Left-right property of x-values violated at #{node}" unless left_max < right_min
+      raise LogicError, "Left-right property of x-values violated at #{node}" unless left_max < right_min
     end
   end
 

@@ -148,6 +148,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       check_one_case(MaxPrioritySearchTree, :enumerate_3_sided, data, *method_params, actual_set)
     end
 
+    # LogicErrors
+    check_one.call([[1,3], [2,1], [3,2]],               2, 3, 0, [[2, 1], [3, 2]])
+    check_one.call([[2,5], [4,3], [5,4], [1,2], [3,1]], 4, 5, 4, [[5, 4]])
+
     # These had timeouts in early code
     check_one.call([[1,1]],                                    0, 1, 0, [[1, 1]])
     check_one.call([[2,2], [1,1]],                             0, 1, 1, [[1, 1]])
@@ -231,6 +235,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       pst = klass.new(pairs)
 
       timeout = false
+      error_message = nil
       begin
         calculated_value = Timeout::timeout(timeout_time_s) {
           pst.send(method, *method_params)
@@ -240,9 +245,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         puts "* >>>>>>>TIMEOUT<<<<<<<<"
         puts "*\n*\n"
         timeout = true
+      rescue LogicError => e
+        puts "*\n*\n"
+        puts "* >>>>>>>ERROR<<<<<<<<"
+        puts e.message
+        puts "*\n*\n"
+        error_message = e.message
       end
 
-      next unless timeout || expected_value != calculated_value
+      next unless error_message || timeout || expected_value != calculated_value
 
       puts "params = [#{method_params.join(', ')}]"
       pair_data = pairs.map { |p| "[#{p.x},#{p.y}]" }.join(', ')
@@ -296,7 +307,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   private def check_an_enumerate_3_sided(x0, x1, y0, pst)
-    expected_vals = Set.new(ne_quadrant(x0, y0).reject { |pair| pair.x > x1 } || [])
+    expected_vals = Set.new(ne_quadrant(x0, y0).reject { |pair| pair.x > x1 })
     calculated_vals = pst.enumerate_3_sided(x0, x1, y0)
 
     assert_equal expected_vals, calculated_vals
