@@ -596,20 +596,20 @@ class MaxPrioritySearchTree
           q = right(p)
           p_in = left(p)
           left = false
-          left_in = right_in = true
+          left_in = right = true
         else
           # p_l lies inside [x0, x1], so if also q_in is active, p_r and p_in and both squeezed in [x0, x1]
           if left_in && right_in
-            explore(p_in)
-            explore(right(p))
+            explore.call(p_in)
+            explore.call(right(p))
           elsif left_in
             # p_in squeezes right(p) inside [x0, x1]
-            explore(right(p))
+            explore.call(right(p))
             q_in = p_in
             right_in = true
           elsif right_in
             # Now q_in squeezes right(p) inside [x0, x1]
-            explore(right(p))
+            explore.call(right(p))
             left_in = true
           else
             q_in = right(p)
@@ -728,27 +728,21 @@ class MaxPrioritySearchTree
 
       # q has two children. Cases!
       if val_at(left(q)).x < x0
+        raise 'p_in should not be active, based on the value at left(q)' if left_in
+        raise 'q_in should not be active, based on the value at left(q)' if right_in
+
+        left = true
         if val_at(right(q)).x < x0
-          p = left(q)
+          p = right(q)
           right = false
-          left = true
         elsif val_at(right(q)).x <= x1
-          if left_in && right_in
-            explore.call(p_in)
-            p_in = q_in
-          elsif right_in
-            p_in = q_in
-            left_in = true
-          end
-          q_in = right(q)
+          p_in = right(q)
           p = left(q)
-          right_in = true
+          left_in = true
           right = false
-          left = true # are these three assignments correct?
         else
           p = left(q)
           q = right(q)
-          left = true
         end
       elsif val_at(left(q)).x <= x1
         if val_at(right(q)).x > x1
@@ -762,6 +756,9 @@ class MaxPrioritySearchTree
           elsif right_in
             p_in = q_in
             q_in = left(q)
+            left_in = true
+          else
+            p_in = left(q)
             left_in = true
           end
           q = right(q)
@@ -779,7 +776,7 @@ class MaxPrioritySearchTree
           elsif right_in
             p_in = q_in
             left_in = true
-            explore_call(left(q))
+            explore.call(left(q))
             q_in = right(q)
           else
             p_in = left(q)
@@ -814,12 +811,12 @@ class MaxPrioritySearchTree
         elsif left_val.x < x0
           # We have moved out to the left
           p = left(q_in)
-          left_in = false
+          right_in = false
           left = true
         else
           # We have moved out to the right
           q = left(q_in)
-          left_in = false
+          right_in = false
           right = true
         end
         return
@@ -896,6 +893,7 @@ class MaxPrioritySearchTree
       set_i << :left_in if left_in
       set_i << :right_in if right_in
       set_i << :right if right
+      byebug if set_i.any? { |s| val.call(s).nil? }
       z = set_i.min_by { |sym| level(val.call(sym)) }
       case z
       when :left

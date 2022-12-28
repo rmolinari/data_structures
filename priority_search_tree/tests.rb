@@ -74,7 +74,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # Some regression tests on inputs found to be bad during testing
 
   private def check_one_case(klass, method, data, *method_params, expected_val)
-    calculated_val = Timeout::timeout(need_debug? ? 1e10 : 1) do
+    calculated_val = Timeout::timeout(timeout_time_s) do
       pst = klass.new(data.map { |x, y| Pair.new(x, y) })
       calculated_val = pst.send(method, *method_params)
     end
@@ -135,13 +135,20 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_bad_inputs_for_max_enumerate_3_sided
-    check_one = lambda do |data, *method_params, actual_val|
-      check_one_case(MaxPrioritySearchTree, :enumerate_3_sided, data, *method_params, actual_val)
+    check_one = lambda do |data, *method_params, actual_vals|
+      actual_set = Set.new(actual_vals.map { |x, y| Pair.new(x, y) })
+      check_one_case(MaxPrioritySearchTree, :enumerate_3_sided, data, *method_params, actual_set)
     end
 
     # These had timeouts in early code
-    check_one.call([[1,1]],        0, 1, 0, Set.new([Pair.new(1, 1)]))
-    check_one.call([[2,2], [1,1]], 0, 1, 1, Set.new([Pair.new(1, 1)]))
+    check_one.call([[1,1]],                                    0, 1, 0, [[1, 1]])
+    check_one.call([[2,2], [1,1]],                             0, 1, 1, [[1, 1]])
+    check_one.call([[2,6], [3,5], [5,3], [1,4], [4,2], [6,1]], 3, 5, 5, [[3, 5]])
+    check_one.call([[5,10], [7,8], [10,9], [2,7], [6,4], [8,6], [9,5], [1,1], [3,2], [4,3]], 5, 6, 0, [[6, 4], [5, 10]])
+
+    # These ones didn't time out, but returned bad values
+    check_one.call([[2,3], [1,1], [3,2]],                             0, 1, 0, [[1, 1]])
+    check_one.call([[7,7], [1,5], [4,6], [2,2], [3,1], [5,4], [6,3]], 5, 6, 3, [[5,4], [6, 3]])
   end
 
   ########################################
@@ -207,7 +214,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
       timeout = false
       begin
-        calculated_value = Timeout::timeout(0.5) {
+        calculated_value = Timeout::timeout(timeout_time_s) {
           pst.send(method, *method_params)
         }
       rescue Timeout::Error
@@ -232,8 +239,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     ENV['find_bad']
   end
 
-  private def need_debug?
-    ENV['debug']
+  private def timeout_time_s
+    ENV['debug'] ? 1e10 : 0.5
   end
 
   ########################################
