@@ -538,6 +538,48 @@ class MaxPrioritySearchTree
       end
     end
 
+    # Helpers for the helpers
+    #
+    # Invariant: if q_in is active then p_in is active. In other words, if only one "inside" node is active then it is p_in.
+
+    # Mark p_in as inactive. Then, if q_in is active, it becomes p_in.
+    deactivate_p_in = lambda do
+      left_in = false
+      return unless right_in
+
+      p_in = q_in
+      left_in = true
+      right_in = false
+    end
+
+    # Add a new leftmost "in" point. This becomes p_in. We handle existing "inside" points appropriately
+    add_leftmost_in_node = lambda do |node|
+      if left_in && right_in
+        # the old p_in is squeezed between node and q_in
+        explore.call(p_in)
+      elsif left_in
+        q_in = p_in
+        right_in = true
+      else
+        left_in = true
+      end
+      p_in = node
+    end
+
+    add_rightmost_in_node = lambda do |node|
+      if left_in && right_in
+        # the old q_in is squeezed between p_in and node
+        explore.call(q_in)
+        q_in = node
+      elsif left_in
+        right_in = true
+        q_in = node
+      else
+        left_in = true
+        p_in = node
+      end
+    end
+
     # Handle the next step of the subtree at p
     #
     # I need to go through this with paper, pencil, and some diagrams.
@@ -549,16 +591,7 @@ class MaxPrioritySearchTree
 
       if one_child?(p)
         if x_range.cover? val_at(left(p)).x
-          if left_in && right_in
-            # Idea: because x(q_in) <= x1, p_in and its subtree are squeezed inside [x0, x1] by p and q_in. Thus we can exhaust p_in
-            # and its subtree merely by looking and the y-values.
-            explore.call(p_in)
-          elsif left_in
-            q_in = p_in
-            right_in = true
-          end
-          p_in = left(p)
-          left_in = true
+          add_leftmost_in_node.call(left(p))
           left = false
         elsif val_at(left(p)).x < x0
           p = left(p)
@@ -575,16 +608,8 @@ class MaxPrioritySearchTree
         if val_at(right(p)).x < x0
           p = right(p)
         elsif val_at(right(p)).x <= x1
-          if left_in && right_in
-            # right(p) is inside [x0, x1] and so it at q_in squeeze all of p_in inside that interval too.
-            explore.call(p_in)
-          elsif left_in
-            q_in = p_in
-            right_in = true
-          end
-          p_in = right(p)
+          add_leftmost_in_node.call(right(p))
           p = left(p)
-          left_in = true
         else
           q = right(p)
           p = left(p)
@@ -597,20 +622,9 @@ class MaxPrioritySearchTree
           left = false
           left_in = right = true
         else
-          # p_l lies inside [x0, x1], so if also q_in is active, p_r and p_in and both squeezed in [x0, x1]
-          if left_in && right_in
-            explore.call(p_in)
-            explore.call(right(p))
-          elsif left_in
-            # p_in squeezes right(p) inside [x0, x1]
-            explore.call(right(p))
-            q_in = p_in
-            right_in = true
-          else
-            q_in = right(p)
-            left_in = right_in = true
-          end
-          p_in = left(p)
+          # p_l and p_r both lie inside [x0, x1]
+          add_leftmost_in_node.call(right(p))
+          add_leftmost_in_node.call(left(p))
           left = false
         end
       else
@@ -620,15 +634,6 @@ class MaxPrioritySearchTree
       end
     end
 
-    # Helper to maintain invariant that right_in is not true if left_in is false. We have just set left_in to false after handling p_in
-    perhaps_move_q_in = lambda do
-      return unless right_in
-
-      p_in = q_in
-      left_in = true
-      right_in = false
-    end
-
     # Given: p' satisfied x0 <= x(p') <= x1. (Our p_in is the paper's p')
     enumerate_left_in = lambda do
       if val_at(p_in).y >= y0
@@ -636,8 +641,7 @@ class MaxPrioritySearchTree
       end
 
       if leaf?(p_in) # nothing more to do
-        left_in = false
-        perhaps_move_q_in.call
+        deactivate_p_in.call
         return
       end
 
@@ -648,15 +652,14 @@ class MaxPrioritySearchTree
         elsif left_val.x < x0
           # We aren't in the [x0, x1] zone any more and have moved out to the left
           p = left(p_in)
-          left_in = false
-          perhaps_move_q_in.call
+          deactivate_p_in.call
           left = true
         else
           # similar, but we've moved out to the right. Note that left(p_in) is the leftmost node to the right of Q.
           raise 'q_in should not be active (by the val of left(p_in))' if right_in
 
           q = left(p_in)
-          left_in = false
+          deactivate_p_in.call
           right = true
         end
       else
@@ -666,8 +669,7 @@ class MaxPrioritySearchTree
           if right_val.x < x0
             p = right(p_in)
             left = true
-            left_in = false
-            perhaps_move_q_in.call
+            deactivate_p_in.call
           elsif right_val.x <= x1
             p = left(p_in)
             p_in = right(p_in)
@@ -676,8 +678,8 @@ class MaxPrioritySearchTree
             raise LogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
             p = left(p_in)
             q = right(p_in)
+            deactivate_p_in.call
             left = true
-            left_in = false
             right = true
           end
         elsif left_val.x <= x1
@@ -698,7 +700,7 @@ class MaxPrioritySearchTree
         else
           raise LogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
           q = left(p_in)
-          left_in = false
+          deactivate_p_in.call
           right = true
         end
       end
