@@ -89,6 +89,9 @@ class MaxPrioritySearchTree
   # quadrant.
   #
   # Algorithm is from De et al. section 3.1
+  #
+  # Note that highest_ne(x0, y0) = highest_3_sided(x0, infinty, y0) so we don't really need this. But it's a bit faster than the
+  # general case and is a simple algorithm that shows the idea of how to interact with the PST
   def highest_ne(x0, y0)
     helper = HighestNEHelper.new(root, x0, y0, self)
 
@@ -265,7 +268,7 @@ class MaxPrioritySearchTree
   #    bit R indicates whether or not p∗ may be in the subtree of q; if R=1, then q is to the right of Q.
   #
   # Although there are a lot of lines and cases the overall idea is simple. We maintain in p the rightmost node at its level that is
-  # to the left of the area Q. Likewise, q is the leftmost node that is the right of Q. The logic just updated this data at each
+  # to the left of the area Q. Likewise, q is the leftmost node that is the right of Q. The logic just updates this data at each
   # step. The helper check_left updates p and check_right updates q.
   #
   # A couple of simple observations that show why maintaining just these two points is enough.
@@ -482,7 +485,6 @@ class MaxPrioritySearchTree
   #
   # So the algorithm is actually quite simple. There is a large amount of code here because of the many cases that need to be
   # handled at each update.
-
   def enumerate_3_sided(x0, x1, y0)
     x_range = x0..x1
     # Instead of using primes we use "_in"
@@ -846,7 +848,6 @@ class MaxPrioritySearchTree
 
     val = ->(sym) { { left: p, left_in: p_in, right_in: q_in, right: q }[sym] }
 
-    byebug if $do_it
     root_val = val_at(root)
     if root_val.y < y0
       # no hope, no op
@@ -862,7 +863,7 @@ class MaxPrioritySearchTree
     end
 
     while left || left_in || right_in || right
-      byebug if $do_it
+      # byebug if $do_it
       raise LogicError, 'It should not be that q_in is active but p_in is not' if right_in && !left_in
 
       set_i = []
@@ -871,7 +872,6 @@ class MaxPrioritySearchTree
       set_i << :right_in if right_in
       set_i << :right if right
       z = set_i.min_by { |sym| level(val.call(sym)) }
-      byebug if $do_it
       case z
       when :left
         enumerate_left.call
