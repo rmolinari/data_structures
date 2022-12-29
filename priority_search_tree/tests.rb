@@ -308,7 +308,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   private def check_an_enumerate_3_sided(x0, x1, y0, pst)
     expected_vals = Set.new(ne_quadrant(x0, y0).reject { |pair| pair.x > x1 })
-    calculated_vals = pst.enumerate_3_sided(x0, x1, y0)
+    calculated_vals = Set.new
+    pst.enumerate_3_sided(x0, x1, y0) { |pt| calculated_vals << pt }
 
     assert_equal expected_vals, calculated_vals
   end

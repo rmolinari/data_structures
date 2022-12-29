@@ -155,6 +155,12 @@ class MaxPrioritySearchTree
   #     - if Q \intersect P is empty then p* = best
   #     - if Q \intersect P is nonempty then  p* \in {best} \union T(p) \union T(q)
   #     - p and q are at the same level of T and x(p) <= x(q)
+  #
+  # TODO: generalize this so leftmost_ne and rightmost_nw are variants of the same underlying code:
+  #     - update_leftmost becomes update_best and comparisons are :< or :> via a parameter
+  #     - comparisons in the algorithm against x0 are :< or :> via the same parameter
+  #  Doing it this way - generically - makes things slightly slower, but maintaining two separate versions of the code, almost
+  #  identical, would be tedious.
   def leftmost_ne(x0, y0)
     best = Pair.new(INFINITY, INFINITY)
     p = q = root
@@ -485,7 +491,10 @@ class MaxPrioritySearchTree
   #
   # So the algorithm is actually quite simple. There is a large amount of code here because of the many cases that need to be
   # handled at each update.
-  def enumerate_3_sided(x0, x1, y0)
+  #
+  #
+  # If a block is given, yield each found point to it. Otherwise return all the found points in an enumerable (currently Set).
+  def enumerate_3_sided(x0, x1, y0, &block)
     x_range = x0..x1
     # Instead of using primes we use "_in"
     left = left_in = right_in = right = false
@@ -496,7 +505,13 @@ class MaxPrioritySearchTree
     # NOTE: for now just accumulate the values in an array and return it.
     #
     # TODO: provide for a block to yield to and return a Set when there isn't a block.
-    report = ->(node) { result << val_at(node) }
+    report = lambda do |node|
+      if block_given?
+        yield val_at(node)
+      else
+        result << val_at(node)
+      end
+    end
 
     # "reports all points in T_t whose y-coordinates are at least y0"
     #
@@ -885,7 +900,7 @@ class MaxPrioritySearchTree
         raise LogicError, "bad symbol #{z}"
       end
     end
-    result
+    return result unless block_given?
   end
 
   ########################################
