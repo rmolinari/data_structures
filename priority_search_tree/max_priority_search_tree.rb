@@ -204,19 +204,26 @@ class MaxPrioritySearchTree
         if leaf?(q)
           q = p # p itself is just one layer above the leaves, or is itself a leaf
         elsif one_child?(q)
+          # q is just above the leaves, which means the same is true of p (though it has two children)
           q_left_val = val_at(left(q))
           if q_left_val.y < y0
+            # q_l is no good: ignore it
             q = right(p)
             p = left(p)
           elsif (p_right_val = val_at(right(p))).y < y0
+            # p_r is no good: ignore it
             p = left(p)
             q = left(q)
           elsif q_left_val.x < x0
+            # Although q_l is no good, neither are p's children, by the x-property of the PST
             p = q = left(q)
           elsif p_right_val.x < x0
+            # p_r is no good, which means p_l is also no good. I think we could set them both the left(q) again.
             p = right(p)
             q = left(q)
           else
+            # q_l and p_r are both in Q. By the x-property of the PST p_r is to the left of q_l, so we can ignore q_l. p_l might be
+            # even better.
             q = right(p)
             p = left(p)
           end
@@ -224,28 +231,37 @@ class MaxPrioritySearchTree
           # q has two children
           p_right_val = val_at(right(p))
           if in_q.call(p_right_val)
+            # p_r is in Q and beats anything in T_q for leftmost-ness. Abandon q.
             q = right(p)
             p = left(p)
           elsif p_right_val.x < x0
+            # By the x-property of the PST, nothing in T_(p_l) can lie in Q so we can ignore it.
             q_left_val = val_at(left(q))
             if q_left_val.x < x0
+              # We just learned that nothing in T_(p_r) interests us
               p = left(q)
               q = right(q)
             elsif q_left_val.y < y0
+              # q_l and below is ruled out by the y-property of the PST.
               p = right(p)
               q = right(q)
             else
+              # q_l \in Q and beats anything in T_(q_r) for leftmost-ness
               p = right(p)
               q = left(q)
             end
           else
-            # x(p_r) >= x0 and y(p_r) < y0
+            # x(p_r) >= x0 and y(p_r) < y0.
+            # This means that nodes in T_(p_l) are in play and nodes in T_(p_r) are not (because of the y-property)
             if val_at(left(p)).y < y0
+              # ...but p_l and descendants are too y-low.
               p = left(q)
               q = right(q)
             else
               p = left(p)
               if val_at(left(q)).y >= y0
+                # TODO: understand why q_r isn't still in play. Why can we ignore it here? We haven't looked at x(q_l), so maybe
+                # it's a bust.
                 q = left(q)
               else
                 q = right(q)
