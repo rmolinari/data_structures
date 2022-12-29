@@ -228,7 +228,10 @@ class MaxPrioritySearchTree
             p = left(p)
           end
         else
-          # q has two children
+          # p and q both have two children
+          #
+          # TODO: use the "interval" approach of the Min-Max paper, p. 316. This is simpler to follow and may help uncover the
+          # genericization we need to get an easy implementation of rightmost_nw
           p_right_val = val_at(right(p))
           if in_q.call(p_right_val)
             # p_r is in Q and beats anything in T_q for leftmost-ness. Abandon q.
@@ -295,8 +298,8 @@ class MaxPrioritySearchTree
   #
   # A couple of simple observations that show why maintaining just these two points is enough.
   #
-  # - We know that x(p) < x0. This tells us nothing about the x values in the sutrees of p (which is why we need to check various
-  #   cases), it doess tell us that everything to the left of p has values of x that are too small to bother with.
+  # - We know that x(p) < x0. This tells us nothing about the x values in the subtrees of p (which is why we need to check various
+  #   cases), but it does tell us that everything to the left of p has values of x that are too small to bother with.
   # - We don't need to maintain any state inside the region Q because the max-heap property means that if we ever find a node r in Q
   #   we check it for best and then ignore its subtree (which cannot beat r on y-value).
   #

@@ -120,7 +120,7 @@ class MinmaxPrioritySearchTree
       return nil if node_count.zero?
 
       if val_at(nodes.last).x <= x0
-        # Only the rightmost subtree can possibly have anything Q,. assuming hat all the x-values are distinct.
+        # Only the rightmost subtree can possibly have anything Q, assuming that all the x-values are distinct.
         return [nodes.last, nodes.last]
       end
 
@@ -131,7 +131,7 @@ class MinmaxPrioritySearchTree
 
         return nil unless leftmost # nothing left to find
 
-        # Otherwise we explore the leftmost subtree. Its root is in Q and can't be beated by anything to its right.
+        # Otherwise we explore the leftmost subtree. Its root is in Q and can't be beaten by anything to its right.
         return [leftmost, leftmost]
       end
 
