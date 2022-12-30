@@ -90,6 +90,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     assert_equal expected_val, calculated_val
   end
 
+  def test_bad_inputs_for_max_leftmost_ne
+    check_one = lambda do |data, *method_params, actual_highest|
+      check_one_case(MaxPrioritySearchTree, :leftmost_ne, data, *method_params, actual_highest)
+    end
+
+    check_one.call(
+      [[6,19], [9,18], [15,17], [2,16], [11,13], [16,12], [19,10], [4,6], [8,15], [10,7], [12,11], [13,9], [14,4], [17,2], [18,3], [1,5], [3,1], [5,8], [7,14]],
+      4, 15,
+      Pair.new(6, 19)
+    )
+  end
+
   def test_bad_inputs_for_max_highest_3_sided
     check_one = lambda do |data, *method_params, actual_highest|
       check_one_case(MaxPrioritySearchTree, :highest_3_sided, data, *method_params, actual_highest)
@@ -190,6 +202,17 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
+  def test_max_find_bad_input_for_leftmost_ne
+    search_for_bad_inputs(MaxPrioritySearchTree, :leftmost_ne) do |pairs|
+      x0 = rand(@size)
+      y0 = rand(@size)
+      actual_leftmost = pairs.select { |p| p.x >= x0 && p.y >= y0 }.min_by(&:x) || Pair.new(INFINITY, INFINITY)
+
+      [[x0, y0], actual_leftmost]
+    end
+  end
+
+
   def test_max_find_bad_input_for_highest_3_sided
     search_for_bad_inputs(MaxPrioritySearchTree, :highest_3_sided) do |pairs|
       x0 = rand(@size)
@@ -269,7 +292,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   private def timeout_time_s
-    ENV['debug'] ? 1e10 : 0.5
+    ENV['debug'] ? 1e10 : 0.5 # Timeout doesn't allow Infinity
   end
 
   ########################################

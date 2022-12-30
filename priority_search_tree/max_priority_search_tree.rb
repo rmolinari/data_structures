@@ -181,17 +181,43 @@ class MaxPrioritySearchTree
       end
     end
 
+    # Use the approach described in the Min-Max paper, p 316
+    #
+    # In the paper c is an array of four nodes, [left(p), right(p), left(q), right(q)]
+    determine_next_nodes = lambda do |*c|
+      if val_at(c.last).x <= x0
+        # only the rightmost subtree can possibly have anything in Q, assuming distinct x-values
+        return [c.last, c.last]
+      end
+
+      if val_at(c.first).x >= x0
+        # All subtrees have x-values large enough for Q. We look at y-values to work out which subtree to focus on
+        leftmost = c.find { |node| val_at(node).y >= y0 } # might be nil
+
+        # Otherwise, explore the leftmost subtree with large enough y values. Its root is in Q and can't be beaten as leftmost by
+        # anything to its right. If it's nill the calling code can bail
+        return [leftmost, leftmost]
+      end
+
+      values = c.map { |node| val_at(node) }
+
+      # Note that x(c1) < x0 < x(c4 so i is well-defined
+      i = (0...4).find { |j| values[j].x <= x0 && x0 < values[j + 1].x }
+
+      # These nodes all have large-enough x values so looking at y finds the ones in Q
+      new_q = c[(i + 1)..].find { |node| val_at(node).y >= y0 } # could be nil
+      new_p = c[i] if values[i].y >= y0 # The leftmost subtree is worth exploring if the y-value is big enough but not otherwise
+      new_p ||= new_q # if nodes[i] is no good, send p along with q
+      new_q ||= new_p # but if there is no worthwhile value for q we should send it along with p
+
+      [new_p, new_q]
+    end
+
     until leaf?(p)
       update_leftmost.call(p)
       update_leftmost.call(q)
 
       # SO many cases!
-      #
-      # We can make this more efficient by storing values accessed more than once. But we only run the loop lg(N) times so gains
-      # would be limited. Leave the code easier to read and close to the paper's pseudocode unless we have reason to change it.
-      #
-      # ...actually, the code asthetics bothered me, so I have included a little bit of value caching. But I've left the nesting of
-      # the logic to match the paper's code.
       if p == q
         if one_child?(p)
           p = q = left(p)
@@ -204,74 +230,15 @@ class MaxPrioritySearchTree
         if leaf?(q)
           q = p # p itself is just one layer above the leaves, or is itself a leaf
         elsif one_child?(q)
-          # q is just above the leaves, which means the same is true of p (though it has two children)
-          q_left_val = val_at(left(q))
-          if q_left_val.y < y0
-            # q_l is no good: ignore it
-            q = right(p)
-            p = left(p)
-          elsif (p_right_val = val_at(right(p))).y < y0
-            # p_r is no good: ignore it
-            p = left(p)
-            q = left(q)
-          elsif q_left_val.x < x0
-            # Although q_l is no good, neither are p's children, by the x-property of the PST
-            p = q = left(q)
-          elsif p_right_val.x < x0
-            # p_r is no good, which means p_l is also no good. I think we could set them both the left(q) again.
-            p = right(p)
-            q = left(q)
-          else
-            # q_l and p_r are both in Q. By the x-property of the PST p_r is to the left of q_l, so we can ignore q_l. p_l might be
-            # even better.
-            q = right(p)
-            p = left(p)
-          end
+          # This generic approach is not as fast as the bespoke checks described in the paper. But it is easier to maintain the code
+          # this way and convert it to a generic approach that may let us get code that can be shared between leftmost_ne and
+          # rightmost_nw.
+          p, q = determine_next_nodes.call(left(p), right(p), left(q))
+          return best unless p
         else
-          # p and q both have two children
-          #
-          # TODO: use the "interval" approach of the Min-Max paper, p. 316. This is simpler to follow and may help uncover the
-          # genericization we need to get an easy implementation of rightmost_nw
-          p_right_val = val_at(right(p))
-          if in_q.call(p_right_val)
-            # p_r is in Q and beats anything in T_q for leftmost-ness. Abandon q.
-            q = right(p)
-            p = left(p)
-          elsif p_right_val.x < x0
-            # By the x-property of the PST, nothing in T_(p_l) can lie in Q so we can ignore it.
-            q_left_val = val_at(left(q))
-            if q_left_val.x < x0
-              # We just learned that nothing in T_(p_r) interests us
-              p = left(q)
-              q = right(q)
-            elsif q_left_val.y < y0
-              # q_l and below is ruled out by the y-property of the PST.
-              p = right(p)
-              q = right(q)
-            else
-              # q_l \in Q and beats anything in T_(q_r) for leftmost-ness
-              p = right(p)
-              q = left(q)
-            end
-          else
-            # x(p_r) >= x0 and y(p_r) < y0.
-            # This means that nodes in T_(p_l) are in play and nodes in T_(p_r) are not (because of the y-property)
-            if val_at(left(p)).y < y0
-              # ...but p_l and descendants are too y-low.
-              p = left(q)
-              q = right(q)
-            else
-              p = left(p)
-              if val_at(left(q)).y >= y0
-                # TODO: understand why q_r isn't still in play. Why can we ignore it here? We haven't looked at x(q_l), so maybe
-                # it's a bust.
-                q = left(q)
-              else
-                q = right(q)
-              end
-            end
-          end
+          p, q = determine_next_nodes.call(left(p), right(p), left(q), right(q))
         end
+        return best unless p # we've run out of useful nodes
       end
     end
     update_leftmost.call(p)
