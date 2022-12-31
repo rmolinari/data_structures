@@ -527,9 +527,8 @@ class MaxPrioritySearchTree
   # So the algorithm is actually quite simple. There is a large amount of code here because of the many cases that need to be
   # handled at each update.
   #
-  #
   # If a block is given, yield each found point to it. Otherwise return all the found points in an enumerable (currently Set).
-  def enumerate_3_sided(x0, x1, y0, &block)
+  def enumerate_3_sided(x0, x1, y0)
     x_range = x0..x1
     # Instead of using primes we use "_in"
     left = left_in = right_in = right = false
@@ -537,9 +536,6 @@ class MaxPrioritySearchTree
 
     result = Set.new
 
-    # NOTE: for now just accumulate the values in an array and return it.
-    #
-    # TODO: provide for a block to yield to and return a Set when there isn't a block.
     report = lambda do |node|
       if block_given?
         yield val_at(node)
