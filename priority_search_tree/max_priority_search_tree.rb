@@ -13,7 +13,14 @@
 #
 # - leftmost_ne: for x0 and y0, what is the leftmost (min x) point (x, y) in P satisfying x >= x0 and y >= y0?
 # - rightmost_nw: for x0 and y0, what is the rightmost (max x) point (x, y) in P satisfying x <= x0 and y >= y0?
+# - highest_ne: for x0 and y0, what is the highest (max y) point (x, y) in P satisfying x >= x0 and y >= y0?
+# - highest_nw: for x0 and y0, what is the highest (max y) point (x, y) in P satisfying x <= x0 and y >= y0?
 # - highest_3_sided: for x0, x1, and y0, what is the highest (max y) point (x, y) in P satisfying x >= x0, x <= x1 and y >= y0?
+# - enumerate_3_sided: for x0, x1, and y0, enumerate all points in P satisfying x >= x0, x <= x1 and y >= y0.
+#
+# The first 5 operations take O(log n) time.
+#
+# The final operation (enumerate) take O(m + log n) time, where m is the number of points that are enumerated.
 #
 # Notes:
 #
