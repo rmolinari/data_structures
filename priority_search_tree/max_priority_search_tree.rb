@@ -162,11 +162,14 @@ class MaxPrioritySearchTree
   #  Doing it this way - generically - makes things slightly slower, but maintaining two separate versions of the code, almost
   #  identical, would be tedious.
   def leftmost_ne(x0, y0)
+    style = :ne
+    sign = style == :ne ? 1 : -1 # +/- 1 to handle desired direction of comparisons
+
     best = Pair.new(INFINITY, INFINITY)
     p = q = root
 
     in_q = lambda do |pair|
-      pair.x >= x0 && pair.y >= y0
+      sign * pair.x >= sign * x0 && pair.y >= y0
     end
 
     # From the paper:
@@ -176,33 +179,47 @@ class MaxPrioritySearchTree
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
     update_leftmost = lambda do |node|
       t = val_at(node)
-      if in_q.call(t) && t.x < best.x
+      if in_q.call(t) && sign * t.x < sign * best.x
         best = t
       end
     end
 
     # Use the approach described in the Min-Max paper, p 316
     #
-    # In the paper c is an array of four nodes, [left(p), right(p), left(q), right(q)]
+    # In the paper c = [c1, c2, ..., ck] is an array of four nodes, [left(p), right(p), left(q), right(q)], but we also use this
+    # logic when q has only a left child.
+    #
+    # Idea: x(c1) < x(c2) < ..., so the key thing to know for the next step is where x0 fits in.
+    #
+    # - If x0 <= x(c1) then all subtrees have large enough x values and we look for the leftmost node in c with a large enough y
+    #   value. Both p and q are sent into that subtree.
+    # - If x0 >= x(ck) the the rightmost subtree is our only hope the rightmost subtree.
+    # - Otherwise, x(c1) < x0 < x(ck) and we let i be least so that x(ci) <= x0 < x(c(i+1)). Then q becomes the lefmost cj in c not
+    #   to the left of ci such that y(cj) >= y0, if any. p becomes ci if y(ci) >= y0 and q otherwise. If there is no such j, we put
+    #   q = p. This may leave both of p, q undefined which means there is no useful way forward and we return nils to signal this to
+    #   calling code.
+    #
+    # If we can adapt this to rightmost_ne, presumably we reverse the order of the array c to get x(c1) > x(c2) > ... and use the
+    # analagous logic.
     determine_next_nodes = lambda do |*c|
-      if val_at(c.last).x <= x0
-        # only the rightmost subtree can possibly have anything in Q, assuming distinct x-values
-        return [c.last, c.last]
-      end
-
-      if val_at(c.first).x >= x0
+      if sign * val_at(c.first).x > sign * x0 #big_enough.call(val_at(c.first).x)
         # All subtrees have x-values large enough for Q. We look at y-values to work out which subtree to focus on
         leftmost = c.find { |node| val_at(node).y >= y0 } # might be nil
 
         # Otherwise, explore the leftmost subtree with large enough y values. Its root is in Q and can't be beaten as leftmost by
-        # anything to its right. If it's nill the calling code can bail
+        # anything to its right. If it's nil the calling code can bail
         return [leftmost, leftmost]
+      end
+
+      if sign * val_at(c.last).x <= sign * x0
+        # only the rightmost subtree can possibly have anything in Q, assuming distinct x-values
+        return [c.last, c.last]
       end
 
       values = c.map { |node| val_at(node) }
 
-      # Note that x(c1) < x0 < x(c4 so i is well-defined
-      i = (0...4).find { |j| values[j].x <= x0 && x0 < values[j + 1].x }
+      # Note that x(c1) <= x0 < x(c4) so i is well-defined
+      i = (0...4).find { |j| sign * values[j].x <= sign * x0 && sign * x0 < sign *values[j + 1].x }
 
       # These nodes all have large-enough x values so looking at y finds the ones in Q
       new_q = c[(i + 1)..].find { |node| val_at(node).y >= y0 } # could be nil
@@ -217,7 +234,6 @@ class MaxPrioritySearchTree
       update_leftmost.call(p)
       update_leftmost.call(q)
 
-      # SO many cases!
       if p == q
         if one_child?(p)
           p = q = left(p)
@@ -234,15 +250,14 @@ class MaxPrioritySearchTree
           # this way and convert it to a generic approach that may let us get code that can be shared between leftmost_ne and
           # rightmost_nw.
           p, q = determine_next_nodes.call(left(p), right(p), left(q))
-          return best unless p
         else
           p, q = determine_next_nodes.call(left(p), right(p), left(q), right(q))
         end
-        return best unless p # we've run out of useful nodes
+        break unless p # we've run out of useful nodes
       end
     end
-    update_leftmost.call(p)
-    update_leftmost.call(q)
+    update_leftmost.call(p) if p
+    update_leftmost.call(q) if q
     best
   end
 
