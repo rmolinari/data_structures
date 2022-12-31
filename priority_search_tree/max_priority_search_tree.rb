@@ -138,7 +138,7 @@ class MaxPrioritySearchTree
   end
 
   ########################################
-  # Leftmost NE
+  # Leftmost NE and Rightmost NW
 
   # Let Q = [x0, infty) X [y0, infty) be the northeast "quadrant" defined by the point (x0, y0) and let P be the points in this data
   # structure. Define p* as
@@ -155,12 +155,6 @@ class MaxPrioritySearchTree
   #     - if Q \intersect P is empty then p* = best
   #     - if Q \intersect P is nonempty then  p* \in {best} \union T(p) \union T(q)
   #     - p and q are at the same level of T and x(p) <= x(q)
-  #
-  # TODO: generalize this so leftmost_ne and rightmost_nw are variants of the same underlying code:
-  #     - update_leftmost becomes update_best and comparisons are :< or :> via a parameter
-  #     - comparisons in the algorithm against x0 are :< or :> via the same parameter
-  #  Doing it this way - generically - makes things slightly slower, but maintaining two separate versions of the code, almost
-  #  identical, would be tedious.
   def leftmost_ne(x0, y0)
     extremal_in_x_dimension(x0, y0, :ne)
   end
@@ -169,12 +163,20 @@ class MaxPrioritySearchTree
     extremal_in_x_dimension(x0, y0, :nw)
   end
 
+  # A genericized version of leftmost_ne that can calculate either leftmost_ne or rightmost_nw as specifies via a parameter.
+  #
   # Style is either :ne (which gives leftmost_ne) or :nw (which gives rightmost_nw)
-  def extremal_in_x_dimension(x0, y0, style)
+  private def extremal_in_x_dimension(x0, y0, style)
     style.must_be_in [:ne, :nw]
-    sign = style == :ne ? 1 : -1 # +/- 1 to handle desired direction of comparisons
 
-    best = Pair.new(INFINITY, INFINITY)
+    if style == :ne
+      sign = 1
+      best = Pair.new(INFINITY, INFINITY)
+    else
+      sign = -1
+      best = Pair.new(-INFINITY, INFINITY)
+    end
+
     p = q = root
 
     in_q = lambda do |pair|
@@ -208,7 +210,7 @@ class MaxPrioritySearchTree
     #   q = p. This may leave both of p, q undefined which means there is no useful way forward and we return nils to signal this to
     #   calling code.
     #
-    # The same logic should apply to rightmost_nw, though everything is "backwards"
+    # The same logic applies to rightmost_nw, though everything is "backwards"
     # - membership of Q depends on having a small-enough value of x, rather than a large-enough one
     # - among the ci, values towards the end of the array tend not to be in Q while values towards the start of the array tend to be
     #  in Q
@@ -218,17 +220,17 @@ class MaxPrioritySearchTree
     determine_next_nodes = lambda do |*c|
       c.reverse! if style == :nw
 
-      if sign * val_at(c.first).x > sign * x0 #big_enough.call(val_at(c.first).x)
-        # All subtrees have x-values large enough for Q. We look at y-values to work out which subtree to focus on
+      if sign * val_at(c.first).x > sign * x0
+        # All subtrees have x-values good enough for Q. We look at y-values to work out which subtree to focus on
         leftmost = c.find { |node| val_at(node).y >= y0 } # might be nil
 
-        # Otherwise, explore the leftmost subtree with large enough y values. Its root is in Q and can't be beaten as leftmost by
-        # anything to its right. If it's nil the calling code can bail
+        # Otherwise, explore the "leftmost" subtree with large enough y values. Its root is in Q and can't be beaten as "leftmost"
+        # by anything to its "right". If it's nil the calling code can bail
         return [leftmost, leftmost]
       end
 
       if sign * val_at(c.last).x <= sign * x0
-        # only the rightmost subtree can possibly have anything in Q, assuming distinct x-values
+        # only the "rightmost" subtree can possibly have anything in Q, assuming distinct x-values
         return [c.last, c.last]
       end
 
@@ -265,8 +267,7 @@ class MaxPrioritySearchTree
           q = p # p itself is just one layer above the leaves, or is itself a leaf
         elsif one_child?(q)
           # This generic approach is not as fast as the bespoke checks described in the paper. But it is easier to maintain the code
-          # this way and convert it to a generic approach that may let us get code that can be shared between leftmost_ne and
-          # rightmost_nw.
+          # this way and allows easy implementation of rightmost_nw
           p, q = determine_next_nodes.call(left(p), right(p), left(q))
         else
           p, q = determine_next_nodes.call(left(p), right(p), left(q), right(q))

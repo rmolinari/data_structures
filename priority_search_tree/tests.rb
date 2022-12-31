@@ -44,6 +44,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
+  def test_pst_rightmost_nw
+    100.times do
+      x0 = rand(@size)
+      y0 = rand(@size)
+      check_a_rightmost_nw(x0, y0, max_pst)
+    end
+  end
+
   def test_pst_highest_3_sided
     100.times do
       x0 = rand(@size)
@@ -185,6 +193,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     )
   end
 
+  def test_bad_inputs_for_rightmost_nw
+    check_one = lambda do |data, *method_params, actual_leftmost|
+      check_one_case(MaxPrioritySearchTree, :rightmost_nw, data, *method_params, actual_leftmost)
+    end
+
+    $do_it = true
+    check_one.call([[3,6], [2,5], [6,3], [1,1], [4,4], [5,2]], 5, 2, Pair.new(5, 2))
+  end
+
   ########################################
   # Some quasi-tests that search for inputs that lead to assertion failures.
   #
@@ -232,6 +249,16 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       actual_set = Set.new(pairs.select { |p| x0 <= p.x && p.x <= x1 && p.y >= y0 } || [])
 
       [[x0, x1, y0], actual_set]
+    end
+  end
+
+  def test_max_find_bad_input_for_rightmost_nw
+    search_for_bad_inputs(MaxPrioritySearchTree, :rightmost_nw) do |pairs|
+      x0 = rand(@size)
+      y0 = rand(@size)
+      actual_rightmost = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:x) || Pair.new(-INFINITY, INFINITY)
+
+      [[x0, y0], actual_rightmost]
     end
   end
 
@@ -322,6 +349,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     assert_equal leftmost, calc_leftmost
   end
 
+  private def check_a_rightmost_nw(x0, y0, pst)
+    # puts "Calculating leftmost_ne(#{x0}, #{y0})"
+    rightmost = nw_quadrant(x0, y0).max_by(&:x) || Pair.new(-INFINITY, INFINITY)
+    calc_rightmost = pst.rightmost_nw(x0, y0)
+
+    assert_equal rightmost, calc_rightmost
+  end
+
   private def check_a_highest_3_sided(x0, x1, y0, pst)
     highest = ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }.max_by(&:y) || Pair.new(INFINITY, -INFINITY)
     calc_highest = pst.highest_3_sided(x0, x1, y0)
@@ -348,6 +383,12 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @pairs_by_x[first_idx..]
   end
 
+  # Points (x,y) in @data with x <= x0
+  private def leftward_points(x0)
+    first_idx = @pairs_by_x.bsearch_index { |v| v.x >= x0 }
+    @pairs_by_x[..first_idx]
+  end
+
   private def upward_points(y0)
     first_idx = @pairs_by_y.bsearch_index { |v| v.y >= y0 }
     @pairs_by_y[first_idx..]
@@ -359,5 +400,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     else
       upward_points(y0).select { |pair| pair.x >= x0 }
     end
+  end
+
+  private def nw_quadrant(x0, y0)
+    leftward_points(x0).select { |pair| pair.y >= y0 }
   end
 end
