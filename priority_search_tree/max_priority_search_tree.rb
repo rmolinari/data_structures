@@ -9,13 +9,19 @@
 # It is possible to build such a tree in place, given an array of pairs. See De, Maheshwari, Nandy, Smid, _An in-place priority
 # search tree_, 23rd Annual Canadian Conference on Computational Geometry.
 #
-# But I don't really understand the algorithm from the description. So I'm coding it up so I can see what is going on.
+# Given a set of n points, we can answer the following questions quickly:
 #
-# For a while I started implementing the Min-max Priority Search Tree (see that file) but got very confused by the Highest3Sided
-# algorithm. So for now I'm coming back here to see if I can work out the version for this (simpler) data structure.
+# - leftmost_ne: for x0 and y0, what is the leftmost (min x) point (x, y) in P satisfying x >= x0 and y >= y0?
+# - rightmost_nw: for x0 and y0, what is the rightmost (max x) point (x, y) in P satisfying x <= x0 and y >= y0?
+# - highest_3_sided: for x0, x1, and y0, what is the highest (max y) point (x, y) in P satisfying x >= x0, x <= x1 and y >= y0?
 #
-# Since there is an alternate data structure that is a "min-max priority search tree" we call this one a "max priority search tree"
-# or MaxPST.
+# Notes:
+#
+# - For a while I started implementing the Min-max Priority Search Tree (see that file) but got very confused by the Highest3Sided
+#   algorithm. So for now I'm coming back here to see if I can work out the version for this (simpler) data structure.
+#
+# - Since there is an alternate data structure that is a "min-max priority search tree" we call this one a "max priority search
+#   tree" or MaxPST.
 
 require 'set'
 
@@ -42,9 +48,15 @@ class MaxPrioritySearchTree
   ########################################
   # Highest NE
 
-  # A small scope in which to put helper code for the highest_ne algorithm. EXPERIMENTAL.
+  # Find the "highest" (max-y) point that is "northeast" of (x, y).
   #
-  # This idea, if it is feasible, may help break up long methods like highest_3_sided that have more complicated helper functions.
+  # That is, the point p* in Q = [x, infty) X [y, infty) with the largest y value, or (infty, -infty) if there is no point in that
+  # quadrant.
+  #
+  # Algorithm is from De et al. section 3.1
+  #
+  # Note that highest_ne(x0, y0) = highest_3_sided(x0, infinty, y0) so we don't really need this. But it's a bit faster than the
+  # general case and is a simple algorithm that introduces a typical way that an algorithm interacts with the data structure.
   #
   # From the paper:
   #
@@ -54,16 +66,12 @@ class MaxPrioritySearchTree
   #     - If Q intersect P is empty then p* = best
   #
   # Here, P is the set of points in our data structure and T_p is the subtree rooted at p
-  class HighestNEHelper
-    attr_accessor :p
-    attr_reader :best
+  def highest_ne(x0, y0)
+    p = root
+    best = Pair.new(INFINITY, -INFINITY)
 
-    def initialize(initial_p, x0, y0, pst)
-      @p = initial_p
-      @best = Pair.new(INFINITY, -INFINITY)
-      @pst = pst # only for val_at
-      @x0 = x0
-      @y0 = y0
+    in_q = lambda do |pair|
+      pair.x >= x0 && pair.y >= y0
     end
 
     # From the paper:
@@ -71,70 +79,50 @@ class MaxPrioritySearchTree
     #   takes as input a point t and does the following: if t \in Q and y(t) > y(best) then it assignes best = t
     #
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
-    def update_highest(node)
-      t = @pst.send(:val_at, node)
-      if in_q(t) && t.y > @best.y
-        @best = t
+    update_highest = lambda do |node|
+      t = val_at(node)
+      if in_q.call(t) && t.y > best.y
+        best = t
       end
     end
-
-    def in_q(pair)
-      pair.x >= @x0 && pair.y >= @y0
-    end
-  end
-
-  # Find the "highest" (max-y) point that is "northeast" of (x, y).
-  #
-  # That is, the point p* in Q = [x, infty) X [y, infty) with the largest y value, or (infty, -infty) if there is no point in that
-  # quadrant.
-  #
-  # Algorithm is from De et al. section 3.1
-  #
-  # Note that highest_ne(x0, y0) = highest_3_sided(x0, infinty, y0) so we don't really need this. But it's a bit faster than the
-  # general case and is a simple algorithm that shows the idea of how to interact with the PST
-  def highest_ne(x0, y0)
-    helper = HighestNEHelper.new(root, x0, y0, self)
 
     # We could make this code more efficient. But since we only have O(log n) steps we won't actually gain much so let's keep it
     # readable and close to the paper's pseudocode for now.
-    until leaf?(helper.p)
-      p_val = val_at(helper.p)
-      if helper.in_q(p_val)
+    until leaf?(p)
+      p_val = val_at(p)
+      if in_q.call(p_val)
         # p \in Q and nothing in its subtree can beat it because of the max-heap
-        helper.update_highest(helper.p)
-        return helper.best
-
-        # p = left(p) <- from paper
+        update_highest.call(p)
+        return best
       elsif p_val.y < y0
         # p is too low for Q, so the entire subtree is too low as well
-        return helper.best
-
-        # p = left(p)
-      elsif one_child?(helper.p)
+        return best
+      elsif one_child?(p)
         # With just one child we need to check it
-        helper.p = left(helper.p)
-      elsif val_at(right(helper.p)).x <= x0
+        p = left(p)
+      elsif val_at(right(p)).x <= x0
         # right(p) might be in Q, but nothing in the left subtree can be, by the PST property on x.
-        helper.p = right(helper.p)
-      elsif val_at(left(helper.p)).x >= x0
-        # Both children are in Q, so try the higher of them. Note that nothing in either subtree will beat this one.
-        higher = left(helper.p)
-        if val_at(right(helper.p)).y > val_at(left(helper.p)).y
-          higher = right(helper.p)
+        p = right(p)
+      elsif val_at(left(p)).x >= x0
+        # Both children are in Q, so try the higher of them. Note that nothing else in either subtree will beat this one, by the
+        # y-property of the PST
+        higher = left(p)
+        if val_at(right(p)).y > val_at(left(p)).y
+          higher = right(p)
         end
-        helper.p = higher
-      elsif val_at(right(helper.p)).y < y0
+        p = higher
+      elsif val_at(right(p)).y < y0
         # Nothing in the right subtree is in Q, but maybe we'll find something in the left
-        helper.p = left(helper.p)
+        p = left(p)
       else
         # At this point we know that right(p) \in Q so we need to check it. Nothing in its subtree can beat it so we don't need to
         # look there. But there might be something better in the left subtree.
-        helper.update_highest(right(helper.p))
-        helper.p = left(helper.p)
+        update_highest.call(right(p))
+        p = left(p)
       end
     end
-    helper.update_highest(helper.p) # try the leaf
-    helper.best
+    update_highest.call(p) # try the leaf
+    best
   end
 
   ########################################
