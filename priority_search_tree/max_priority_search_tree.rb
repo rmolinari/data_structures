@@ -162,7 +162,16 @@ class MaxPrioritySearchTree
   #  Doing it this way - generically - makes things slightly slower, but maintaining two separate versions of the code, almost
   #  identical, would be tedious.
   def leftmost_ne(x0, y0)
-    style = :ne
+    extremal_in_x_dimension(x0, y0, :ne)
+  end
+
+  def rightmost_nw(x0, y0)
+    extremal_in_x_dimension(x0, y0, :nw)
+  end
+
+  # Style is either :ne (which gives leftmost_ne) or :nw (which gives rightmost_nw)
+  def extremal_in_x_dimension(x0, y0, style)
+    style.must_be_in [:ne, :nw]
     sign = style == :ne ? 1 : -1 # +/- 1 to handle desired direction of comparisons
 
     best = Pair.new(INFINITY, INFINITY)
@@ -199,9 +208,16 @@ class MaxPrioritySearchTree
     #   q = p. This may leave both of p, q undefined which means there is no useful way forward and we return nils to signal this to
     #   calling code.
     #
-    # If we can adapt this to rightmost_ne, presumably we reverse the order of the array c to get x(c1) > x(c2) > ... and use the
-    # analagous logic.
+    # The same logic should apply to rightmost_nw, though everything is "backwards"
+    # - membership of Q depends on having a small-enough value of x, rather than a large-enough one
+    # - among the ci, values towards the end of the array tend not to be in Q while values towards the start of the array tend to be
+    #  in Q
+    #
+    # Idea: handle the first issue by negating all x-values being compared and handle the second by reversing the array c before
+    # doing anything and swapping the values for p and q we work out.
     determine_next_nodes = lambda do |*c|
+      c.reverse! if style == :nw
+
       if sign * val_at(c.first).x > sign * x0 #big_enough.call(val_at(c.first).x)
         # All subtrees have x-values large enough for Q. We look at y-values to work out which subtree to focus on
         leftmost = c.find { |node| val_at(node).y >= y0 } # might be nil
@@ -226,6 +242,8 @@ class MaxPrioritySearchTree
       new_p = c[i] if values[i].y >= y0 # The leftmost subtree is worth exploring if the y-value is big enough but not otherwise
       new_p ||= new_q # if nodes[i] is no good, send p along with q
       new_q ||= new_p # but if there is no worthwhile value for q we should send it along with p
+
+      return [new_q, new_p] if style == :nw # swap for the rightmost_nw case.
 
       [new_p, new_q]
     end
