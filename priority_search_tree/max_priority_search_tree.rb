@@ -46,11 +46,11 @@ class MaxPrioritySearchTree
   end
 
   ########################################
-  # Highest NE
+  # Highest NE and Highest NW
 
-  # Find the "highest" (max-y) point that is "northeast" of (x, y).
+  # Find the "highest" (max-y) point that is "northeast" of (x0, y0).
   #
-  # That is, the point p* in Q = [x, infty) X [y, infty) with the largest y value, or (infty, -infty) if there is no point in that
+  # That is, the point p* in Q = [x0, infty) X [y0, infty) with the largest y value, or (infty, -infty) if there is no point in that
   # quadrant.
   #
   # Algorithm is from De et al. section 3.1
@@ -67,11 +67,37 @@ class MaxPrioritySearchTree
   #
   # Here, P is the set of points in our data structure and T_p is the subtree rooted at p
   def highest_ne(x0, y0)
+    highest_in_quadrant(x0, y0, :ne)
+  end
+
+  # The same idea as highest_nw, but now the region Q is (-infty, x0] X [y0, infty) and returning (-infty, -infty) if there is no
+  # point in the quadrant.
+  def highest_nw(x0, y0)
+    highest_in_quadrant(x0, y0, :nw)
+  end
+
+  # The highest_ne code genericezed to allow for highest_nw with the same code, given a switching parameter "quadrant"
+  private def highest_in_quadrant(x0, y0, quadrant)
+    quadrant.must_be_in [:ne, :nw]
+
     p = root
-    best = Pair.new(INFINITY, -INFINITY)
+    if quadrant == :ne
+      best = Pair.new(INFINITY, -INFINITY)
+      preferred_child = ->(n) { right(n) }
+      nonpreferred_child = ->(n) { left(n) }
+      sufficient_x = ->(x) { x >= x0 }
+    else
+      best = Pair.new(-INFINITY, -INFINITY)
+      preferred_child = ->(n) { left(n) }
+      nonpreferred_child = ->(n) { right(n) }
+      sufficient_x = ->(x) { x <= x0 }
+    end
+
+    # x == x0 or is not sufficient. This test sometimes excludes the other child of a node from consideration.
+    exclusionary_x = ->(x) { x == x0 || !sufficient_x.call(x) }
 
     in_q = lambda do |pair|
-      pair.x >= x0 && pair.y >= y0
+      sufficient_x.call(pair.x) && pair.y >= y0
     end
 
     # From the paper:
@@ -89,6 +115,7 @@ class MaxPrioritySearchTree
     # We could make this code more efficient. But since we only have O(log n) steps we won't actually gain much so let's keep it
     # readable and close to the paper's pseudocode for now.
     until leaf?(p)
+      byebug if $do_it
       p_val = val_at(p)
       if in_q.call(p_val)
         # p \in Q and nothing in its subtree can beat it because of the max-heap
@@ -100,25 +127,25 @@ class MaxPrioritySearchTree
       elsif one_child?(p)
         # With just one child we need to check it
         p = left(p)
-      elsif val_at(right(p)).x <= x0
+      elsif exclusionary_x.call(val_at(preferred_child.call(p)).x)
         # right(p) might be in Q, but nothing in the left subtree can be, by the PST property on x.
-        p = right(p)
-      elsif val_at(left(p)).x >= x0
-        # Both children are in Q, so try the higher of them. Note that nothing else in either subtree will beat this one, by the
-        # y-property of the PST
+        p = preferred_child.call(p)
+      elsif sufficient_x.call(val_at(nonpreferred_child.call(p)).x)
+        # Both children have sufficient x, so try the y-higher of them. Note that nothing else in either subtree will beat this one,
+        # by the y-property of the PST
         higher = left(p)
         if val_at(right(p)).y > val_at(left(p)).y
           higher = right(p)
         end
         p = higher
-      elsif val_at(right(p)).y < y0
+      elsif val_at(preferred_child.call(p)).y < y0
         # Nothing in the right subtree is in Q, but maybe we'll find something in the left
-        p = left(p)
+        p = nonpreferred_child.call(p)
       else
         # At this point we know that right(p) \in Q so we need to check it. Nothing in its subtree can beat it so we don't need to
         # look there. But there might be something better in the left subtree.
-        update_highest.call(right(p))
-        p = left(p)
+        update_highest.call(preferred_child.call(p))
+        p = nonpreferred_child.call(p)
       end
     end
     update_highest.call(p) # try the leaf
@@ -153,11 +180,11 @@ class MaxPrioritySearchTree
 
   # A genericized version of leftmost_ne that can calculate either leftmost_ne or rightmost_nw as specifies via a parameter.
   #
-  # Style is either :ne (which gives leftmost_ne) or :nw (which gives rightmost_nw)
-  private def extremal_in_x_dimension(x0, y0, style)
-    style.must_be_in [:ne, :nw]
+  # Quadrant is either :ne (which gives leftmost_ne) or :nw (which gives rightmost_nw).
+  private def extremal_in_x_dimension(x0, y0, quadrant)
+    quadrant.must_be_in [:ne, :nw]
 
-    if style == :ne
+    if quadrant == :ne
       sign = 1
       best = Pair.new(INFINITY, INFINITY)
     else
@@ -204,9 +231,9 @@ class MaxPrioritySearchTree
     #  in Q
     #
     # Idea: handle the first issue by negating all x-values being compared and handle the second by reversing the array c before
-    # doing anything and swapping the values for p and q we work out.
+    # doing anything and swapping the values for p and q that we work out.
     determine_next_nodes = lambda do |*c|
-      c.reverse! if style == :nw
+      c.reverse! if quadrant == :nw
 
       if sign * val_at(c.first).x > sign * x0
         # All subtrees have x-values good enough for Q. We look at y-values to work out which subtree to focus on
@@ -233,7 +260,7 @@ class MaxPrioritySearchTree
       new_p ||= new_q # if nodes[i] is no good, send p along with q
       new_q ||= new_p # but if there is no worthwhile value for q we should send it along with p
 
-      return [new_q, new_p] if style == :nw # swap for the rightmost_nw case.
+      return [new_q, new_p] if quadrant == :nw # swap for the rightmost_nw case.
 
       [new_p, new_q]
     end

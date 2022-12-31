@@ -1,5 +1,7 @@
-require 'simplecov'
-SimpleCov.start
+if ENV['coverage']
+  require 'simplecov'
+  SimpleCov.start
+end
 
 require 'set'
 require 'test/unit'
@@ -17,6 +19,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @size = (ENV['test_size'] || 100_000).to_i
     @pairs_by_x = raw_data(@size)
     @pairs_by_y = @pairs_by_x.sort_by(&:y)
+    @min_x, @max_x = @pairs_by_x.map(&:x).minmax
   end
 
   ########################################
@@ -33,6 +36,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       x0 = rand(@size)
       y0 = rand(@size)
       check_a_highest_ne(x0, y0, max_pst)
+    end
+  end
+
+  def test_pst_highest_nw
+    100.times do
+      x0 = rand(@size)
+      y0 = rand(@size)
+      check_a_highest_nw(x0, y0, max_pst)
     end
   end
 
@@ -198,8 +209,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       check_one_case(MaxPrioritySearchTree, :rightmost_nw, data, *method_params, actual_leftmost)
     end
 
-    $do_it = true
     check_one.call([[3,6], [2,5], [6,3], [1,1], [4,4], [5,2]], 5, 2, Pair.new(5, 2))
+  end
+
+  def test_bad_inputs_for_highest_ne
+    check_one = lambda do |data, *method_params, actual_leftmost|
+      check_one_case(MaxPrioritySearchTree, :highest_ne, data, *method_params, actual_leftmost)
+    end
+
+    check_one.call([[1,3], [2,2], [3,1]], 2, 1, Pair.new(2, 2))
   end
 
   ########################################
@@ -228,7 +246,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       [[x0, y0], actual_leftmost]
     end
   end
-
 
   def test_max_find_bad_input_for_highest_3_sided
     search_for_bad_inputs(MaxPrioritySearchTree, :highest_3_sided) do |pairs|
@@ -259,6 +276,26 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       actual_rightmost = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:x) || Pair.new(-INFINITY, INFINITY)
 
       [[x0, y0], actual_rightmost]
+    end
+  end
+
+  def test_max_find_bad_input_for_highest_ne
+    search_for_bad_inputs(MaxPrioritySearchTree, :highest_ne) do |pairs|
+      x0 = rand(@size)
+      y0 = rand(@size)
+      actual_highest = pairs.select { |p| p.x >= x0 && p.y >= y0 }.max_by(&:y) || Pair.new(INFINITY, -INFINITY)
+
+      [[x0, y0], actual_highest]
+    end
+  end
+
+  def test_max_find_bad_input_for_highest_nw
+    search_for_bad_inputs(MaxPrioritySearchTree, :highest_nw) do |pairs|
+      x0 = rand(@size)
+      y0 = rand(@size)
+      actual_highest = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:y) || Pair.new(-INFINITY, -INFINITY)
+
+      [[x0, y0], actual_highest]
     end
   end
 
@@ -333,16 +370,24 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @minmax_pst ||= MinmaxPrioritySearchTree.new(@pairs_by_x.shuffle)
   end
 
+  # Do I really need all of these check_a_foo methods?
   private def check_a_highest_ne(x0, y0, pst)
-    # puts "Calculating highest_ne(#{x0}, #{y0})"
     highest = ne_quadrant(x0, y0).max_by(&:y) || Pair.new(INFINITY, -INFINITY)
     calc_highest = pst.highest_ne(x0, y0)
 
     assert_equal highest, calc_highest
   end
 
+  private def check_a_highest_nw(x0, y0, pst)
+    highest = nw_quadrant(x0, y0).max_by(&:y) || Pair.new(-INFINITY, -INFINITY)
+    calc_highest = pst.highest_nw(x0, y0)
+
+    byebug unless highest == calc_highest
+
+    assert_equal highest, calc_highest
+  end
+
   private def check_a_leftmost_ne(x0, y0, pst)
-    # puts "Calculating leftmost_ne(#{x0}, #{y0})"
     leftmost = ne_quadrant(x0, y0).min_by(&:x) || Pair.new(INFINITY, INFINITY)
     calc_leftmost = pst.leftmost_ne(x0, y0)
 
@@ -350,7 +395,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   private def check_a_rightmost_nw(x0, y0, pst)
-    # puts "Calculating leftmost_ne(#{x0}, #{y0})"
     rightmost = nw_quadrant(x0, y0).max_by(&:x) || Pair.new(-INFINITY, INFINITY)
     calc_rightmost = pst.rightmost_nw(x0, y0)
 
@@ -379,14 +423,24 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   # Points (x,y) in @data with x >= x0
   private def rightward_points(x0)
+    return @pairs_by_x if x0 <= @min_x
+    return [] if x0 > @max_x
+
     first_idx = @pairs_by_x.bsearch_index { |v| v.x >= x0 }
     @pairs_by_x[first_idx..]
   end
 
   # Points (x,y) in @data with x <= x0
   private def leftward_points(x0)
+    return @pairs_by_x if x0 >= @max_x
+    return [] if x0 < @min_x
+
     first_idx = @pairs_by_x.bsearch_index { |v| v.x >= x0 }
-    @pairs_by_x[..first_idx]
+    if @pairs_by_x[first_idx].x == x0
+      @pairs_by_x[..first_idx]
+    else
+      @pairs_by_x[...first_idx]
+    end
   end
 
   private def upward_points(y0)
