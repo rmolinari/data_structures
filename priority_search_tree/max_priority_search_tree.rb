@@ -947,9 +947,19 @@ class MaxPrioritySearchTree
   private def construct_pst
     # We follow the algorithm in the paper by De, Maheshwari et al. Note that indexing is from 1 there. For now we pretend that that
     # is the case here, too.
+
     h = Math.log2(@size).floor
     a = @size - (2**h - 1) # the paper calls it A
     sort_subarray(1, @size)
+
+    @last_non_leaf = @size / 2
+    if @size.even?
+      @parent_of_one_child = @last_non_leaf
+      @last_parent_of_two_children = @parent_of_one_child - 1
+    else
+      @parent_of_one_child = nil
+      @last_parent_of_two_children = @last_non_leaf
+    end
 
     (0...h).each do |i|
       pow_of_2 = 2**i
@@ -1018,17 +1028,17 @@ class MaxPrioritySearchTree
 
   # i has no children
   private def leaf?(i)
-    left(i) > @size
+    i > @last_non_leaf
   end
 
   # i has exactly one child (the left)
   private def one_child?(i)
-    left(i) <= @size && right(i) > @size
+    i == @parent_of_one_child
   end
 
   # i has two children
   private def two_children?(i)
-    right(i) <= @size
+    i <= @last_parent_of_two_children
   end
 
   # i is the left child of its parent.
