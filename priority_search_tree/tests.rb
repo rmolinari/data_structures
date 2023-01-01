@@ -6,6 +6,7 @@ end
 require 'set'
 require 'test/unit'
 require 'timeout'
+require 'ruby-prof'
 
 require_relative 'max_priority_search_tree'
 require_relative 'minmax_priority_search_tree'
@@ -298,6 +299,54 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       [[x0, y0], actual_highest]
     end
   end
+
+  ########################################
+  # Harness for profiling
+  #
+  # These aren't actually tests and make no assertions. THey do nothing unless the >profile< environment variable is set.
+
+  def test_profiling
+    method = :enumerate_3_sided
+    profile(method) do
+      pst = MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
+      100.times do
+        x0 = rand(@size)
+        x1 = rand(@size - x0) + x0
+        y0 = rand(@size)
+        pst.send(method, x0, x1, y0)
+      end
+    end
+  end
+
+  # Not an actual test. We don't make any assertions. Do nothing at all unless the profile environment variable is set
+  private def profile(tag)
+    return unless ENV['profile']
+
+    # Boilerplate lifted from my ad hoc code from one of the work projects
+    profile = RubyProf::Profile.new(merge_fibers: true)
+
+    profile.exclude_common_methods!
+    profile.exclude_methods!([/Array#/, /Rational#/, /Integer#/, /Enumerator#/, /Range#/, /Fixnum#/, /Enumerable#/])
+
+    profile.start
+    result = yield
+    profile.stop
+
+    FileUtils.mkdir_p("profile")
+    flat_printer = RubyProf::FlatPrinter.new(profile)
+    graph_printer = RubyProf::GraphPrinter.new(profile)
+    call_tree_printer = RubyProf::CallTreePrinter.new(profile)
+    stack_printer = RubyProf::CallStackPrinter.new(profile)
+
+    File.open("profile/flat_#{tag}.out",  "w") {|f| flat_printer.print(f)}
+    File.open("profile/graph_#{tag}.out", "w") {|f| graph_printer.print(f)}
+
+    # Just to annoy me, the CallTreePrinter class now does paths differently and in a way
+    # that is poorly documented.
+    call_tree_printer.print(path: "profile", profile: "#{tag}")
+    File.open("profile/stack_#{tag}.html", 'w') {|f| stack_printer.print(f)}
+  end
+
 
   # Search for a set of bad input that causes klass#method to return the wrong value.
   #
