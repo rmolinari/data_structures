@@ -113,7 +113,7 @@ class MaxPrioritySearchTree
     #
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
     update_highest = lambda do |node|
-      t = val_at(node)
+      t = @data[node]
       if in_q.call(t) && t.y > best.y
         best = t
       end
@@ -122,7 +122,7 @@ class MaxPrioritySearchTree
     # We could make this code more efficient. But since we only have O(log n) steps we won't actually gain much so let's keep it
     # readable and close to the paper's pseudocode for now.
     until leaf?(p)
-      p_val = val_at(p)
+      p_val = @data[p]
       if in_q.call(p_val)
         # p \in Q and nothing in its subtree can beat it because of the max-heap
         update_highest.call(p)
@@ -133,18 +133,18 @@ class MaxPrioritySearchTree
       elsif one_child?(p)
         # With just one child we need to check it
         p = left(p)
-      elsif exclusionary_x.call(val_at(preferred_child.call(p)).x)
+      elsif exclusionary_x.call(@data[preferred_child.call(p)].x)
         # right(p) might be in Q, but nothing in the left subtree can be, by the PST property on x.
         p = preferred_child.call(p)
-      elsif sufficient_x.call(val_at(nonpreferred_child.call(p)).x)
+      elsif sufficient_x.call(@data[nonpreferred_child.call(p)].x)
         # Both children have sufficient x, so try the y-higher of them. Note that nothing else in either subtree will beat this one,
         # by the y-property of the PST
         higher = left(p)
-        if val_at(right(p)).y > val_at(left(p)).y
+        if @data[right(p)].y > @data[left(p)].y
           higher = right(p)
         end
         p = higher
-      elsif val_at(preferred_child.call(p)).y < y0
+      elsif @data[preferred_child.call(p)].y < y0
         # Nothing in the right subtree is in Q, but maybe we'll find something in the left
         p = nonpreferred_child.call(p)
       else
@@ -210,7 +210,7 @@ class MaxPrioritySearchTree
     #
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
     update_leftmost = lambda do |node|
-      t = val_at(node)
+      t = @data[node]
       if in_q.call(t) && sign * t.x < sign * best.x
         best = t
       end
@@ -241,27 +241,27 @@ class MaxPrioritySearchTree
     determine_next_nodes = lambda do |*c|
       c.reverse! if quadrant == :nw
 
-      if sign * val_at(c.first).x > sign * x0
+      if sign * @data[c.first].x > sign * x0
         # All subtrees have x-values good enough for Q. We look at y-values to work out which subtree to focus on
-        leftmost = c.find { |node| val_at(node).y >= y0 } # might be nil
+        leftmost = c.find { |node| @data[node].y >= y0 } # might be nil
 
         # Otherwise, explore the "leftmost" subtree with large enough y values. Its root is in Q and can't be beaten as "leftmost"
         # by anything to its "right". If it's nil the calling code can bail
         return [leftmost, leftmost]
       end
 
-      if sign * val_at(c.last).x <= sign * x0
+      if sign * @data[c.last].x <= sign * x0
         # only the "rightmost" subtree can possibly have anything in Q, assuming distinct x-values
         return [c.last, c.last]
       end
 
-      values = c.map { |node| val_at(node) }
+      values = c.map { |node| @data[node] }
 
       # Note that x(c1) <= x0 < x(c4) so i is well-defined
       i = (0...4).find { |j| sign * values[j].x <= sign * x0 && sign * x0 < sign *values[j + 1].x }
 
       # These nodes all have large-enough x values so looking at y finds the ones in Q
-      new_q = c[(i + 1)..].find { |node| val_at(node).y >= y0 } # could be nil
+      new_q = c[(i + 1)..].find { |node| @data[node].y >= y0 } # could be nil
       new_p = c[i] if values[i].y >= y0 # The leftmost subtree is worth exploring if the y-value is big enough but not otherwise
       new_p ||= new_q # if nodes[i] is no good, send p along with q
       new_q ||= new_p # but if there is no worthwhile value for q we should send it along with p
@@ -343,7 +343,7 @@ class MaxPrioritySearchTree
     #
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
     update_highest = lambda do |node|
-      t = val_at(node)
+      t = @data[node]
       if in_q.call(t) && t.y > best.y
         best = t
       end
@@ -359,10 +359,10 @@ class MaxPrioritySearchTree
       if leaf?(p)
         left = false # Question: did p ever get checked as a potential winner?
       elsif one_child?(p)
-        if x_range.cover? val_at(left(p)).x
+        if x_range.cover? @data[left(p)].x
           update_highest.call(left(p))
           left = false # can't do y-better in the subtree
-        elsif val_at(left(p)).x < x0
+        elsif @data[left(p)].x < x0
           p = left(p)
         else
           q = left(p)
@@ -371,10 +371,10 @@ class MaxPrioritySearchTree
         end
       else
         # p has two children
-        if val_at(left(p)).x < x0
-          if val_at(right(p)).x < x0
+        if @data[left(p)].x < x0
+          if @data[right(p)].x < x0
             p = right(p)
-          elsif val_at(right(p)).x <= x1
+          elsif @data[right(p)].x <= x1
             update_highest.call(right(p))
             p = left(p)
           else
@@ -383,10 +383,10 @@ class MaxPrioritySearchTree
             p = left(p)
             right = true
           end
-        elsif val_at(left(p)).x <= x1
+        elsif @data[left(p)].x <= x1
           update_highest.call(left(p))
           left = false # we won't do better in T(p_l)
-          if val_at(right(p)).x > x1
+          if @data[right(p)].x > x1
             q = right(p)
             right = true
           else
@@ -413,10 +413,10 @@ class MaxPrioritySearchTree
       if leaf?(q)
         right = false
       elsif one_child?(q)
-        if x_range.cover? val_at(left(q)).x
+        if x_range.cover? @data[left(q)].x
           update_highest.call(left(q))
           right = false # can't do y-better in the subtree
-        elsif val_at(left(q)).x < x0
+        elsif @data[left(q)].x < x0
           p = left(q)
           left = true
           right = false
@@ -425,12 +425,12 @@ class MaxPrioritySearchTree
         end
       else
         # q has two children
-        if val_at(left(q)).x < x0
+        if @data[left(q)].x < x0
           left = true
-          if val_at(right(q)).x < x0
+          if @data[right(q)].x < x0
             p = right(q)
             right = false
-          elsif val_at(right(q)).x <= x1
+          elsif @data[right(q)].x <= x1
             update_highest.call(right(q))
             p = left(q)
             right = false
@@ -440,9 +440,9 @@ class MaxPrioritySearchTree
             q = right(q)
             # left = true
           end
-        elsif val_at(left(q)).x <= x1
+        elsif @data[left(q)].x <= x1
           update_highest.call(left(q))
-          if val_at(right(q)).x > x1
+          if @data[right(q)].x > x1
             q = right(q)
           else
             update_highest.call(right(q))
@@ -454,7 +454,7 @@ class MaxPrioritySearchTree
       end
     end
 
-    root_val = val_at(root)
+    root_val = @data[root]
 
     # If the root value is in the region Q, the max-heap property on y means we can't do better
     if x_range.cover? root_val.x
@@ -544,9 +544,9 @@ class MaxPrioritySearchTree
 
     report = lambda do |node|
       if block_given?
-        yield val_at(node)
+        yield @data[node]
       else
-        result << val_at(node)
+        result << @data[node]
       end
     end
 
@@ -563,17 +563,17 @@ class MaxPrioritySearchTree
           # State 0: we have arrived at this node for the first time
           # look at current and perhaps descend to left child
           # The paper describes this algorithm as in-order, but isn't this pre-order?
-          if val_at(current).y >= y0
+          if @data[current].y >= y0
             report.call(current)
           end
-          if !leaf?(current) && val_at(left(current)).y >= y0
+          if !leaf?(current) && @data[left(current)].y >= y0
             current = left(current)
           else
             state = 1
           end
         when 1
           # State 1: we've already handled this node and its left subtree. Should we descend to the right subtree?
-          if two_children?(current) && val_at(right(current)).y >= y0
+          if two_children?(current) && @data[right(current)].y >= y0
             current = right(current)
             state = 0
           else
@@ -647,10 +647,10 @@ class MaxPrioritySearchTree
       end
 
       if one_child?(p)
-        if x_range.cover? val_at(left(p)).x
+        if x_range.cover? @data[left(p)].x
           add_leftmost_inner_node.call(left(p))
           left = false
-        elsif val_at(left(p)).x < x0
+        elsif @data[left(p)].x < x0
           p = left(p)
         else
           q = left(p)
@@ -661,10 +661,10 @@ class MaxPrioritySearchTree
       end
 
       # p has two children
-      if val_at(left(p)).x < x0
-        if val_at(right(p)).x < x0
+      if @data[left(p)].x < x0
+        if @data[right(p)].x < x0
           p = right(p)
-        elsif val_at(right(p)).x <= x1
+        elsif @data[right(p)].x <= x1
           add_leftmost_inner_node.call(right(p))
           p = left(p)
         else
@@ -672,8 +672,8 @@ class MaxPrioritySearchTree
           p = left(p)
           right = true
         end
-      elsif val_at(left(p)).x <= x1
-        if val_at(right(p)).x > x1
+      elsif @data[left(p)].x <= x1
+        if @data[right(p)].x > x1
           q = right(p)
           p_in = left(p)
           left = false
@@ -693,7 +693,7 @@ class MaxPrioritySearchTree
 
     # Given: p' satisfied x0 <= x(p') <= x1. (Our p_in is the paper's p')
     enumerate_left_in = lambda do
-      if val_at(p_in).y >= y0
+      if @data[p_in].y >= y0
         report.call(p_in)
       end
 
@@ -702,7 +702,7 @@ class MaxPrioritySearchTree
         return
       end
 
-      left_val = val_at(left(p_in))
+      left_val = @data[left(p_in)]
       if one_child?(p_in)
         if x_range.cover? left_val.x
           p_in = left(p_in)
@@ -721,7 +721,7 @@ class MaxPrioritySearchTree
         end
       else
         # p' has two children
-        right_val = val_at(right(p_in))
+        right_val = @data[right(p_in)]
         if left_val.x < x0
           if right_val.x < x0
             p = right(p_in)
@@ -777,10 +777,10 @@ class MaxPrioritySearchTree
       end
 
       if one_child?(q)
-        if x_range.cover? val_at(left(q)).x
+        if x_range.cover? @data[left(q)].x
           add_rightmost_inner_node.call(left(q))
           right = false
-        elsif val_at(left(q)).x < x0
+        elsif @data[left(q)].x < x0
           p = left(q)
           left = true
           right = false
@@ -791,15 +791,15 @@ class MaxPrioritySearchTree
       end
 
       # q has two children. Cases!
-      if val_at(left(q)).x < x0
+      if @data[left(q)].x < x0
         raise LogicError, 'p_in should not be active, based on the value at left(q)' if left_in
         raise LogicError, 'q_in should not be active, based on the value at left(q)' if right_in
 
         left = true
-        if val_at(right(q)).x < x0
+        if @data[right(q)].x < x0
           p = right(q)
           right = false
-        elsif val_at(right(q)).x <= x1
+        elsif @data[right(q)].x <= x1
           p_in = right(q)
           p = left(q)
           left_in = true
@@ -808,9 +808,9 @@ class MaxPrioritySearchTree
           p = left(q)
           q = right(q)
         end
-      elsif val_at(left(q)).x <= x1
+      elsif @data[left(q)].x <= x1
         add_rightmost_inner_node.call(left(q))
-        if val_at(right(q)).x > x1
+        if @data[right(q)].x > x1
           q = right(q)
         else
           add_rightmost_inner_node.call(right(q))
@@ -826,7 +826,7 @@ class MaxPrioritySearchTree
     enumerate_right_in = lambda do
       raise LogicError, 'right_in should be true if we call enumerate_right_in' unless right_in
 
-      if val_at(q_in).y >= y0
+      if @data[q_in].y >= y0
         report.call(q_in)
       end
 
@@ -835,7 +835,7 @@ class MaxPrioritySearchTree
         return
       end
 
-      left_val = val_at(left(q_in))
+      left_val = @data[left(q_in)]
       if one_child?(q_in)
         if x_range.cover? left_val.x
           q_in = left(q_in)
@@ -854,7 +854,7 @@ class MaxPrioritySearchTree
       end
 
       # q' has two children
-      right_val = val_at(right(q_in))
+      right_val = @data[right(q_in)]
       if left_val.x < x0
         raise LogicError, 'p_in cannot be active, by the value in the left child of q_in' if left_in
 
@@ -900,7 +900,7 @@ class MaxPrioritySearchTree
 
     val = ->(sym) { { left: p, left_in: p_in, right_in: q_in, right: q }[sym] }
 
-    root_val = val_at(root)
+    root_val = @data[root]
     if root_val.y < y0
       # no hope, no op
     elsif root_val.x < x0
@@ -1001,10 +1001,6 @@ class MaxPrioritySearchTree
     1
   end
 
-  private def val_at(idx)
-    @data[idx]
-  end
-
   # Indexing is from 1
   private def parent(i)
     i >> 1
@@ -1044,7 +1040,7 @@ class MaxPrioritySearchTree
 
   # i is the left child of its parent.
   private def left_child?(i)
-    i > 1 && (i % 2).zero?
+    (i & 1).zero?
   end
 
   private def swap(index1, index2)
@@ -1057,7 +1053,7 @@ class MaxPrioritySearchTree
   private def index_with_largest_y_in(l, r)
     return nil if r < l
 
-    (l..r).max_by { |idx| val_at(idx).y }
+    (l..r).max_by { |idx| @data[idx].y }
   end
 
   # Sort the subarray @data[l..r]. This is much faster than a Ruby-layer heapsort because it is mostly happening in C.
@@ -1081,7 +1077,7 @@ class MaxPrioritySearchTree
   def verify_properties
     # It's a max-heap in y
     (2..@size).each do |node|
-      raise LogicError, "Heap property violated at child #{node}" unless val_at(node).y < val_at(parent(node)).y
+      raise LogicError, "Heap property violated at child #{node}" unless @data[node].y < @data[parent(node)].y
     end
 
     # Left subtree has x values less than all of the right subtree
@@ -1098,12 +1094,12 @@ class MaxPrioritySearchTree
   private def max_x_in_subtree(root)
     return -Float::INFINITY if root >= @size
 
-    [val_at(root).x, max_x_in_subtree(left(root)), max_x_in_subtree(right(root))].max
+    [@data[root].x, max_x_in_subtree(left(root)), max_x_in_subtree(right(root))].max
   end
 
   private def min_x_in_subtree(root)
     return Float::INFINITY if root >= @size
 
-    [val_at(root).x, min_x_in_subtree(left(root)), min_x_in_subtree(right(root))].min
+    [@data[root].x, min_x_in_subtree(left(root)), min_x_in_subtree(right(root))].min
   end
 end
