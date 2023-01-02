@@ -122,7 +122,6 @@ class MaxPrioritySearchTree
     # We could make this code more efficient. But since we only have O(log n) steps we won't actually gain much so let's keep it
     # readable and close to the paper's pseudocode for now.
     until leaf?(p)
-      byebug if $do_it
       p_val = val_at(p)
       if in_q.call(p_val)
         # p \in Q and nothing in its subtree can beat it because of the max-heap
@@ -948,6 +947,8 @@ class MaxPrioritySearchTree
     # We follow the algorithm in the paper by De, Maheshwari et al. Note that indexing is from 1 there. For now we pretend that that
     # is the case here, too.
 
+    @data.unshift nil
+
     h = Math.log2(@size).floor
     a = @size - (2**h - 1) # the paper calls it A
     sort_subarray(1, @size)
@@ -1001,7 +1002,7 @@ class MaxPrioritySearchTree
   end
 
   private def val_at(idx)
-    @data[idx - 1]
+    @data[idx]
   end
 
   # Indexing is from 1
@@ -1049,7 +1050,7 @@ class MaxPrioritySearchTree
   private def swap(index1, index2)
     return if index1 == index2
 
-    @data[index1 - 1], @data[index2 - 1] = @data[index2 - 1], @data[index1 - 1]
+    @data[index1], @data[index2] = @data[index2], @data[index1]
   end
 
   # The index in @data[l..r] having the largest value for y
@@ -1064,8 +1065,8 @@ class MaxPrioritySearchTree
     # heapsort_subarray(l, r)
     return if l == r # 1-array already sorted!
 
-    l -= 1
-    r -= 1
+    #l -= 1
+    #r -= 1
     @data[l..r] = @data[l..r].sort_by(&:x)
   end
 
