@@ -14,7 +14,8 @@ Gem::Specification.new do |s|
   s.files       = [
     'lib/data_structures_rmolinari.rb',
     'lib/data_structures_rmolinari/max_priority_search_tree_internal.rb',
-    'lib/data_structures_rmolinari/minmax_priority_search_tree_internal.rb'
+    'lib/data_structures_rmolinari/minmax_priority_search_tree_internal.rb',
+    'lib/data_structures_rmolinari/shared.rb'
   ]
   s.license     = 'MIT'
   s.required_ruby_version = '3.1.3'

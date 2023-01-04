@@ -1,47 +1,57 @@
-# A priority search tree stores points in two dimensions (x,y) and can efficiently answer certain questions about the set of point.
-#
-# It is a binary search tree which is a max-heap by the y-coordinate, and, for a non-leaf node N storing (x, y), all the nodes in
-# the left subtree of N have smaller x values than any of the nodes in the right subtree of N. Note, though, that the x-value at N
-# has no particular property relative to the x values in its subtree. It is thus _almost_ a binary search tree in the x coordinate.
-#
-# See more: https://en.wikipedia.org/wiki/Priority_search_tree
-#
-# It is possible to build such a tree in place, given an array of pairs. See De, Maheshwari, Nandy, Smid, _An in-place priority
-# search tree_, 23rd Annual Canadian Conference on Computational Geometry.
-#
-# Given a set of n points, we can answer the following questions quickly:
-#
-# - leftmost_ne: for x0 and y0, what is the leftmost (min x) point (x, y) in P satisfying x >= x0 and y >= y0?
-# - rightmost_nw: for x0 and y0, what is the rightmost (max x) point (x, y) in P satisfying x <= x0 and y >= y0?
-# - highest_ne: for x0 and y0, what is the highest (max y) point (x, y) in P satisfying x >= x0 and y >= y0?
-# - highest_nw: for x0 and y0, what is the highest (max y) point (x, y) in P satisfying x <= x0 and y >= y0?
-# - highest_3_sided: for x0, x1, and y0, what is the highest (max y) point (x, y) in P satisfying x >= x0, x <= x1 and y >= y0?
-# - enumerate_3_sided: for x0, x1, and y0, enumerate all points in P satisfying x >= x0, x <= x1 and y >= y0.
-#
-# The first 5 operations take O(log n) time.
-#
-# The final operation (enumerate) take O(m + log n) time, where m is the number of points that are enumerated.
-#
-# Notes:
-#
-# - For a while I started implementing the Min-max Priority Search Tree (see that file) but got very confused by the Highest3Sided
-#   algorithm. So for now I'm coming back here to see if I can work out the version for this (simpler) data structure.
-#
-# - Since there is an alternate data structure that is a "min-max priority search tree" we call this one a "max priority search
-#   tree" or MaxPST.
-
 require 'set'
 
-Pair = Struct.new(:x, :y)
+require_relative 'shared'
 
 class LogicError < StandardError; end
 
+# A priority search tree (PST) stores a set, P, of two-dimensional points (x,y) in a way that allows efficient answes to certain
+# questions about P.
+#
+# (In the current implementation no two points can share an x-value and no two points can share a y-value. This (rather severe)
+# restriction can be relaxed with some more complicated code.)
+#
+# The data structure was introduced in 1985 by Edward McCreight. Later, De, Maheshwari, Nandy, and Smid showed how to construct a
+# PST in-place (using only O(1) extra memory), at the expense of some slightly more complicated code for the various supported
+# operations. It is their approach that we have implemented.
+#
+# The PST structure is an implicit, balanced binary tree with the following properties:
+# * The tree is a _max-heap_ in the y coordinate. That is, the point at each node has a y-value less than its parent.
+# * For each node p, the x-values of all the nodes in the left subtree of p are less than the x-values of all the nodes in the right
+#   subtree of p. Note that this says nothing about the x-value at the node p itself. The tree is thus _almost_ a binary search tree
+#   in the x coordinate.
+#
+# Given a set of n points, we can answer the following questions quickly:
+#
+# - +leftmost_ne+: for x0 and y0, what is the leftmost point (x, y) in P satisfying x >= x0 and y >= y0?
+# - +rightmost_nw+: for x0 and y0, what is the rightmost point (x, y) in P satisfying x <= x0 and y >= y0?
+# - +highest_ne+: for x0 and y0, what is the highest point (x, y) in P satisfying x >= x0 and y >= y0?
+# - +highest_nw+: for x0 and y0, what is the highest point (x, y) in P satisfying x <= x0 and y >= y0?
+# - +highest_3_sided+: for x0, x1, and y0, what is the highest point (x, y) in P satisfying x >= x0, x <= x1 and y >= y0?
+# - +enumerate_3_sided+: for x0, x1, and y0, enumerate all points in P satisfying x >= x0, x <= x1 and y >= y0.
+#
+# (Here, "leftmost/rightmost" means "minimal/maximal x", and "highest" means "maximal y".)
+#
+# The first 5 operations take O(log n) time.
+#
+# The final operation (enumerate) takes O(m + log n) time, where m is the number of points that are enumerated.
+#
+# There is a related data structure called the Min-max priority search tree so we have called this a "Max priority search tree", or
+# MaxPST.
+#
+# References:
+# * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.  Later, De,
+# * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational
+#   Geometry, 2011
 class MaxPrioritySearchTreeInternal
-  INFINITY = Float::INFINITY
+  include Shared
 
-  # The array of pairs is turned into a PST in-place without cloning. So clone before passing it in, if you care.
+  # Construct a MaxPST from the collection of points in +data+.
   #
-  # Each element must respond to #x and #y. Use Pair (above) if you like.
+  # @param data [Array] the set P of points presented as an array. The tree is built in the array in-place without cloning. Each
+  #        element of the array must respond to +#x+ and +#y+ (though this is not currently checked).
+  #
+  # @param verify [Boolean] when truthy, check that the properties of a PST are satisified after construction, raising an exception
+  #        if not.
   def initialize(data, verify: false)
     @data = data
     @size = @data.size
@@ -55,12 +65,34 @@ class MaxPrioritySearchTreeInternal
   ########################################
   # Highest NE and Highest NW
 
-  # Find the "highest" (max-y) point that is "northeast" of (x0, y0).
+  # Return the highest point in P to the "northeast" of (x0, y0).
   #
-  # That is, the point p* in Q = [x0, infty) X [y0, infty) with the largest y value, or (infty, -infty) if there is no point in that
-  # quadrant.
+  # Let Q = [x0, infty) X [y0, infty) be the northeast quadrant defined by the point (x0, y0) and let P be the points in this data
+  # structure. Define p* as
   #
-  # Algorithm is from De et al. section 3.1
+  # - (infty, -infty) f Q \intersect P is empty and
+  # - the highest (max-x) point in Q \intersect P otherwise.
+  #
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def highest_ne(x0, y0)
+    highest_in_quadrant(x0, y0, :ne)
+  end
+
+  # Return the highest point in P to the "northwest" of (x0, y0).
+  #
+  # Let Q = (-infty, x0] X [y0, infty) be the northwest quadrant defined by the point (x0, y0) and let P be the points in this data
+  # structure. Define p* as
+  #
+  # - (-infty, -infty) f Q \intersect P is empty and
+  # - the highest (max-y) point in Q \intersect P otherwise.
+  #
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def highest_nw(x0, y0)
+    highest_in_quadrant(x0, y0, :nw)
+  end
+
+  # The basic algorithm is from De et al. section 3.1. We have generalaized it slightly to allow it to calculate both highest_ne and
+  # highest_nw
   #
   # Note that highest_ne(x0, y0) = highest_3_sided(x0, infinty, y0) so we don't really need this. But it's a bit faster than the
   # general case and is a simple algorithm that introduces a typical way that an algorithm interacts with the data structure.
@@ -73,17 +105,6 @@ class MaxPrioritySearchTreeInternal
   #     - If Q intersect P is empty then p* = best
   #
   # Here, P is the set of points in our data structure and T_p is the subtree rooted at p
-  def highest_ne(x0, y0)
-    highest_in_quadrant(x0, y0, :ne)
-  end
-
-  # The same idea as highest_nw, but now the region Q is (-infty, x0] X [y0, infty) and returning (-infty, -infty) if there is no
-  # point in the quadrant.
-  def highest_nw(x0, y0)
-    highest_in_quadrant(x0, y0, :nw)
-  end
-
-  # The highest_ne code genericezed to allow for highest_nw with the same code, given a switching parameter "quadrant"
   private def highest_in_quadrant(x0, y0, quadrant)
     quadrant.must_be_in [:ne, :nw]
 
@@ -161,13 +182,36 @@ class MaxPrioritySearchTreeInternal
   ########################################
   # Leftmost NE and Rightmost NW
 
-  # Let Q = [x0, infty) X [y0, infty) be the northeast "quadrant" defined by the point (x0, y0) and let P be the points in this data
+  # Return the leftmost (min-x) point in P to the northeast of (x0, y0).
+  #
+  # Let Q = [x0, infty) X [y0, infty) be the northeast quadrant defined by the point (x0, y0) and let P be the points in this data
   # structure. Define p* as
   #
   # - (infty, infty) f Q \intersect P is empty and
-  # - the leftmost (min-x) point in Q \intersect P otherwise
+  # - the leftmost (min-x) point in Q \intersect P otherwise.
   #
-  # This method returns p*.
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def leftmost_ne(x0, y0)
+    extremal_in_x_dimension(x0, y0, :ne)
+  end
+
+  # Return the rightmost (max-x) point in P to the northwest of (x0, y0).
+  #
+  # Let Q = (-infty, x0] X [y0, infty) be the northwest quadrant defined by the point (x0, y0) and let P be the points in this data
+  # structure. Define p* as
+  #
+  # - (-infty, infty) if Q \intersect P is empty and
+  # - the leftmost (min-x) point in Q \intersect P otherwise.
+  #
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def rightmost_nw(x0, y0)
+    extremal_in_x_dimension(x0, y0, :nw)
+  end
+
+  # A genericized version of the paper's leftmost_ne that can calculate either leftmost_ne or rightmost_nw as specifies via a
+  # parameter.
+  #
+  # Quadrant is either :ne (which gives leftmost_ne) or :nw (which gives rightmost_nw).
   #
   # From De et al:
   #
@@ -176,17 +220,6 @@ class MaxPrioritySearchTreeInternal
   #     - if Q \intersect P is empty then p* = best
   #     - if Q \intersect P is nonempty then  p* \in {best} \union T(p) \union T(q)
   #     - p and q are at the same level of T and x(p) <= x(q)
-  def leftmost_ne(x0, y0)
-    extremal_in_x_dimension(x0, y0, :ne)
-  end
-
-  def rightmost_nw(x0, y0)
-    extremal_in_x_dimension(x0, y0, :nw)
-  end
-
-  # A genericized version of leftmost_ne that can calculate either leftmost_ne or rightmost_nw as specifies via a parameter.
-  #
-  # Quadrant is either :ne (which gives leftmost_ne) or :nw (which gives rightmost_nw).
   private def extremal_in_x_dimension(x0, y0, quadrant)
     quadrant.must_be_in [:ne, :nw]
 
@@ -304,30 +337,39 @@ class MaxPrioritySearchTreeInternal
   ########################################
   # Highest 3 Sided
 
-  # From the paper:
+  # Return the highest point of P in the box bounded by x0, x1, and y0.
   #
-  #    The three real numbers x0, x1, and y0 define the three-sided range Q = [x0,x1] X [y0,∞). If Q \intersect P̸ is not \empty,
-  #    define p* to be the highest point of P in Q. If Q \intersect P = \empty, define p∗ to be the point (infty, -infty).
-  #    Algorithm Highest3Sided(x0,x1,y0) returns the point p∗.
+  # Let Q = [x0, x1] X [y0, infty) be the "three-sided" box bounded by x0, x1, and y0, and let P be the set of points in the
+  # MaxPST. (Note that Q is empty if x1 < x0.) Define p* as
   #
-  #    The algorithm uses two bits L and R, and three variables best, p, and q. As before, best stores the highest point in Q found
-  #    so far. The bit L indicates whether or not p∗ may be in the subtree of p; if L=1, then p is to the left of Q. Similarly, the
-  #    bit R indicates whether or not p∗ may be in the subtree of q; if R=1, then q is to the right of Q.
+  # - (infty, -infty) if Q \intersect P is empty and
+  # - the highest (max-x) point in Q \intersect P otherwise.
   #
-  # Although there are a lot of lines and cases the overall idea is simple. We maintain in p the rightmost node at its level that is
-  # to the left of the area Q. Likewise, q is the leftmost node that is the right of Q. The logic just updates this data at each
-  # step. The helper check_left updates p and check_right updates q.
-  #
-  # A couple of simple observations that show why maintaining just these two points is enough.
-  #
-  # - We know that x(p) < x0. This tells us nothing about the x values in the subtrees of p (which is why we need to check various
-  #   cases), but it does tell us that everything to the left of p has values of x that are too small to bother with.
-  # - We don't need to maintain any state inside the region Q because the max-heap property means that if we ever find a node r in Q
-  #   we check it for best and then ignore its subtree (which cannot beat r on y-value).
-  #
-  # Sometimes we don't have a relevant node to the left or right of Q. The booleans L and R (which we call left and right) track
-  # whether p and q are defined at the moment.
+  # This method returns p* in O(log n) time and O(1) extra space.
   def highest_3_sided(x0, x1, y0)
+    # From the paper:
+    #
+    #    The three real numbers x0, x1, and y0 define the three-sided range Q = [x0,x1] X [y0,∞). If Q \intersect P̸ is not \empty,
+    #    define p* to be the highest point of P in Q. If Q \intersect P = \empty, define p∗ to be the point (infty, -infty).
+    #    Algorithm Highest3Sided(x0,x1,y0) returns the point p∗.
+    #
+    #    The algorithm uses two bits L and R, and three variables best, p, and q. As before, best stores the highest point in Q
+    #    found so far. The bit L indicates whether or not p∗ may be in the subtree of p; if L=1, then p is to the left of
+    #    Q. Similarly, the bit R indicates whether or not p∗ may be in the subtree of q; if R=1, then q is to the right of Q.
+    #
+    # Although there are a lot of lines and cases the overall idea is simple. We maintain in p the rightmost node at its level that
+    # is to the left of the area Q. Likewise, q is the leftmost node that is the right of Q. The logic just updates this data at
+    # each step. The helper check_left updates p and check_right updates q.
+    #
+    # A couple of simple observations that show why maintaining just these two points is enough.
+    #
+    # - We know that x(p) < x0. This tells us nothing about the x values in the subtrees of p (which is why we need to check various
+    #   cases), but it does tell us that everything to the left of p has values of x that are too small to bother with.
+    # - We don't need to maintain any state inside the region Q because the max-heap property means that if we ever find a node r in
+    #   Q we check it for best and then ignore its subtree (which cannot beat r on y-value).
+    #
+    # Sometimes we don't have a relevant node to the left or right of Q. The booleans L and R (which we call left and right) track
+    # whether p and q are defined at the moment.
     best = Pair.new(INFINITY, -INFINITY)
     p = q = left = right = nil
 
@@ -494,47 +536,56 @@ class MaxPrioritySearchTreeInternal
   ########################################
   # Enumerate 3 sided
 
-  # From the paper
+  # Enumerate the points of P in the box bounded by x0, x1, and y0.
   #
-  #    "Given three real numbers x0, x1, and y0 define the three sided range Q = [x0, x1] X [y0, infty). Algorithm
-  #     Enumerage3Sided(x0, x1,y0) returns all elements of Q \intersect P. The algorithm uses the same approach as algorithm
-  #     Highest3Sided. Besides the two bits L and R it uses two additional bits L' and R'. Each of these four bits ... corresponds
-  #     to a subtree of T rooted at the points p, p', q, and q', respectively; if the bit is equal to one, then the subtree may
-  #     contain points that are in the query range Q.
+  # Let Q = [x0, x1] X [y0, infty) be the "three-sided" box bounded by x0, x1, and y0, and let P be the set of points in the
+  # MaxPST. (Note that Q is empty if x1 < x0.) We find an enumerate all the points in Q \intersect P.
   #
-  #     The following variant will be maintained:
+  # If the calling code provides a block then we +yield+ each point to it. Otherwise we return a set containing all the points in
+  # the intersection.
   #
-  #     - If L = 1 then x(p) < x0.
-  #     - If L' = 1 then x0 <= x(p') <= x1.
-  #     - If R = 1 then x(q) > x1.
-  #     - If R' = 1 then x0 <= x(q') <= x1.
-  #     - If L' = 1 and R' = 1 then x(p') <= x(q').
-  #     - All points in Q \intersect P [other than those in the subtrees of the currently active search nodes] have been reported.""
-  #
-  #
-  # My high-level understanding of the algorithm
-  # --------------------------------------------
-  #
-  # We need to find all elements of Q \intersect P, so it isn't enough, as it was in highest_3_sided simply to keep track of p and
-  # q. We need to track four nodes, p, p', q', and q which are (with a little handwaving) respectively
-  #
-  # - the rightmost node to the left of Q' = [x0, x1] X [-infinity, infinity],
-  # - the leftmost node inside Q',
-  # - the rightmost node inside Q', and
-  # - the leftmost node to the right of Q'.
-  #
-  # Tracking these is enough. Subtrees of things to the left of p can't have anything in Q by the x-value properties of the PST, and
-  # likewise with things to the right of q.
-  #
-  # And we don't need to track any more nodes inside Q'. If we had r with p' <~ r <~ q' (where s <~ t represents "t is to the right
-  # of s"), then all of the subtree rooted at r lies inside Q', and we can visit all of its elements of Q \intersect P via the
-  # routine Explore(), which is what we do whenever we need to. The node r is thus exhausted, and we can forget about it.
-  #
-  # So the algorithm is actually quite simple. There is a large amount of code here because of the many cases that need to be
-  # handled at each update.
-  #
-  # If a block is given, yield each found point to it. Otherwise return all the found points in an enumerable (currently Set).
+  # This method runs in O(m + log n) time and O(1) extra space, where m is the number of points found.
   def enumerate_3_sided(x0, x1, y0)
+    # From the paper
+    #
+    #     Given three real numbers x0, x1, and y0 define the three sided range Q = [x0, x1] X [y0, infty). Algorithm
+    #     Enumerage3Sided(x0, x1,y0) returns all elements of Q \intersect P. The algorithm uses the same approach as algorithm
+    #     Highest3Sided. Besides the two bits L and R it uses two additional bits L' and R'. Each of these four bits ... corresponds
+    #     to a subtree of T rooted at the points p, p', q, and q', respectively; if the bit is equal to one, then the subtree may
+    #     contain points that are in the query range Q.
+    #
+    #     The following variant will be maintained:
+    #
+    #     - If L = 1 then x(p) < x0.
+    #     - If L' = 1 then x0 <= x(p') <= x1.
+    #     - If R = 1 then x(q) > x1.
+    #     - If R' = 1 then x0 <= x(q') <= x1.
+    #     - If L' = 1 and R' = 1 then x(p') <= x(q').
+    #     - All points in Q \intersect P [other than those in the subtrees of the currently active search nodes] have been reported.
+    #
+    #
+    # My high-level understanding of the algorithm
+    # --------------------------------------------
+    #
+    # We need to find all elements of Q \intersect P, so it isn't enough, as it was in highest_3_sided simply to keep track of p and
+    # q. We need to track four nodes, p, p', q', and q which are (with a little handwaving) respectively
+    #
+    # - the rightmost node to the left of Q' = [x0, x1] X [-infinity, infinity],
+    # - the leftmost node inside Q',
+    # - the rightmost node inside Q', and
+    # - the leftmost node to the right of Q'.
+    #
+    # Tracking these is enough. Subtrees of things to the left of p can't have anything in Q by the x-value properties of the PST,
+    # and likewise with things to the right of q.
+    #
+    # And we don't need to track any more nodes inside Q'. If we had r with p' <~ r <~ q' (where s <~ t represents "t is to the
+    # right of s"), then all of the subtree rooted at r lies inside Q', and we can visit all of its elements of Q \intersect P via
+    # the routine Explore(), which is what we do whenever we need to. The node r is thus exhausted, and we can forget about it.
+    #
+    # So the algorithm is actually quite simple. There is a large amount of code here because of the many cases that need to be
+    # handled at each update.
+    #
+    # If a block is given, yield each found point to it. Otherwise return all the found points in an enumerable (currently Set).
     x_range = x0..x1
     # Instead of using primes we use "_in"
     left = left_in = right_in = right = false
@@ -1074,7 +1125,7 @@ class MaxPrioritySearchTreeInternal
   # Check that our data satisfies the requirements of a Priority Search Tree:
   # - max-heap in y
   # - all the x values in the left subtree are less than all the x values in the right subtree
-  def verify_properties
+  private def verify_properties
     # It's a max-heap in y
     (2..@size).each do |node|
       raise LogicError, "Heap property violated at child #{node}" unless @data[node].y < @data[parent(node)].y
