@@ -1045,7 +1045,7 @@ class MaxPrioritySearchTreeInternal
   end
 
   ########################################
-  # Indexing the data structure as though it were from 1, even though the underlying @data is indexed from zero.
+  # Tree arithmetic
 
   # First element and root of the tree structure
   private def root
