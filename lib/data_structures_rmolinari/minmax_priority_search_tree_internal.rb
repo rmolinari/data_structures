@@ -1,3 +1,7 @@
+require 'must_be'
+
+require_relative 'shared'
+
 # A priority search tree (PST) stores points in two dimensions (x,y) and can efficiently answer certain questions about the set of
 # point.
 #
@@ -26,28 +30,18 @@
 # I started implementing the in-place PST. Then, finding the follow-up paper [3], decided to do that one instead, as the paper says
 # it is more flexible. The point is to learn a new data structure and its associated algorithms.
 #
-# Hmmm. The algorithms are rather bewildering. Highest3SidedUp is complicated, and only two of the functions CheckLeft, CheckLeftIn,
+# The algorithms are rather bewildering. Highest3SidedUp is complicated, and only two of the functions CheckLeft, CheckLeftIn,
 # CheckRight, CheckRightIn are given; the other two are "symmetric". But it's not really clear what the first are actually doing, so
 # it's hard to know what the others actually do.
 #
-# I either need to go back to MaxPST until I understand things better, or spend quite a lot of time going through the algorithms
-# here on paper.
-
+# The implementation is incomplete. The pseduo-code in the paper is buggy (see the code below), which makes progress difficult.
+#
 # [1] E. McCreight, _Priority Search Trees_, SIAM J. Computing, v14, no 3, May 1985, pp 257-276.
 # [2] De, Maheshwari, Nandy, Smid, _An in-place priority search tree_, 23rd Annual Canadian Conference on Computational Geometry.
 # [3] De, Maheshwari, Nandy, Smid, _An in-place min-max priority search tree_, Computational Geometry, v46 (2013), pp 310-327.
 # [4] Atkinson, Sack, Santoro, Strothotte, _Min-max heaps and generalized priority queues_, Commun. ACM 29 (10) (1986), pp 996-1000.
-
-require 'must_be'
-
-Pair = Struct.new(:x, :y) do
-  def fmt
-    "(#{x},#{y})"
-  end
-end
-
 class MinmaxPrioritySearchTreeInternal
-  INFINITY = Float::INFINITY
+  include Shared
 
   # The array of pairs is turned into a minmax PST in-place without cloning. So clone before passing it in, if you care.
   #

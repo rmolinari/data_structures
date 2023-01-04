@@ -10,6 +10,7 @@ require 'timeout'
 
 require 'data_structures_rmolinari'
 
+Pair = Shared::Pair
 MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
 MinmaxPrioritySearchTree = DataStructuresRMolinari::MinmaxPrioritySearchTree
 

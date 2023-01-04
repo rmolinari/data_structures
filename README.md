@@ -29,5 +29,5 @@ puts pts.highest_ne(0, 0)
 Store a set of two-dimensional points in a way that allows certain queries to be answered efficiently. See McCreight and De et al.
 
 ## References
-- E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.  Later, De,
+- E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
 - M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011

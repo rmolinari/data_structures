@@ -1,5 +1,4 @@
 require 'set'
-
 require_relative 'shared'
 
 class LogicError < StandardError; end
