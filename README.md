@@ -8,10 +8,25 @@ pseudo-code I found as I read about each structure and so are unlikely to be as 
 
 Documentation is a work in progress.
 
+The code will soon be available as a Ruby gem.
+
+## Usage
+
+The right way to organize the code is not obvious to me. For now the data structures are all defined in a module to avoid polluting
+the global namespace. Once it is published as a gem the usage will look like this:
+```
+require 'data_structures_rmolinari`
+
+MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
+Pair = DataStructuresRMolinari::Pair
+
+pst = MaxPrioritySearchTree.new([Pair.new(1, 1)])
+puts pts.highest_ne(0, 0)
+```
+
 ## Priority Search Tree
 
-Store a set of two-dimensional points in the place that allows certain queries to be answered efficiently. See McCreight and De et al.
-
+Store a set of two-dimensional points in a way that allows certain queries to be answered efficiently. See McCreight and De et al.
 
 ## References
 - E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.  Later, De,
