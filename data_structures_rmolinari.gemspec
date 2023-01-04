@@ -1,3 +1,5 @@
+require 'rake'
+
 Gem::Specification.new do |s|
   s.name        = 'data_structures_rmolinari'
   s.version     = '0.1.0'
@@ -11,12 +13,8 @@ Gem::Specification.new do |s|
   DESC
   s.authors     = ['Rory Molinari']
   s.email       = 'rorymolinari+rubygems@gmail.com'
-  s.files       = [
-    'lib/data_structures_rmolinari.rb',
-    'lib/data_structures_rmolinari/max_priority_search_tree_internal.rb',
-    'lib/data_structures_rmolinari/minmax_priority_search_tree_internal.rb',
-    'lib/data_structures_rmolinari/shared.rb'
-  ]
+  s.homepage    = 'https://github.com/rmolinari/data_structures'
+  s.files       = FileList['lib/**/*.rb']
   s.license     = 'MIT'
   s.required_ruby_version = '3.1.3'
 
