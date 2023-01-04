@@ -46,7 +46,7 @@ Pair = Struct.new(:x, :y) do
   end
 end
 
-class MinmaxPrioritySearchTree
+class MinmaxPrioritySearchTreeInternal
   INFINITY = Float::INFINITY
 
   # The array of pairs is turned into a minmax PST in-place without cloning. So clone before passing it in, if you care.

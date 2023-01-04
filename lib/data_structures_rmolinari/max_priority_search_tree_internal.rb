@@ -36,7 +36,7 @@ Pair = Struct.new(:x, :y)
 
 class LogicError < StandardError; end
 
-class MaxPrioritySearchTree
+class MaxPrioritySearchTreeInternal
   INFINITY = Float::INFINITY
 
   # The array of pairs is turned into a PST in-place without cloning. So clone before passing it in, if you care.
@@ -258,7 +258,7 @@ class MaxPrioritySearchTree
       values = c.map { |node| @data[node] }
 
       # Note that x(c1) <= x0 < x(c4) so i is well-defined
-      i = (0...4).find { |j| sign * values[j].x <= sign * x0 && sign * x0 < sign *values[j + 1].x }
+      i = (0...4).find { |j| sign * values[j].x <= sign * x0 && sign * x0 < sign * values[j + 1].x }
 
       # These nodes all have large-enough x values so looking at y finds the ones in Q
       new_q = c[(i + 1)..].find { |node| @data[node].y >= y0 } # could be nil
