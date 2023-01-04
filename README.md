@@ -24,16 +24,20 @@ pst = MaxPrioritySearchTree.new([Pair.new(1, 1)])
 puts pts.highest_ne(0, 0)
 ```
 
+# Implementations
+
 ## Priority Search Tree
 
 Store a set of two-dimensional points in a way that allows certain queries to be answered efficiently. See McCreight and De et al.
 
 ## Segment Tree
 
-Segment trees sore information related to subintervals of a certain array. For example, they can be used to find the sum of the
+Segment trees store information related to subintervals of a certain array. For example, they can be used to find the sum of the
 elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) time.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
+
+There is a generic implementation, ```GenericSegmentTree``` and a single concrete class ```MaxValSegmentTree```.
 
 ## References
 - E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
