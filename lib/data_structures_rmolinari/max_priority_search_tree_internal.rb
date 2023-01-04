@@ -1,7 +1,6 @@
 require 'set'
 require_relative 'shared'
 
-class LogicError < StandardError; end
 
 # A priority search tree (PST) stores a set, P, of two-dimensional points (x,y) in a way that allows efficient answes to certain
 # questions about P.
@@ -43,6 +42,7 @@ class LogicError < StandardError; end
 #   Geometry, 2011
 class MaxPrioritySearchTreeInternal
   include Shared
+  include BinaryTreeArithmetic
 
   # Construct a MaxPST from the collection of points in +data+.
   #
@@ -1046,52 +1046,52 @@ class MaxPrioritySearchTreeInternal
   ########################################
   # Tree arithmetic
 
-  # First element and root of the tree structure
-  private def root
-    1
-  end
+  # # First element and root of the tree structure
+  # private def root
+  #   1
+  # end
 
-  # Indexing is from 1
-  private def parent(i)
-    i >> 1
-  end
+  # # Indexing is from 1
+  # private def parent(i)
+  #   i >> 1
+  # end
 
-  private def left(i)
-    i << 1
-  end
+  # private def left(i)
+  #   i << 1
+  # end
 
-  private def right(i)
-    1 + (i << 1)
-  end
+  # private def right(i)
+  #   1 + (i << 1)
+  # end
 
-  private def level(i)
-    l = 0
-    while i > root
-      i >>= 1
-      l += 1
-    end
-    l
-  end
+  # private def level(i)
+  #   l = 0
+  #   while i > root
+  #     i >>= 1
+  #     l += 1
+  #   end
+  #   l
+  # end
 
-  # i has no children
-  private def leaf?(i)
-    i > @last_non_leaf
-  end
+  # # i has no children
+  # private def leaf?(i)
+  #   i > @last_non_leaf
+  # end
 
-  # i has exactly one child (the left)
-  private def one_child?(i)
-    i == @parent_of_one_child
-  end
+  # # i has exactly one child (the left)
+  # private def one_child?(i)
+  #   i == @parent_of_one_child
+  # end
 
-  # i has two children
-  private def two_children?(i)
-    i <= @last_parent_of_two_children
-  end
+  # # i has two children
+  # private def two_children?(i)
+  #   i <= @last_parent_of_two_children
+  # end
 
-  # i is the left child of its parent.
-  private def left_child?(i)
-    (i & 1).zero?
-  end
+  # # i is the left child of its parent.
+  # private def left_child?(i)
+  #   (i & 1).zero?
+  # end
 
   private def swap(index1, index2)
     return if index1 == index2
