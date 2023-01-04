@@ -37,7 +37,7 @@ elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) tim
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-There is a generic implementation, ```GenericSegmentTree``` and a single concrete class ```MaxValSegmentTree```.
+There is a generic implementation, ```GenericSegmentTree```, and a single concrete class ```MaxValSegmentTree```.
 
 ## References
 - E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
