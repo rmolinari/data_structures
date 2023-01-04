@@ -8,12 +8,12 @@ pseudo-code I found as I read about each structure and so are unlikely to be as 
 
 Documentation is a work in progress.
 
-The code will soon be available as a Ruby gem.
+The code is available in gem form as `data_structures_rmolinari`: https://rubygems.org/gems/data_structures_rmolinari.
 
 ## Usage
 
 The right way to organize the code is not obvious to me. For now the data structures are all defined in a module to avoid polluting
-the global namespace. Once it is published as a gem the usage will look like this:
+the global namespace.
 ```
 require 'data_structures_rmolinari`
 
