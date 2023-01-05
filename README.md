@@ -12,8 +12,10 @@ The code is available in gem form as `data_structures_rmolinari`: https://rubyge
 
 ## Usage
 
-The right way to organize the code is not obvious to me. For now the data structures are all defined in a module to avoid polluting
-the global namespace.
+The right way to organize the code is not obvious to me. For now the data structures are all defined in the module
+`DataStructuresRMolinari` to avoid polluting the global namespace.
+
+Example usage:
 ```
 require 'data_structures_rmolinari`
 
@@ -37,8 +39,13 @@ elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) tim
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-There is a generic implementation, ```GenericSegmentTree```, and a single concrete class ```MaxValSegmentTree```.
+There is a generic implementation, `GenericSegmentTree`, and a single concrete class `MaxValSegmentTree`.
+
+## Heap
+
+A standard binary heap, suitable for use as a priority queue. See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.
 
 ## References
 - E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
+- Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
 - M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011

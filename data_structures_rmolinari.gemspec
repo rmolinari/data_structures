@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.homepage    = 'https://github.com/rmolinari/data_structures'
   s.files       = FileList['lib/**/*.rb']
   s.license     = 'MIT'
-  s.required_ruby_version = '3.1.3'
+  s.required_ruby_version = '~> 3.1.3'
 
   s.add_runtime_dependency 'must_be', '~> 1.1.0'
 
