@@ -30,10 +30,10 @@ puts pst.highest_ne(0, 0)
 
 ## Disjoint Union
 
-We represent the set S(n) = {0, 1, ..., n} as the disjoint union of subsets. Alternatively, we represent a partition S(n). The data
+We represent the set S(n) = {0, 1, ..., n} as the disjoint union of subsets. Alternatively, we represent a partition of S(n). The data
 structure provides very efficient implementation of the two key operations
-- +unite(e, f)+, which merges the subsets containing e and f; and
-- +find(e)+, which returns the canonical representative of the subset containing e. Two elements e and f are in the same subset
+- `unite(e, f)`, which merges the subsets containing e and f; and
+- `find(e)`, which returns the canonical representative of the subset containing e. Two elements e and f are in the same subset
   exactly when +find(e) == find(f)+.
 
 ## Heap
