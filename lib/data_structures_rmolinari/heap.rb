@@ -36,9 +36,17 @@ require_relative 'shared'
 #   DOI 10.1007/s00224-017-9760-2
 #
 # @todo
+#   - allow for priorities comparable only via +<=>+, like arrays
+#     - this requires different handling for max-heaps, as we can't just negate the priorities and use min-heap logic
 #   - relax the requirement that priorities must be comparable vai +<+ and respond to negation. Instead, allow comparison via +<=>+
 #     and handle max-heaps differently.
 #     - this will allow priorities to be arrays for tie-breakers and similar.
+#   - offer a non-addressable version that doesn't support +update+
+#     - configure through the initializer
+#     - other operations will be a little quicker, and we can add the same item more than once. The paper by Chen et al. referenced
+#       in the Wikipedia article for Pairing Heaps suggests that using such a priority queue for Dijkstra's algorithm and inserting
+#       multiple copies of a key rather than updating its priority is faster in practice than other approaches that have better
+#       theoretical performance.
 class DataStructuresRMolinari::Heap
   include Shared::BinaryTreeArithmetic
 
@@ -61,7 +69,7 @@ class DataStructuresRMolinari::Heap
     @size.zero?
   end
 
-  # Insert a new element into the heap with the given property.
+  # Insert a new element into the heap with the given priority.
   # @param value the item to be inserted. It is an error to insert an item that is already present in the heap, though we don't
   #   check for this.
   # @param priority the priority to use for new item. The values used as priorities ust be totally ordered via +<+ and, if +self+ is

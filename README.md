@@ -36,12 +36,15 @@ structure provides very efficient implementation of the two key operations
 
 ## Heap
 
-A standard binary heap, suitable for use as a priority queue. See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.
+A binary heap with an `update` method, suitable for use as a priority queue. See https://en.wikipedia.org/wiki/Binary_heap and
+Edelkamp et al.
 
 ## Priority Search Tree
 
-A PST stores a set of two-dimensional points in a way that allows certain queries to be answered efficiently. See McCreight and De
-et al.
+A PST stores a set of two-dimensional points in a way that allows certain queries to be answered efficiently. The implementation is
+in `MaxPrioritySearchTree`.
+
+See the papers McCreight (1985) and De et al (2011).
 
 ## Segment Tree
 
@@ -50,7 +53,7 @@ elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) tim
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-There is a generic implementation, `GenericSegmentTree`, and a single concrete class `MaxValSegmentTree`.
+There is a generic implementation, `GenericSegmentTree`, and a concrete class `MaxValSegmentTree`.
 
 ## References
 - Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
