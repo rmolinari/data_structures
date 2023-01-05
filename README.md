@@ -49,11 +49,17 @@ See the papers McCreight (1985) and De et al (2011).
 ### Segment Tree
 
 Segment trees store information related to subintervals of a certain array. For example, they can be used to find the sum of the
-elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) time.
+elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) time. Each node in the tree corresponds to a subarray
+of the array, in such a way that the values we store in the nodes can be combined efficiently to determined the desired result for
+arbitrary subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-There is a generic implementation, `GenericSegmentTree`, and a concrete class `MaxValSegmentTree`.
+There is a generic implementation, `GenericSegmentTree`, and concrete classes `MaxValSegmentTree` and
+`IndexOfMaxValSegmentTree`. The generic implementation is such that concrete classes can be written by providing a handful of
+(usually) simple lambdas and constants to the generic class's initializer. Working out the details require some knowledge of the
+internal mechanisms of a segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions of the concrete
+classes here for examples.
 
 ## References
 - Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
