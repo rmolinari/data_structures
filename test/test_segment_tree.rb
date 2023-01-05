@@ -4,42 +4,55 @@ require 'byebug'
 require 'data_structures_rmolinari'
 
 MaxValSegmentTree = DataStructuresRMolinari::MaxValSegmentTree
+IndexOfMaxValSegmentTree = DataStructuresRMolinari::IndexOfMaxValSegmentTree
 
 class SegmentTreeTest < Test::Unit::TestCase
-  def test_max_val_segment_tree
-    seg_tree = MaxValSegmentTree.new(data)
-
-    # Do it! Gotta try them all!
-    (0...size).each do |i|
-      (i...size).each do |j|
-        assert_equal seg_tree.max_on(i, j), data[i..j].max
-      end
-    end
-  end
-
-  def test_max_val_segment_tree_updates
-    mutable_data = data.clone
-    seg_tree = MaxValSegmentTree.new(mutable_data)
-    (0...(data.size)).each do |idx|
-      mutable_data[idx] += rand(-5..5)
-      seg_tree.update_at(idx)
-      check_all_intervals_for_max(seg_tree, mutable_data)
-    end
-  end
-
-  private def data
-    @data ||= [
+  DATA = [
       -1, 7, 1, -4, 3, 0, -4, 1, -8, 9, -5, -10, 4, -9, 3, 8, 3, 6, 7, 1, -4, 8, -9, -6, 10, -10, 7, 9, -6, -10, 5, -4, -1, -2, 4,
       3, -10, -8, 9, 2
     ]
+
+  def test_max_val_segment_tree
+    test_seg_tree_basic(MaxValSegmentTree, :max_on, DATA) { |i, j| DATA[i..j].max }
   end
 
-  private def check_all_intervals_for_max(segment_tree, data)
-    size = data.size
+  def test_max_val_segment_tree_updates
+    mutable_data = DATA.clone
+    test_seg_tree_with_updates(MaxValSegmentTree, :max_on, mutable_data) { |i, j| mutable_data[i..j].max }
+  end
 
-    (0...size).each do |i|
-      (i...size).each do |j|
-        assert_equal segment_tree.max_on(i, j), data[i..j].max
+  def test_index_of_max_val_segment_tree
+    test_seg_tree_basic(IndexOfMaxValSegmentTree, :index_of_max_val_on, DATA) { |i, j| (i..j).max_by { DATA[_1] } }
+  end
+
+  def test_index_of_max_val_segment_tree_updates
+    mutable_data = DATA.clone
+    test_seg_tree_with_updates(IndexOfMaxValSegmentTree, :index_of_max_val_on, mutable_data) { |i, j| (i..j).max_by { mutable_data[_1] } }
+  end
+
+  ########################################
+  # Helpers
+
+  private def test_seg_tree_basic(klass, method, data, &block)
+    seg_tree = klass.new(data)
+    check_all_intervals(seg_tree, method, data.size) { |i, j| block.call(i, j) }
+  end
+
+  private def test_seg_tree_with_updates(klass, method, mutable_data, &block)
+    seg_tree = klass.new(mutable_data)
+    (0...(mutable_data.size)).each do |idx|
+      mutable_data[idx] += rand(-5..5)
+      seg_tree.update_at(idx)
+      check_all_intervals(seg_tree, method, mutable_data.size) { |i, j| block.call(i, j) }
+    end
+  end
+
+  private def check_all_intervals(segment_tree, method, data_size)
+    (0...data_size).each do |i|
+      (i...data_size).each do |j|
+        expected_value = yield(i, j)
+        actual_value = segment_tree.send(method, i, j)
+        assert_equal expected_value, actual_value
       end
     end
   end
