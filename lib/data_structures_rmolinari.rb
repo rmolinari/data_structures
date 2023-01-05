@@ -1,4 +1,5 @@
 require_relative 'data_structures_rmolinari/shared'
+require_relative 'data_structures_rmolinari/disjoint_union_internal'
 require_relative 'data_structures_rmolinari/generic_segment_tree_internal'
 require_relative 'data_structures_rmolinari/heap_internal'
 require_relative 'data_structures_rmolinari/max_priority_search_tree_internal'
@@ -11,6 +12,7 @@ module DataStructuresRMolinari
   # Priority Search Trees
   #
   # Note that MinmaxPrioritySearchTree is only a fragment of what we need
+
   MaxPrioritySearchTree = MaxPrioritySearchTreeInternal
   MinmaxPrioritySearchTree = MinmaxPrioritySearchTreeInternal
 
@@ -42,5 +44,11 @@ module DataStructuresRMolinari
 
   ########################################
   # Heap
+
   Heap = HeapInternal
+
+  ########################################
+  # Disjoint Union
+
+  DisjointUnion = DisjointUnionInternal
 end
