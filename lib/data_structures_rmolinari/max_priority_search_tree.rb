@@ -46,8 +46,12 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
   # Construct a MaxPST from the collection of points in +data+.
   #
-  # @param data [Array] the set P of points presented as an array. The tree is built in the array in-place without cloning. Each
-  #        element of the array must respond to +#x+ and +#y+ (though this is not currently checked).
+  # @param data [Array] the set P of points presented as an array. The tree is built in the array in-place without cloning.
+  #   - Each element of the array must respond to +#x+ and +#y+.
+  #     - This is not checked explicitly but a missing method exception will be thrown when we try to call one of them.
+  #   - The +x+ values must be distinct, as must the +y+ values. We raise a +Shared::DataError+ if this isn't the case.
+  #     - This is a restriction that simplifies some of the algorithm code. It can be removed as the cost of some extra work. Issue
+  #       #9.
   #
   # @param verify [Boolean] when truthy, check that the properties of a PST are satisified after construction, raising an exception
   #        if not.
@@ -994,9 +998,14 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # Build the initial stucture
 
   private def construct_pst
-    # We follow the algorithm in the paper by De, Maheshwari et al. Note that indexing is from 1 there. For now we pretend that that
-    # is the case here, too.
+    raise DataError, 'Duplicate x values are not supported' if contains_duplicates?(@data, by: :x)
+    raise DataError, 'Duplicate y values are not supported' if contains_duplicates?(@data, by: :y)
 
+    # We follow the algorithm in the paper by De, Maheshwari et al.
+
+    # Since we are building an implicit binary tree, things are simpler if the array is 1-based. This probably requires a malloc and
+    # data copy, which isn't great, but it's in the C layer so cheap compared to the O(n log^2 n) work we need to do for
+    # construction. In fact, we are probably doing O(n^2) work because of all the calls to #index_with_largest_y_in.
     @data.unshift nil
 
     h = Math.log2(@size).floor
@@ -1106,13 +1115,11 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     (l..r).max_by { |idx| @data[idx].y }
   end
 
-  # Sort the subarray @data[l..r]. This is much faster than a Ruby-layer heapsort because it is mostly happening in C.
+  # Sort the subarray @data[l..r].
   private def sort_subarray(l, r)
-    # heapsort_subarray(l, r)
     return if l == r # 1-array already sorted!
 
-    #l -= 1
-    #r -= 1
+    # This slice-replacement is much faster than a Ruby-layer heapsort because it is mostly happening in C.
     @data[l..r] = @data[l..r].sort_by(&:x)
   end
 

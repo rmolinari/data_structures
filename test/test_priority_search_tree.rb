@@ -35,6 +35,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     MaxPrioritySearchTree.new(data.shuffle, verify: true)
   end
 
+  def test_duplicate_coordinate_checks
+    # duplicate x values
+    assert_raise(Shared::DataError) do
+      MaxPrioritySearchTree.new([Pair.new(0, 0), Pair.new(0, 1)])
+    end
+
+    # duplicate y valus
+    assert_raise(Shared::DataError) do
+      MaxPrioritySearchTree.new([Pair.new(0, 0), Pair.new(1, 0)])
+    end
+  end
+
   def test_pst_highest_ne
     100.times do
       x0 = rand(@size)

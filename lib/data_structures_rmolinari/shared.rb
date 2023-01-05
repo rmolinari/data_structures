@@ -6,6 +6,7 @@ module Shared
 
   # @private
   class LogicError < StandardError; end
+  class DataError < StandardError; end
 
   # @private
   #
@@ -60,5 +61,23 @@ module Shared
     private def left_child?(i)
       (i & 1).zero?
     end
+  end
+
+  # Simple O(n) check for duplicates in an enumerable.
+  #
+  # It may be worse than O(n), depending on how close to constant set insertion is.
+  #
+  # @param enum the enumerable to check for duplicates
+  # @param by a method to call on each element of enum before checking. The results of these methods are checked for
+  #        duplication. When nil we don't call anything and just use the elements themselves.
+  def contains_duplicates?(enum, by: nil)
+    seen = Set.new
+    enum.each do |v|
+      v = v.send(by) if by
+      return true if seen.include? v
+
+      seen << v
+    end
+    false
   end
 end
