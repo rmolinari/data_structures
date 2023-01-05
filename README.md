@@ -13,7 +13,7 @@ The code is available in gem form as `data_structures_rmolinari`: https://rubyge
 The right way to organize the code is not obvious to me. For now the data structures are all defined in the module
 `DataStructuresRMolinari` to avoid polluting the global namespace.
 
-Example usage:
+Example usage after the gem is installed:
 ```
 require 'data_structures_rmolinari`
 
@@ -24,9 +24,9 @@ pst = MaxPrioritySearchTree.new([Pair.new(1, 1)])
 puts pst.highest_ne(0, 0)
 ```
 
-# Implementations
+## Implementations
 
-## Disjoint Union
+### Disjoint Union
 
 We represent the set S(n) = {0, 1, ..., n} as the disjoint union of subsets. Alternatively, we represent a partition of S(n). The data
 structure provides very efficient implementation of the two key operations
@@ -34,19 +34,19 @@ structure provides very efficient implementation of the two key operations
 - `find(e)`, which returns the canonical representative of the subset containing e. Two elements e and f are in the same subset
   exactly when `find(e) == find(f)`.
 
-## Heap
+### Heap
 
 A binary heap with an `update` method, suitable for use as a priority queue. See https://en.wikipedia.org/wiki/Binary_heap and
 Edelkamp et al.
 
-## Priority Search Tree
+### Priority Search Tree
 
 A PST stores a set of two-dimensional points in a way that allows certain queries to be answered efficiently. The implementation is
 in `MaxPrioritySearchTree`.
 
 See the papers McCreight (1985) and De et al (2011).
 
-## Segment Tree
+### Segment Tree
 
 Segment trees store information related to subintervals of a certain array. For example, they can be used to find the sum of the
 elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) time.
