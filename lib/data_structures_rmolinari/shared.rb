@@ -4,8 +4,12 @@ module Shared
 
   Pair = Struct.new(:x, :y)
 
+  # @private
   class LogicError < StandardError; end
 
+  # @private
+  #
+  # Provide simple arithmetic for an implied binary tree stored in an array, with the root at 1
   module BinaryTreeArithmetic
     # First element and root of the tree structure
     private def root

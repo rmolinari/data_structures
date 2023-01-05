@@ -23,14 +23,19 @@ MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
 Pair = DataStructuresRMolinari::Pair
 
 pst = MaxPrioritySearchTree.new([Pair.new(1, 1)])
-puts pts.highest_ne(0, 0)
+puts pst.highest_ne(0, 0)
 ```
 
 # Implementations
 
+## Heap
+
+A standard binary heap, suitable for use as a priority queue. See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.
+
 ## Priority Search Tree
 
-Store a set of two-dimensional points in a way that allows certain queries to be answered efficiently. See McCreight and De et al.
+A PST stores a set of two-dimensional points in a way that allows certain queries to be answered efficiently. See McCreight and De
+et al.
 
 ## Segment Tree
 
@@ -40,10 +45,6 @@ elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) tim
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
 There is a generic implementation, `GenericSegmentTree`, and a single concrete class `MaxValSegmentTree`.
-
-## Heap
-
-A standard binary heap, suitable for use as a priority queue. See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.
 
 ## References
 - E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
