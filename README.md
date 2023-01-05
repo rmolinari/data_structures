@@ -34,7 +34,7 @@ We represent the set S(n) = {0, 1, ..., n} as the disjoint union of subsets. Alt
 structure provides very efficient implementation of the two key operations
 - `unite(e, f)`, which merges the subsets containing e and f; and
 - `find(e)`, which returns the canonical representative of the subset containing e. Two elements e and f are in the same subset
-  exactly when +find(e) == find(f)+.
+  exactly when `find(e) == find(f)`.
 
 ## Heap
 
