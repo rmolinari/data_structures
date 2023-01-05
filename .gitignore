@@ -10,3 +10,4 @@ profile
 *.gem
 .yardoc
 doc
+.DS_Store

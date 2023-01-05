@@ -35,7 +35,7 @@ require_relative 'shared'
 #     - NOTE that in this case, we have different "combine" functions in #determine_val and #build. In #build we would combine
 #       sorted lists into a larger sorted list. In #determine_val we combine results via #min.
 #     - Think about the interface before doing this.
-class GenericSegmentTreeInternal
+class DataStructuresRMolinari::GenericSegmentTree
   include Shared::BinaryTreeArithmetic
 
   # Construct a concrete instance of a Segment Tree. See details at the links above for the underlying concepts here.

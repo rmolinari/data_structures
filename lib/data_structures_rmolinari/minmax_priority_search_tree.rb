@@ -40,7 +40,7 @@ require_relative 'shared'
 # [2] De, Maheshwari, Nandy, Smid, _An in-place priority search tree_, 23rd Annual Canadian Conference on Computational Geometry.
 # [3] De, Maheshwari, Nandy, Smid, _An in-place min-max priority search tree_, Computational Geometry, v46 (2013), pp 310-327.
 # [4] Atkinson, Sack, Santoro, Strothotte, _Min-max heaps and generalized priority queues_, Commun. ACM 29 (10) (1986), pp 996-1000.
-class MinmaxPrioritySearchTreeInternal
+class DataStructuresRMolinari::MinmaxPrioritySearchTree
   include Shared
 
   # The array of pairs is turned into a minmax PST in-place without cloning. So clone before passing it in, if you care.

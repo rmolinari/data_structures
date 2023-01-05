@@ -40,7 +40,7 @@ require_relative 'shared'
 # * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.  Later, De,
 # * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational
 #   Geometry, 2011
-class MaxPrioritySearchTreeInternal
+class DataStructuresRMolinari::MaxPrioritySearchTree
   include Shared
   include BinaryTreeArithmetic
 

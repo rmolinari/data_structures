@@ -4,13 +4,21 @@
 # The data structure provides efficient actions to merge two disjoint subsets, i.e., replace them by their union, and determine if
 # two elements are in the same subset.
 #
-# The elements of the set must be 0, 1, ..., n-1. Client code can map its data to these representatives. The code uses several ideas
-# from Tarjan and van Leeuwen for efficiency
+# The elements of the set must be 0, 1, ..., n-1, where n is the size of the universe. Client code can map its data to these
+# representatives.
 #
 # See https://en.wikipedia.org/wiki/Disjoint-set_data_structure for a good introduction.
 #
+# The code uses several ideas from Tarjan and van Leeuwen for efficiency. We use "union by rank" in +unite+ and path-halving in
+# +find+. Together, these make the amortized cost for each of n such operations effectively constant.
+#
 # - Tarjan, Robert E., van Leeuwen, Jan (1984). "Worst-case analysis of set union algorithms". Journal of the ACM. 31 (2): 245–281.
-class DisjointUnionInternal
+#
+# @todo
+#   - allow caller to expand the size of the universe. This operation is called "make set".
+#     - All we need to do is increase the size of @d, set the parent pointers, define the new ranks (zero), and update @size.
+class DataStructuresRMolinari::DisjointUnion
+  # The number of subsets in the partition.
   attr_reader :subset_count
 
   # @param size the size of the universe, which must be known at the time of construction. The elements 0, 1, ..., size - 1 start

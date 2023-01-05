@@ -39,7 +39,7 @@ require_relative 'shared'
 #   - relax the requirement that priorities must be comparable vai +<+ and respond to negation. Instead, allow comparison via +<=>+
 #     and handle max-heaps differently.
 #     - this will allow priorities to be arrays for tie-breakers and similar.
-class HeapInternal
+class DataStructuresRMolinari::Heap
   include Shared::BinaryTreeArithmetic
 
   attr_reader :size
