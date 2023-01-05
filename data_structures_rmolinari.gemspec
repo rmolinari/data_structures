@@ -2,17 +2,20 @@ require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'data_structures_rmolinari'
-  s.version     = '0.2.0'
+  s.version     = '0.2.2'
   s.summary     = 'Several miscellaneous data structures I have implemented to learn about them.'
   s.description = <<~DESC
-    This small gem contains several data structures that I have implemented to learn how they work.
+    This small gem contains several data structures that I have implemented in Ruby to learn how they work.
 
     Sometimes it is not enough to read the description of a data structure and accompanying pseudo-code.
-    Actually implementing the structure is often helpful in understanding what is going on. It is also
+    Actually implementing it is often helpful in understanding what is going on. It is also
     usually fun.
+
+    The gem contains basic implementions of Disjoint Union, Heap, Priority Search Tree, and Segment Tree.
+    See the homepage for more details.
   DESC
   s.authors     = ['Rory Molinari']
-  s.email       = 'rorymolinari+rubygems@gmail.com'
+  s.email       = 'rorymolinari@gmail.com'
   s.homepage    = 'https://github.com/rmolinari/data_structures'
   s.files       = FileList['lib/**/*.rb']
   s.license     = 'MIT'

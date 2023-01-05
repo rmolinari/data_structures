@@ -69,7 +69,7 @@ class MaxPrioritySearchTreeInternal
   # Let Q = [x0, infty) X [y0, infty) be the northeast quadrant defined by the point (x0, y0) and let P be the points in this data
   # structure. Define p* as
   #
-  # - (infty, -infty) f Q \intersect P is empty and
+  # - (infty, -infty) if Q \intersect P is empty and
   # - the highest (max-x) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
@@ -82,7 +82,7 @@ class MaxPrioritySearchTreeInternal
   # Let Q = (-infty, x0] X [y0, infty) be the northwest quadrant defined by the point (x0, y0) and let P be the points in this data
   # structure. Define p* as
   #
-  # - (-infty, -infty) f Q \intersect P is empty and
+  # - (-infty, -infty) if Q \intersect P is empty and
   # - the highest (max-y) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
@@ -186,7 +186,7 @@ class MaxPrioritySearchTreeInternal
   # Let Q = [x0, infty) X [y0, infty) be the northeast quadrant defined by the point (x0, y0) and let P be the points in this data
   # structure. Define p* as
   #
-  # - (infty, infty) f Q \intersect P is empty and
+  # - (infty, infty) if Q \intersect P is empty and
   # - the leftmost (min-x) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.

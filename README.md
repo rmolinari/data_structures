@@ -3,10 +3,8 @@
 This is a small collection of Ruby data structures that I have implemented for my own sake. Implementing the code for a data
 structure is almost always more educational than simply reading about it and is usually fun.
 
-These implementations are not particularly clever and are probably slow. They are based on the expository descriptions and
-pseudo-code I found as I read about each structure and so are unlikely to be as fast as possible.
-
-Documentation is a work in progress.
+These implementations are not particularly clever. They are based on the expository descriptions and pseudo-code I found as I read
+about each structure and so are unlikely to be as fast as possible.
 
 The code is available in gem form as `data_structures_rmolinari`: https://rubygems.org/gems/data_structures_rmolinari.
 
@@ -55,6 +53,6 @@ An excellent description of the idea is found at https://cp-algorithms.com/data_
 There is a generic implementation, `GenericSegmentTree`, and a single concrete class `MaxValSegmentTree`.
 
 ## References
-- E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
 - Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
-- M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
+- E.M. McCreight, E.M., _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
+- De, M., Maheshwari A.,, Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
