@@ -25,6 +25,7 @@ module DataStructuresRMolinari
     extend Forwardable
 
     def_delegator :@structure, :query_on, :max_on
+    def_delegator :@structure, :update_at
 
     def initialize(data)
       @structure = GenericSegmentTree.new(

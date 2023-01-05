@@ -16,16 +16,6 @@ require_relative 'shared'
 # We do O(n) work to build the internal data structure at initialization. Then we answer queries in O(log n) time.
 #
 # @todo
-#   - provide a data-update operation like update_val_at(idx, val)
-#     - this is O(log n)
-#     - note that this may need some rework. Consider something like IndexOfMaxVal: @merge needs to know about the underlying data
-#       in that case. Hmmm. Maybe the lambda can close over the data in a way that makes it possible to change the data "from the
-#       outside". Yes:
-#         a = [1,2,3]
-#         foo = ->() { a.max }
-#         foo.call # 3
-#         a = [1,2,4]
-#         foo.call # 4
 #   - Offer an optional parameter base_case_value_extractor (<-- need better name) to be used in #determine_val in the case that
 #     left == tree_l && right == tree_r instead of simply returning @tree[tree_idx]
 #     - Use case: https://cp-algorithms.com/data_structures/segment_tree.html#saving-the-entire-subarrays-in-each-vertex, such as
@@ -45,6 +35,7 @@ class DataStructuresRMolinari::GenericSegmentTree
   # @param single_cell_array_val a lambda that takes an index i and returns the value we need to store in the #build
   #     operation for the subinterval i..i. This is often simply be the value data[i], but in some cases - like "index of max val" -
   #     it will be something else.
+  #     - If +update_at+ is called later, this lambda must close over the underlying data in a way that captures the updated value.
   # @param size the size of the underlying data array, used in certain internal arithmetic.
   # @param identity is the value to return when we are querying on an empty interval
   #   - for sums, this will be zero; for maxima, this will be -Infinity, etc
@@ -71,6 +62,18 @@ class DataStructuresRMolinari::GenericSegmentTree
     determine_val(root, left, right, 0, @size - 1)
   end
 
+  # Update the value in the underlying array at the given idx
+  #
+  # @param idx an index in the underlying data array.
+  #
+  # Note that we don't accept the updated value here. We get that from the argument +single_cell_array_val+ supplied at
+  # construction.
+  def update_at(idx)
+    raise DataError, 'Cannot update an index outside the initial range of the underlying data' unless (0...@size).cover?(idx)
+
+    update_val_at(idx, root, 0, @size - 1)
+  end
+
   private def determine_val(tree_idx, left, right, tree_l, tree_r)
     # Does the current tree node exactly serve up the interval we're interested in?
     return @tree[tree_idx] if left == tree_l && right == tree_r
@@ -89,6 +92,26 @@ class DataStructuresRMolinari::GenericSegmentTree
         determine_val(left(tree_idx),  left,    mid,   tree_l,  mid),
         determine_val(right(tree_idx), mid + 1, right, mid + 1, tree_r)
       )
+    end
+  end
+
+  private def update_val_at(idx, tree_idx, tree_l, tree_r)
+    if tree_l == tree_r
+      # We have found the spot!
+      raise LogicError, 'tree_l == tree_r, but they do not agree with the idx holding the updated value' unless tree_l == idx
+
+      @tree[tree_idx] = @single_cell_array_val.call(tree_l)
+    else
+      # Recursively update the appropriate subtree
+      mid = midpoint(tree_l, tree_r)
+      left = left(tree_idx)
+      right = right(tree_idx)
+      if mid >= idx
+        update_val_at(idx, left(tree_idx), tree_l, mid)
+      else
+        update_val_at(idx, right(tree_idx), mid + 1, tree_r)
+      end
+      @tree[tree_idx] = @combine.call(@tree[left], @tree[right])
     end
   end
 
