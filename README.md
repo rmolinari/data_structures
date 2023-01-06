@@ -41,16 +41,14 @@ A binary heap with an `update` method, suitable for use as a priority queue. Ope
   - values must be distinct (but see #11).
 - `top`, returning the element with smallest priority
 - `pop`, return the element with smallest priority and remove it from the structure
-- `update(value, priority)`, update the priority of the given element
+- `update(value, priority)`, update the priority of the given element, which must already be in the heap
 
 `top` is O(1). The others are O(log n).
 
 By default we have a min-heap: the top element is the one with smallest priority. A configuration parameter at construction makes it
 a max-heap.
 
-
-See https://en.wikipedia.org/wiki/Binary_heap and
-Edelkamp et al.
+See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.
 
 ### Priority Search Tree
 

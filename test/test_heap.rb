@@ -75,4 +75,15 @@ class HeapTest < Test::Unit::TestCase
       heap.update(1, 1)
     end
   end
+
+  def test_arrays_as_priorities
+    data = (1..50).to_a.shuffle
+    heap = Heap.new
+    data.each { |v| heap.insert(v, [v]) }
+
+    tops = []
+    tops << heap.pop until heap.empty?
+
+    assert(tops.each_cons(2).all? { |x, y| x < y })
+  end
 end

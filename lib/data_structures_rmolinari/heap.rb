@@ -36,11 +36,6 @@ require_relative 'shared'
 #   DOI 10.1007/s00224-017-9760-2
 #
 # @todo
-#   - allow for priorities comparable only via +<=>+, like arrays
-#     - this requires different handling for max-heaps, as we can't just negate the priorities and use min-heap logic
-#   - relax the requirement that priorities must be comparable vai +<+ and respond to negation. Instead, allow comparison via +<=>+
-#     and handle max-heaps differently.
-#     - this will allow priorities to be arrays for tie-breakers and similar.
 #   - offer a non-addressable version that doesn't support +update+
 #     - configure through the initializer
 #     - other operations will be a little quicker, and we can add the same item more than once. The paper by Chen et al. referenced
@@ -73,14 +68,9 @@ class DataStructuresRMolinari::Heap
   # Insert a new element into the heap with the given priority.
   # @param value the item to be inserted. It is an error to insert an item that is already present in the heap, though we don't
   #   check for this.
-  # @param priority the priority to use for new item. The values used as priorities ust be totally ordered via +<+ and, if +self+ is
-  #   a max-heap, must respond to negation +@-+ in the natural order-respecting way.
-  # @todo
-  #   - check for duplicate
+  # @param priority the priority to use for new item. The values used as priorities must be comparable via +<=>+.
   def insert(value, priority)
     raise DataError, "Heap already contains #{value}" if contains?(value)
-
-    priority *= -1 if @max_heap
 
     @size += 1
 
@@ -115,23 +105,19 @@ class DataStructuresRMolinari::Heap
   end
 
   # Update the priority of the given element and maintain the necessary heap properties.
+  #
   # @param element the item whose priority we are updating. It is an error to update the priority of an element not already in the
   #   heap
   # @param priority the new priority
-  #
-  # @todo
-  #   - check that the element is in the heap
   def update(element, priority)
     raise DataError, "Cannot update priority for value #{element} not already in the heap" unless contains?(element)
-
-    priority *= -1 if @max_heap
 
     idx = @index_of[element]
     old = @data[idx].priority
     @data[idx].priority = priority
-    if priority > old
+    if less_than_priority?(old, priority)
       sift_down(idx)
-    elsif priority < old
+    elsif less_than_priority?(priority, old)
       sift_up(idx)
     end
 
@@ -145,7 +131,7 @@ class DataStructuresRMolinari::Heap
     x = @data[idx]
     while idx != root
       i = parent(idx)
-      break unless x.priority < @data[i].priority
+      break unless less_than?(x, @data[i])
 
       assign(@data[i], idx)
       idx = i
@@ -160,9 +146,9 @@ class DataStructuresRMolinari::Heap
     x = @data[idx]
 
     while (j = left(idx)) <= @size
-      j += 1 if j + 1 <= @size && @data[j + 1].priority < @data[j].priority
+      j += 1 if j + 1 <= @size && less_than?(@data[j + 1], @data[j])
 
-      break unless @data[j].priority < x.priority
+      break unless less_than?(@data[j], x)
 
       assign(@data[j], idx)
       idx = j
@@ -178,6 +164,22 @@ class DataStructuresRMolinari::Heap
     @index_of[pair.item] = idx
   end
 
+  # Compare the priorities of two items with <=> and return truthy exactly when the result is -1.
+  #
+  # If this is a max-heap return truthy exactly when the result of <=> is 1.
+  #
+  # The arguments can also be the priorities themselves.
+  private def less_than?(p1, p2)
+    less_than_priority?(p1.priority, p2.priority)
+  end
+
+  # Direct comparison of priorities
+  private def less_than_priority?(priority1, priority2)
+    return (priority1 <=> priority2) == 1 if @max_heap
+
+    (priority1 <=> priority2) == -1
+  end
+
   private def contains?(item)
     !!@index_of[item]
   end
@@ -188,8 +190,8 @@ class DataStructuresRMolinari::Heap
       left = left(idx)
       right = right(idx)
 
-      raise LogicError, "Heap property violated by left child of index #{idx}" if left <= @size && @data[idx].priority >= @data[left].priority
-      raise LogicError, "Heap property violated by right child of index #{idx}" if right <= @size && @data[idx].priority >= @data[right].priority
+      raise LogicError, "Heap property violated by left child of index #{idx}" if left <= @size && less_than?(@data[left], @data[idx])
+      raise LogicError, "Heap property violated by right child of index #{idx}" if right <= @size && less_than?(@data[right], @data[idx])
     end
   end
 end
