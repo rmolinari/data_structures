@@ -75,6 +75,10 @@ The implementation is in `MaxPrioritySearchTree`.
 
 See the papers McCreight[^mccreight] and De et al.[^de_2011]
 
+De et al generalize the structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can also answer queries in the southeast and
+southwest quadrants.[^de_2013] But the presentiation is hard to follow in places and the pseudocode is buggy. See the fragmentary
+code in the class `MinMaxPrioritySearchTree` for further details.
+
 ### Segment Tree
 
 Segment trees store information related to subintervals of a certain array. For example, they can be used to find the sum of the
@@ -93,4 +97,5 @@ classes here for examples.
 ## References
 [^edelkamp]: Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
 [^mccreight]: McCreight, E.M., _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
-[^de_2011]: De, M., Maheshwari A.,, Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
+[^de_2011]: De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
+[^de_2013]: De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An in-place min-max priority search tree_, Computational Geometry, v46 (2013), pp 310-327.
