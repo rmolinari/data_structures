@@ -13,8 +13,8 @@ require_relative 'shared'
 # - +empty?+
 #   - is the heap empty?
 #   - O(1)
-# - +insert(element, priority)+
-#   - add a new element to the heap with an associated priority
+# - +insert(item, priority)+
+#   - add a new item to the heap with an associated priority
 #   - O(log N)
 # - +top+
 #   - return the lowest-priority element, which is the element at the root of the tree. In a max-heap this is the highest-priority
@@ -23,11 +23,17 @@ require_relative 'shared'
 # - +pop+
 #   - removes and returns the item that would be returned by +top+
 #   - O(log N)
-# - +update(element, priority)+
+# - +update(item, priority)+
 #   - tell the heap that the priority of a particular item has changed
 #   - O(log N)
 #
 # Here N is the number of elements in the heap.
+#
+# The internal requirements needed to implement +update+ have several consequences.
+# - Items added to the heap must be distinct. Otherwise we would not know which occurrence to update
+# - There is some bookkeeping overhead.
+# If client code doesn't need to call +update+ then we can create a "non-addressable" heap that allows for the insertion of
+# duplicate items and has slightly faster runtime overall. See the arguments to the initializer.
 #
 # References:
 #
@@ -41,6 +47,7 @@ class DataStructuresRMolinari::Heap
   include Shared
   include Shared::BinaryTreeArithmetic
 
+  # The number of items currently in the heap
   attr_reader :size
 
   # An (item, priority) pair
@@ -53,7 +60,7 @@ class DataStructuresRMolinari::Heap
   #   - items added to the heap must be distinct.
   #   When falsy, priorities are not updateable but items may be inserted multiple times. Operations are slightly faster because
   #   there is less internal bookkeeping.
-  # @param debug when truthy, verify the heap property after each update than might violate it. This makes operations much slower.
+  # @param debug when truthy, verify the heap property after each change that might violate it. This makes operations much slower.
   def initialize(max_heap: false, addressable: true, debug: false)
     @data = []
     @size = 0
@@ -69,9 +76,9 @@ class DataStructuresRMolinari::Heap
   end
 
   # Insert a new element into the heap with the given priority.
-  # @param value the item to be inserted. It is an error to insert an item that is already present in the heap, though we don't
-  #   check for this.
-  # @param priority the priority to use for new item. The values used as priorities must be comparable via +<=>+.
+  # @param value the item to be inserted.
+  #   - If the heap is addressible (the default) it is an error to insert an item that is already present in the heap.
+  # @param priority the priority to use for new item. The values used as priorities must be totally ordered via +<=>+.
   def insert(value, priority)
     raise DataError, "Heap already contains #{value}" if @addressable && contains?(value)
 
@@ -84,8 +91,9 @@ class DataStructuresRMolinari::Heap
   end
 
   # Return the top of the heap without removing it
-  # @return the value with minimal (maximal for max-heaps) priority. Strictly speaking, it returns the item at the root of the
-  #   binary tree; this element has minimal priority, but there may be other elements with the same priority.
+  # @return a value with minimal priority (maximal for max-heaps). Strictly speaking, it returns the item at the root of the
+  #   binary tree; this element has minimal priority, but there may be other elements with the same priority and they do not appear
+  #   at the top of the heap in any guaranteed order.
   def top
     raise 'Heap is empty!' unless @size.positive?
 

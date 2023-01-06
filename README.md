@@ -51,14 +51,29 @@ a max-heap.
 Another configuration parameter allows the creation of a "non-addressable" heap. This makes it impossible to call `update`, but
 allows the insertion of duplicate items (which is sometimes useful) and slightly faster operation overall.
 
-See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.
+See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.[^edelkamp]
 
 ### Priority Search Tree
 
-A PST stores a set of two-dimensional points in a way that allows certain queries to be answered efficiently. The implementation is
-in `MaxPrioritySearchTree`.
+A PST stores a set P of two-dimensional points in a way that allows certain queries to be answered efficiently.
+- `highest_ne(x0, y0)` and `highest_nw(x0, y0)`, the highest point in the quadrant to the northest/northwest of (x0, y0);
+- `leftmost_ne(x0, y0)`, the leftmost point in the quadrant to the northeast of (x0, y0);
+- `rightmost_nw(x0, y0)`, the rightmost point in the quadrant to the northwest of (x0, y0);
+- `highest_3_sided(x0, x1, y0)`, the highest point in the region specified by x0 <= x <= x1 and y0 <= y; and
+- `enumerate_3_sided(x0, x1, y0)`, enumerate all the points in that region.
 
-See the papers McCreight (1985) and De et al (2011).
+Here compass directions are the natural ones in the x-y plane with the positive x-axis pointing east and the positive y-axis
+pointing north. "Left", "right", and "highest" mean "west", "east", and "north".
+
+The single-point queries run in O(log n) time, where n is the size of P, while `enumerate_3_sided` runs in O(m + log n), where m is
+the number of points actually enumerated.
+
+(The use of both compass directions and left/right/highest is confusing but comes from the papers. We will probably switch them all
+to compass-words soon.)
+
+The implementation is in `MaxPrioritySearchTree`.
+
+See the papers McCreight[^mccreight] and De et al.[^de_2011]
 
 ### Segment Tree
 
@@ -76,6 +91,6 @@ internal mechanisms of a segment tree, for which the link at cp-algorithms.com i
 classes here for examples.
 
 ## References
-- Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
-- E.M. McCreight, E.M., _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
-- De, M., Maheshwari A.,, Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
+[^edelkamp]: Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
+[^mccreight]: McCreight, E.M., _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
+[^de_2011]: De, M., Maheshwari A.,, Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011

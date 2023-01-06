@@ -1,12 +1,8 @@
 require 'set'
 require_relative 'shared'
 
-
-# A priority search tree (PST) stores a set, P, of two-dimensional points (x,y) in a way that allows efficient answes to certain
+# A priority search tree (PST) stores a set, P, of two-dimensional points (x,y) in a way that allows efficient answers to certain
 # questions about P.
-#
-# (In the current implementation no two points can share an x-value and no two points can share a y-value. This (rather severe)
-# restriction can be relaxed with some more complicated code.)
 #
 # The data structure was introduced in 1985 by Edward McCreight. Later, De, Maheshwari, Nandy, and Smid showed how to construct a
 # PST in-place (using only O(1) extra memory), at the expense of some slightly more complicated code for the various supported
@@ -33,11 +29,15 @@ require_relative 'shared'
 #
 # The final operation (enumerate) takes O(m + log n) time, where m is the number of points that are enumerated.
 #
+# In the current implementation no two points can share an x-value and no two points can share a y-value. This (rather severe)
+# restriction can be relaxed with some more complicated code.
+#
+#
 # There is a related data structure called the Min-max priority search tree so we have called this a "Max priority search tree", or
 # MaxPST.
 #
 # References:
-# * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.  Later, De,
+# * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
 # * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational
 #   Geometry, 2011
 class DataStructuresRMolinari::MaxPrioritySearchTree

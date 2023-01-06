@@ -2,14 +2,12 @@ require 'must_be'
 
 require_relative 'shared'
 
+# THIS CLASS IS INCOMPLETE AND NOT USABLE
+#
 # A priority search tree (PST) stores points in two dimensions (x,y) and can efficiently answer certain questions about the set of
 # point.
 #
 # The structure was introduced by McCreight [1].
-#
-# It is a binary search tree which is a max-heap by the y-coordinate, and, for a non-leaf node N storing (x, y), all the nodes in
-# the left subtree of N have smaller x values than any of the nodes in the right subtree of N. Note, though, that the x-value at N
-# has no particular property relative to the x values in its subtree. It is thus _almost_ a binary search tree in the x coordinate.
 #
 # See more: https://en.wikipedia.org/wiki/Priority_search_tree
 #

@@ -4,7 +4,7 @@
 # The data structure provides efficient actions to merge two disjoint subsets, i.e., replace them by their union, and determine if
 # two elements are in the same subset.
 #
-# The elements of the set must be 0, 1, ..., n-1, where n is the size of the universe. Client code can map its data to these
+# The elements of the set are 0, 1, ..., n-1, where n is the size of the universe. Client code can map its data to these
 # representatives.
 #
 # See https://en.wikipedia.org/wiki/Disjoint-set_data_structure for a good introduction.
@@ -60,7 +60,7 @@ class DataStructuresRMolinari::DisjointUnion
   end
 
   private def check_value(v)
-    raise "Value must be given and be in (0..#{@size - 1})" unless v && v.between?(0, @size - 1)
+    raise DataError, "Value must be given and be in (0..#{@size - 1})" unless v && v.between?(0, @size - 1)
   end
 
   private def link(e, f)

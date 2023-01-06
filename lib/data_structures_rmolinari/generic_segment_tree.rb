@@ -13,7 +13,7 @@ require_relative 'shared'
 # Ruby.
 #
 # This is a generic implementation, intended to allow easy configuration for concrete instances. See the parameters to the
-# initializer and the defintiaons concrete realisations like MaxValSegmentTree.
+# initializer and the definitions of concrete realisations like MaxValSegmentTree.
 #
 # We do O(n) work to build the internal data structure at initialization. Then we answer queries in O(log n) time.
 class DataStructuresRMolinari::GenericSegmentTree
@@ -24,14 +24,14 @@ class DataStructuresRMolinari::GenericSegmentTree
   #   - For example, if we are calculating sums over subintervals, combine.call(a, b) = a + b, while if we are doing maxima we will
   #     return max(a, b).
   #   - Things get more complicated when we are calculating, say, the _index_ of the maximal value in a subinterval. Now it is not
-  #     enough simple to store that index at each tree node, because to combine the indices from two child nodes we need to know
+  #     enough simply to store that index at each tree node, because to combine the indices from two child nodes we need to know
   #     both the index of the maximal element in each child node's interval, but also the maximal values themselves, so we know
   #     which one "wins" for the parent node. This affects the sort of work we need to do when combining and the value provided by
   #     the +single_cell_array_val+ lambda.
   # @param single_cell_array_val a lambda that takes an index i and returns the value we need to store in the #build
   #     operation for the subinterval i..i.
-  #     - This is often simply be the value data[i], but in some cases it will be something else. For example, when we are
-  #       calculating the index of the maximal value on each subinterval we will retern the pair [i, data[i]] here.
+  #     - This will often simply be the value data[i], but in some cases it will be something else. For example, when we are
+  #       calculating the index of the maximal value on each subinterval we need [i, data[i]] here.
   #     - If +update_at+ is called later, this lambda must close over the underlying data in a way that captures the updated value.
   # @param size the size of the underlying data array, used in certain internal arithmetic.
   # @param identity the value to return when we are querying on an empty interval
