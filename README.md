@@ -17,6 +17,7 @@ Example usage after the gem is installed:
 ```
 require 'data_structures_rmolinari`
 
+# Pull what we need out of the namespace
 MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
 Point = DataStructuresRMolinari::Point # anything responding to :x and :y is fine
 
@@ -57,7 +58,8 @@ See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.[^edelkamp]
 
 ### Priority Search Tree
 
-A PST stores a set P of two-dimensional points in a way that allows certain queries about P to be answered efficiently.
+A PST stores a set P of two-dimensional points in a way that allows certain queries about P to be answered efficiently. See the
+papers McCreight[^mccreight] and De et al.[^de_2011]
 - `highest_ne(x0, y0)` and `highest_nw(x0, y0)`, the highest point in the quadrant to the northest/northwest of (x0, y0);
 - `leftmost_ne(x0, y0)`, the leftmost point in the quadrant to the northeast of (x0, y0);
 - `rightmost_nw(x0, y0)`, the rightmost point in the quadrant to the northwest of (x0, y0);
@@ -67,17 +69,21 @@ A PST stores a set P of two-dimensional points in a way that allows certain quer
 The single-point queries run in O(log n) time, where n is the size of P, while `enumerate_3_sided` runs in O(m + log n), where m is
 the number of points actually enumerated.
 
+The implementation is in `MaxPrioritySearchTree` (MaxPST for short), so called because internally the structure is, among other
+things, a max-heap on the y-coordinates.
+
+These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
+McCreight[^mccreight], keeping in mind that the data structure in that paper is actually a _MinPST_.
+
 Here compass directions are the natural ones in the x-y plane with the positive x-axis pointing east and the positive y-axis
-pointing north. "Left", "right", and "highest" mean "west", "east", and "north".  The use of both compass directions and
-left/right/highest is confusing but comes from the papers. We will probably switch them all to compass-words soon.
-
-The implementation is in `MaxPrioritySearchTree`.
-
-See the papers McCreight[^mccreight] and De et al.[^de_2011]
+pointing north. "Left", "right", and "highest" mean "west", "east", and "north".  The use of both compass- and spatial-directions is
+confusing but comes from the papers. There is an open issue to make this more consistent.
 
 De et al. generalize the structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can also answer queries in the southeast and
-southwest quadrants.[^de_2013] But the presentiation is hard to follow in places and the pseudocode is buggy. See the fragmentary
-code in the class `MinMaxPrioritySearchTree` for further details.
+southwest quadrants of the query point and in a downwards-infinite box.[^de_2013] (Otherwise we need to either implement a _MinPST_
+data structure - which is a duplication of work for the programmer - or create a separate _MaxPST_ with points under the mapping (x,
+y) -> (x, -y), which is a duplication of work for the computer.)  But the presentiation is hard to follow in places and the
+pseudocode is buggy. See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further details.
 
 ### Segment Tree
 
@@ -88,15 +94,15 @@ subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-There is a generic implementation (perhaps better described as "abstract"), `GenericSegmentTree`, and concrete classes
-`MaxValSegmentTree` and `IndexOfMaxValSegmentTree`. The generic implementation is such that concrete classes can be written by
-providing a handful of (usually) simple lambdas and constants to the generic class's initializer. Working out the details require
-some knowledge of the internal mechanisms of a segment tree, for which the link at cp-algorithms.com is very helpful. See the
-definitions of the concrete classes for examples.
+There is a generic implementation, `GenericSegmentTree` (perhaps better described as "abstract"), and concrete classes
+`MaxValSegmentTree` and `IndexOfMaxValSegmentTree`. The generic implementation is designed so that concrete classes can be written
+by providing a handful of simple lambdas and constants to the generic class's initializer. Figuring out the details requires some
+knowledge of the internal mechanisms of a segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions
+of the concrete classes for examples.
 
 ## References
 [^edelkamp]: Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
 [^mccreight]: McCreight, E.M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
 [^de_2011]: De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
 [^de_2013]: De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.
-[^tarjan]: Tarjan, Robert E., van Leeuwen, Jan (1984). _Worst-case Analysis of Set Union Algorithms_. Journal of the ACM. 31 (2): 245–281.
+[^tarjan]: Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
