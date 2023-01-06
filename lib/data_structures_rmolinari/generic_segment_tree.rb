@@ -96,7 +96,7 @@ class DataStructuresRMolinari::GenericSegmentTree
   private def update_val_at(idx, tree_idx, tree_l, tree_r)
     if tree_l == tree_r
       # We have found the spot!
-      raise LogicError, 'tree_l == tree_r, but they do not agree with the idx holding the updated value' unless tree_l == idx
+      raise InternalLogicError, 'tree_l == tree_r, but they do not agree with the idx holding the updated value' unless tree_l == idx
 
       @tree[tree_idx] = @single_cell_array_val.call(tree_l)
     else

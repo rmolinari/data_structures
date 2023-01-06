@@ -1,6 +1,7 @@
 require_relative 'data_structures_rmolinari/shared'
 
 module DataStructuresRMolinari
+  # A struct responding to +.x+ and +.y+.
   Pair = Shared::Pair
 end
 
@@ -11,6 +12,7 @@ require_relative 'data_structures_rmolinari/heap'
 require_relative 'data_structures_rmolinari/max_priority_search_tree'
 require_relative 'data_structures_rmolinari/minmax_priority_search_tree'
 
+# A namespace to hold the provided classes. We want to avoid polluting the global namespace with names like "Heap"
 module DataStructuresRMolinari
   ########################################
   # Concrete instances of Segment Tree

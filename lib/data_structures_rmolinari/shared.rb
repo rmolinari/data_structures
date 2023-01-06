@@ -1,11 +1,20 @@
 # Some odds and ends shared by other classes
 module Shared
+  # Infinity without having to put a +Float::+ prefix every time
   INFINITY = Float::INFINITY
 
+  # An (x, y) coordinate pair.
+  # @todo consider calling this "Point" instead, as "Pair" is too generic.
   Pair = Struct.new(:x, :y)
 
   # @private
+
+  # Used for errors related to logic errors in client code
   class LogicError < StandardError; end
+  # Used for errors related to logic errors in library code
+  class InternalLogicError < LogicError; end
+
+  # Used for errors related to data, such as duplicated elements where they must be distinct.
   class DataError < StandardError; end
 
   # @private

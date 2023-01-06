@@ -641,7 +641,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
           end
           current = parent(current)
         else
-          raise LogicError, "Explore(t) state is somehow #{state} rather than 0, 1, or 2."
+          raise InternalLogicError, "Explore(t) state is somehow #{state} rather than 0, 1, or 2."
         end
       end
     end
@@ -786,7 +786,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
             p_in = right(p_in)
             left = true
           else
-            raise LogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
+            raise InternalLogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
 
             p = left(p_in)
             q = right(p_in)
@@ -796,7 +796,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
           end
         elsif left_val.x <= x1
           if right_val.x > x1
-            raise LogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
+            raise InternalLogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
 
             q = right(p_in)
             p_in = left(p_in)
@@ -810,7 +810,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
             right_in = true
           end
         else
-          raise LogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
+          raise InternalLogicError, 'q_in cannot be active, by the value in the right child of p_in!' if right_in
 
           q = left(p_in)
           deactivate_p_in.call
@@ -846,8 +846,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
       # q has two children. Cases!
       if @data[left(q)].x < x0
-        raise LogicError, 'p_in should not be active, based on the value at left(q)' if left_in
-        raise LogicError, 'q_in should not be active, based on the value at left(q)' if right_in
+        raise InternalLogicError, 'p_in should not be active, based on the value at left(q)' if left_in
+        raise InternalLogicError, 'q_in should not be active, based on the value at left(q)' if right_in
 
         left = true
         if @data[right(q)].x < x0
@@ -878,7 +878,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     # Given: q' is active and satisfied x0 <= x(q') <= x1
     enumerate_right_in = lambda do
-      raise LogicError, 'right_in should be true if we call enumerate_right_in' unless right_in
+      raise InternalLogicError, 'right_in should be true if we call enumerate_right_in' unless right_in
 
       if @data[q_in].y >= y0
         report.call(q_in)
@@ -910,7 +910,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       # q' has two children
       right_val = @data[right(q_in)]
       if left_val.x < x0
-        raise LogicError, 'p_in cannot be active, by the value in the left child of q_in' if left_in
+        raise InternalLogicError, 'p_in cannot be active, by the value in the left child of q_in' if left_in
 
         if right_val.x < x0
           p = right(q_in)
@@ -970,7 +970,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     while left || left_in || right_in || right
       # byebug if $do_it
-      raise LogicError, 'It should not be that q_in is active but p_in is not' if right_in && !left_in
+      raise InternalLogicError, 'It should not be that q_in is active but p_in is not' if right_in && !left_in
 
       set_i = []
       set_i << :left if left
@@ -988,7 +988,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       when :right
         enumerate_right.call
       else
-        raise LogicError, "bad symbol #{z}"
+        raise InternalLogicError, "bad symbol #{z}"
       end
     end
     return result unless block_given?
@@ -1134,7 +1134,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   private def verify_properties
     # It's a max-heap in y
     (2..@size).each do |node|
-      raise LogicError, "Heap property violated at child #{node}" unless @data[node].y < @data[parent(node)].y
+      raise InternalLogicError, "Heap property violated at child #{node}" unless @data[node].y < @data[parent(node)].y
     end
 
     # Left subtree has x values less than all of the right subtree
@@ -1144,7 +1144,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       left_max = max_x_in_subtree(left(node))
       right_min = min_x_in_subtree(right(node))
 
-      raise LogicError, "Left-right property of x-values violated at #{node}" unless left_max < right_min
+      raise InternalLogicError, "Left-right property of x-values violated at #{node}" unless left_max < right_min
     end
   end
 

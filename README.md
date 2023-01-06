@@ -37,16 +37,19 @@ structure provides very efficient implementation of the two key operations
 ### Heap
 
 A binary heap with an `update` method, suitable for use as a priority queue. There are several supported operations:
-- `insert(value, priority)`, insert the given value with the stated priority.
-  - values must be distinct (but see #11).
+- `insert(item, priority)`, insert the given item with the stated priority.
+  - By default, items must be distinct.
 - `top`, returning the element with smallest priority
 - `pop`, return the element with smallest priority and remove it from the structure
-- `update(value, priority)`, update the priority of the given element, which must already be in the heap
+- `update(item, priority)`, update the priority of the given item, which must already be in the heap
 
 `top` is O(1). The others are O(log n).
 
 By default we have a min-heap: the top element is the one with smallest priority. A configuration parameter at construction makes it
 a max-heap.
+
+Another configuration parameter allows the creation of a "non-addressable" heap. This makes it impossible to call `update`, but
+allows the insertion of duplicate items (which is sometimes useful) and slightly faster operation overall.
 
 See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.
 

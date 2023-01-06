@@ -11,7 +11,7 @@ require 'ruby-prof'
 require 'data_structures_rmolinari'
 
 Pair = Shared::Pair
-LogicError = Shared::LogicError
+InternalLogicError = Shared::InternalLogicError
 
 MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
 MinmaxPrioritySearchTree = DataStructuresRMolinari::MinmaxPrioritySearchTree
@@ -395,7 +395,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         puts "* >>>>>>>TIMEOUT<<<<<<<<"
         puts "*\n*\n"
         timeout = true
-      rescue LogicError => e
+      rescue InternalLogicError => e
         puts "*\n*\n"
         puts "* >>>>>>>ERROR<<<<<<<<"
         puts e.message

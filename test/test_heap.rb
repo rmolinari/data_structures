@@ -86,4 +86,20 @@ class HeapTest < Test::Unit::TestCase
 
     assert(tops.each_cons(2).all? { |x, y| x < y })
   end
+
+  def test_unaddressable_heap
+    heap = Heap.new(addressable: false)
+
+    heap.insert(1, 2)
+    heap.insert(2, 1)
+    heap.insert(1, 0) # allowed!
+    assert_equal 1, heap.pop
+    assert_equal 2, heap.pop
+    assert_equal 1, heap.pop
+
+    heap.insert(1, 2)
+    assert_raise(Shared::LogicError) do
+      heap.update(1, 0)
+    end
+  end
 end

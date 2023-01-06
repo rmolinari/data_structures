@@ -13,7 +13,7 @@ require_relative 'shared'
 # - +empty?+
 #   - is the heap empty?
 #   - O(1)
-# - +insert+
+# - +insert(element, priority)+
 #   - add a new element to the heap with an associated priority
 #   - O(log N)
 # - +top+
@@ -23,7 +23,7 @@ require_relative 'shared'
 # - +pop+
 #   - removes and returns the item that would be returned by +top+
 #   - O(log N)
-# - +update+
+# - +update(element, priority)+
 #   - tell the heap that the priority of a particular item has changed
 #   - O(log N)
 #
@@ -36,27 +36,30 @@ require_relative 'shared'
 #   DOI 10.1007/s00224-017-9760-2
 #
 # @todo
-#   - offer a non-addressable version that doesn't support +update+
-#     - configure through the initializer
-#     - other operations will be a little quicker, and we can add the same item more than once. The paper by Chen et al. referenced
-#       in the Wikipedia article for Pairing Heaps suggests that using such a priority queue for Dijkstra's algorithm and inserting
-#       multiple copies of a key rather than updating its priority is faster in practice than other approaches that have better
-#       theoretical performance.
+#   - let caller see the priority of the top element. Maybe this is useful sometimes.
 class DataStructuresRMolinari::Heap
   include Shared
   include Shared::BinaryTreeArithmetic
 
   attr_reader :size
 
-  Pair = Struct.new(:priority, :item)
+  # An (item, priority) pair
+  InternalPair = Struct.new(:item, :priority)
+  private_constant :InternalPair
 
   # @param max_heap when truthy, make a max-heap rather than a min-heap
+  # @param addressable when truthy, the heap is _addressable_. This means that
+  #   - item priorities are updatable with +update(item, p)+, and
+  #   - items added to the heap must be distinct.
+  #   When falsy, priorities are not updateable but items may be inserted multiple times. Operations are slightly faster because
+  #   there is less internal bookkeeping.
   # @param debug when truthy, verify the heap property after each update than might violate it. This makes operations much slower.
-  def initialize(max_heap: false, debug: false)
+  def initialize(max_heap: false, addressable: true, debug: false)
     @data = []
     @size = 0
     @max_heap = max_heap
-    @index_of = {}
+    @addressable = addressable
+    @index_of = {} # used in addressable heaps
     @debug = debug
   end
 
@@ -70,11 +73,11 @@ class DataStructuresRMolinari::Heap
   #   check for this.
   # @param priority the priority to use for new item. The values used as priorities must be comparable via +<=>+.
   def insert(value, priority)
-    raise DataError, "Heap already contains #{value}" if contains?(value)
+    raise DataError, "Heap already contains #{value}" if @addressable && contains?(value)
 
     @size += 1
 
-    d = Pair.new(priority, value)
+    d = InternalPair.new(value, priority)
     assign(d, @size)
 
     sift_up(@size)
@@ -97,7 +100,7 @@ class DataStructuresRMolinari::Heap
 
     @data[@size] = nil
     @size -= 1
-    @index_of.delete(result)
+    @index_of.delete(result) if @addressable
 
     sift_down(root) if @size.positive?
 
@@ -110,6 +113,7 @@ class DataStructuresRMolinari::Heap
   #   heap
   # @param priority the new priority
   def update(element, priority)
+    raise LogicError, 'Cannot update priorities in a non-addressable heap' unless @addressable
     raise DataError, "Cannot update priority for value #{element} not already in the heap" unless contains?(element)
 
     idx = @index_of[element]
@@ -161,7 +165,7 @@ class DataStructuresRMolinari::Heap
   # Put the pair in the given heap location
   private def assign(pair, idx)
     @data[idx] = pair
-    @index_of[pair.item] = idx
+    @index_of[pair.item] = idx if @addressable
   end
 
   # Compare the priorities of two items with <=> and return truthy exactly when the result is -1.
@@ -190,8 +194,8 @@ class DataStructuresRMolinari::Heap
       left = left(idx)
       right = right(idx)
 
-      raise LogicError, "Heap property violated by left child of index #{idx}" if left <= @size && less_than?(@data[left], @data[idx])
-      raise LogicError, "Heap property violated by right child of index #{idx}" if right <= @size && less_than?(@data[right], @data[idx])
+      raise InternalLogicError, "Heap property violated by left child of index #{idx}" if left <= @size && less_than?(@data[left], @data[idx])
+      raise InternalLogicError, "Heap property violated by right child of index #{idx}" if right <= @size && less_than?(@data[right], @data[idx])
     end
   end
 end
