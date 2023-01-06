@@ -1,3 +1,4 @@
+require 'byebug'
 require 'test/unit'
 
 require 'data_structures_rmolinari'
@@ -58,6 +59,20 @@ class HeapTest < Test::Unit::TestCase
     heap.insert(1, 1)
     assert_raise(Shared::DataError) do
       heap.insert(1, 0)
+    end
+  end
+
+  def test_membership_enforcement_for_update
+    heap = Heap.new
+
+    assert_raise(Shared::DataError) do
+      heap.update(1, 1)
+    end
+
+    heap.insert(1, 1)
+    heap.pop
+    assert_raise(Shared::DataError) do
+      heap.update(1, 1)
     end
   end
 end

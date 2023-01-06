@@ -78,7 +78,7 @@ class DataStructuresRMolinari::Heap
   # @todo
   #   - check for duplicate
   def insert(value, priority)
-    raise DataError, "Heap already contains #{value}" if @index_of[value]
+    raise DataError, "Heap already contains #{value}" if contains?(value)
 
     priority *= -1 if @max_heap
 
@@ -103,12 +103,11 @@ class DataStructuresRMolinari::Heap
   # @return (see #top)
   def pop
     result = top
-    @index_of.delete(result)
-
     assign(@data[@size], root)
 
     @data[@size] = nil
     @size -= 1
+    @index_of.delete(result)
 
     sift_down(root) if @size.positive?
 
@@ -123,6 +122,8 @@ class DataStructuresRMolinari::Heap
   # @todo
   #   - check that the element is in the heap
   def update(element, priority)
+    raise DataError, "Cannot update priority for value #{element} not already in the heap" unless contains?(element)
+
     priority *= -1 if @max_heap
 
     idx = @index_of[element]
@@ -177,14 +178,18 @@ class DataStructuresRMolinari::Heap
     @index_of[pair.item] = idx
   end
 
+  private def contains?(item)
+    !!@index_of[item]
+  end
+
   # For debugging
   private def check_heap_property
     (root..@size).each do |idx|
       left = left(idx)
       right = right(idx)
 
-      raise "Heap property violated by left child of index #{idx}" if left <= @size && @data[idx].priority >= @data[left].priority
-      raise "Heap property violated by right child of index #{idx}" if right <= @size && @data[idx].priority >= @data[right].priority
+      raise LogicError, "Heap property violated by left child of index #{idx}" if left <= @size && @data[idx].priority >= @data[left].priority
+      raise LogicError, "Heap property violated by right child of index #{idx}" if right <= @size && @data[idx].priority >= @data[right].priority
     end
   end
 end
