@@ -2,7 +2,7 @@ require_relative 'data_structures_rmolinari/shared'
 
 module DataStructuresRMolinari
   # A struct responding to +.x+ and +.y+.
-  Pair = Shared::Pair
+  Point = Shared::Point
 end
 
 # These define classes inside module DataStructuresRMolinari

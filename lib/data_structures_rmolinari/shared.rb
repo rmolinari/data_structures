@@ -4,8 +4,7 @@ module Shared
   INFINITY = Float::INFINITY
 
   # An (x, y) coordinate pair.
-  # @todo consider calling this "Point" instead, as "Pair" is too generic.
-  Pair = Struct.new(:x, :y)
+  Point = Struct.new(:x, :y)
 
   # @private
 

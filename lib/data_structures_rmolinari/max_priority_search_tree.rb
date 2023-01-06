@@ -113,12 +113,12 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     p = root
     if quadrant == :ne
-      best = Pair.new(INFINITY, -INFINITY)
+      best = Point.new(INFINITY, -INFINITY)
       preferred_child = ->(n) { right(n) }
       nonpreferred_child = ->(n) { left(n) }
       sufficient_x = ->(x) { x >= x0 }
     else
-      best = Pair.new(-INFINITY, -INFINITY)
+      best = Point.new(-INFINITY, -INFINITY)
       preferred_child = ->(n) { left(n) }
       nonpreferred_child = ->(n) { right(n) }
       sufficient_x = ->(x) { x <= x0 }
@@ -228,10 +228,10 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     if quadrant == :ne
       sign = 1
-      best = Pair.new(INFINITY, INFINITY)
+      best = Point.new(INFINITY, INFINITY)
     else
       sign = -1
-      best = Pair.new(-INFINITY, INFINITY)
+      best = Point.new(-INFINITY, INFINITY)
     end
 
     p = q = root
@@ -373,7 +373,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     #
     # Sometimes we don't have a relevant node to the left or right of Q. The booleans L and R (which we call left and right) track
     # whether p and q are defined at the moment.
-    best = Pair.new(INFINITY, -INFINITY)
+    best = Point.new(INFINITY, -INFINITY)
     p = q = left = right = nil
 
     x_range = (x0..x1)

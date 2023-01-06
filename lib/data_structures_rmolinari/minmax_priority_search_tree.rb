@@ -43,7 +43,7 @@ class DataStructuresRMolinari::MinmaxPrioritySearchTree
 
   # The array of pairs is turned into a minmax PST in-place without cloning. So clone before passing it in, if you care.
   #
-  # Each element must respond to #x and #y. Use Pair (above) if you like.
+  # Each element must respond to #x and #y. Use Point (above) if you like.
   def initialize(data, verify: false)
     @data = data
     @size = @data.size
@@ -73,7 +73,7 @@ class DataStructuresRMolinari::MinmaxPrioritySearchTree
   #
   # Here T(x) is the subtree rooted at x
   def leftmost_ne(x0, y0)
-    best = Pair.new(INFINITY, INFINITY)
+    best = Point.new(INFINITY, INFINITY)
     p = q = root
 
     in_q = ->(pair) { pair.x >= x0 && pair.y >= y0 }
@@ -282,7 +282,7 @@ class DataStructuresRMolinari::MinmaxPrioritySearchTree
   #
   # This method returns p*
   # def highest_3_sided_up(x0, x1, y0)
-  #   best = Pair.new(INFINITY, -INFINITY)
+  #   best = Point.new(INFINITY, -INFINITY)
 
   #   in_q = lambda do |pair|
   #     pair.x >= x0 && pair.x <= x1 && pair.y >= y0
@@ -405,7 +405,7 @@ class DataStructuresRMolinari::MinmaxPrioritySearchTree
     #     - If Q intersect P is empty then p* = best
     #
     # Here, P is the set of points in our data structure and T_p is the subtree rooted at p
-    best = Pair.new(INFINITY, -INFINITY)
+    best = Point.new(INFINITY, -INFINITY)
     p = root # root of the whole tree AND the pair stored there
 
     in_q = lambda do |pair|

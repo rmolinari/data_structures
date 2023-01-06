@@ -10,7 +10,7 @@ require 'ruby-prof'
 
 require 'data_structures_rmolinari'
 
-Pair = Shared::Pair
+Point = Shared::Point
 InternalLogicError = Shared::InternalLogicError
 
 MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
@@ -38,12 +38,12 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   def test_duplicate_coordinate_checks
     # duplicate x values
     assert_raise(Shared::DataError) do
-      MaxPrioritySearchTree.new([Pair.new(0, 0), Pair.new(0, 1)])
+      MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(0, 1)])
     end
 
     # duplicate y valus
     assert_raise(Shared::DataError) do
-      MaxPrioritySearchTree.new([Pair.new(0, 0), Pair.new(1, 0)])
+      MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(1, 0)])
     end
   end
 
@@ -119,7 +119,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   private def check_one_case(klass, method, data, *method_params, expected_val)
     calculated_val = Timeout::timeout(timeout_time_s) do
-      pst = klass.new(data.map { |x, y| Pair.new(x, y) })
+      pst = klass.new(data.map { |x, y| Point.new(x, y) })
       calculated_val = pst.send(method, *method_params)
     end
     assert_equal expected_val, calculated_val
@@ -133,7 +133,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_one.call(
       [[6,19], [9,18], [15,17], [2,16], [11,13], [16,12], [19,10], [4,6], [8,15], [10,7], [12,11], [13,9], [14,4], [17,2], [18,3], [1,5], [3,1], [5,8], [7,14]],
       4, 15,
-      Pair.new(6, 19)
+      Point.new(6, 19)
     )
   end
 
@@ -143,24 +143,24 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     # Early versions of code couldn't even handle these!
-    check_one.call([[1, 1]], 0, 1, 0, Pair.new(1, 1))
+    check_one.call([[1, 1]], 0, 1, 0, Point.new(1, 1))
 
     check_one.call(
       [[4,5], [1,4], [5,2], [2,1], [3,3]],
       2, 3, 2,
-      Pair.new(3, 3)
+      Point.new(3, 3)
     )
 
     check_one.call(
       [[8,8], [1,7], [6,5], [2,6], [4,3], [5,1], [7,2], [3,4]],
       3, 5, 0,
-      Pair.new(3, 4)
+      Point.new(3, 4)
     )
 
     check_one.call(
       [[7,8], [1,5], [5,7], [2,3], [4,1], [6,6], [8,4], [3,2]],
       3, 4, 1,
-      Pair.new(3, 2)
+      Point.new(3, 2)
     )
   end
 
@@ -172,7 +172,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_one.call(
       [[4,10], [2,1], [8,2], [3,5], [7,7], [9,9], [10,8], [1,4], [5,3], [6,6]],
       5, 6,
-      Pair.new(6, 6)
+      Point.new(6, 6)
     )
 
     check_one.call(
@@ -182,16 +182,16 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         [27,17], [29,20], [32,16], [4,15]
       ],
       4, 11,
-      Pair.new(4, 15)
+      Point.new(4, 15)
     )
 
     data = [[10,11], [5,2], [11,1], [2,8], [4,9], [8,10], [9,7], [1,5], [3,3], [6,6], [7,4]]
-    check_one.call(data, 3, 9, Pair.new(4, 9))
+    check_one.call(data, 3, 9, Point.new(4, 9))
   end
 
   def test_bad_inputs_for_max_enumerate_3_sided
     check_one = lambda do |data, *method_params, actual_vals|
-      actual_set = Set.new(actual_vals.map { |x, y| Pair.new(x, y) })
+      actual_set = Set.new(actual_vals.map { |x, y| Point.new(x, y) })
       check_one_case(MaxPrioritySearchTree, :enumerate_3_sided, data, *method_params, actual_set)
     end
 
@@ -225,7 +225,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       check_one_case(MaxPrioritySearchTree, :rightmost_nw, data, *method_params, actual_leftmost)
     end
 
-    check_one.call([[3,6], [2,5], [6,3], [1,1], [4,4], [5,2]], 5, 2, Pair.new(5, 2))
+    check_one.call([[3,6], [2,5], [6,3], [1,1], [4,4], [5,2]], 5, 2, Point.new(5, 2))
   end
 
   def test_bad_inputs_for_highest_ne
@@ -233,7 +233,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       check_one_case(MaxPrioritySearchTree, :highest_ne, data, *method_params, actual_leftmost)
     end
 
-    check_one.call([[1,3], [2,2], [3,1]], 2, 1, Pair.new(2, 2))
+    check_one.call([[1,3], [2,2], [3,1]], 2, 1, Point.new(2, 2))
   end
 
   ########################################
@@ -247,7 +247,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     search_for_bad_inputs(MinmaxPrioritySearchTree, :leftmost_ne) do |pairs|
       x0 = rand(@size)
       y0 = rand(@size)
-      actual_leftmost = pairs.select { |p| p.x >= x0 && p.y >= y0 }.min_by(&:x) || Pair.new(INFINITY, INFINITY)
+      actual_leftmost = pairs.select { |p| p.x >= x0 && p.y >= y0 }.min_by(&:x) || Point.new(INFINITY, INFINITY)
 
       [[x0, y0], actual_leftmost]
     end
@@ -257,7 +257,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     search_for_bad_inputs(MaxPrioritySearchTree, :leftmost_ne) do |pairs|
       x0 = rand(@size)
       y0 = rand(@size)
-      actual_leftmost = pairs.select { |p| p.x >= x0 && p.y >= y0 }.min_by(&:x) || Pair.new(INFINITY, INFINITY)
+      actual_leftmost = pairs.select { |p| p.x >= x0 && p.y >= y0 }.min_by(&:x) || Point.new(INFINITY, INFINITY)
 
       [[x0, y0], actual_leftmost]
     end
@@ -268,7 +268,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       x0 = rand(@size)
       x1 = x0 + 1 + rand(@size - x0)
       y0 = rand(@size)
-      actual_highest = pairs.select { |p| x0 <= p.x && p.x <= x1 && p.y >= y0 }.max_by(&:y) || Pair.new(INFINITY, -INFINITY)
+      actual_highest = pairs.select { |p| x0 <= p.x && p.x <= x1 && p.y >= y0 }.max_by(&:y) || Point.new(INFINITY, -INFINITY)
 
       [[x0, x1, y0], actual_highest]
     end
@@ -289,7 +289,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     search_for_bad_inputs(MaxPrioritySearchTree, :rightmost_nw) do |pairs|
       x0 = rand(@size)
       y0 = rand(@size)
-      actual_rightmost = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:x) || Pair.new(-INFINITY, INFINITY)
+      actual_rightmost = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:x) || Point.new(-INFINITY, INFINITY)
 
       [[x0, y0], actual_rightmost]
     end
@@ -299,7 +299,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     search_for_bad_inputs(MaxPrioritySearchTree, :highest_ne) do |pairs|
       x0 = rand(@size)
       y0 = rand(@size)
-      actual_highest = pairs.select { |p| p.x >= x0 && p.y >= y0 }.max_by(&:y) || Pair.new(INFINITY, -INFINITY)
+      actual_highest = pairs.select { |p| p.x >= x0 && p.y >= y0 }.max_by(&:y) || Point.new(INFINITY, -INFINITY)
 
       [[x0, y0], actual_highest]
     end
@@ -309,7 +309,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     search_for_bad_inputs(MaxPrioritySearchTree, :highest_nw) do |pairs|
       x0 = rand(@size)
       y0 = rand(@size)
-      actual_highest = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:y) || Pair.new(-INFINITY, -INFINITY)
+      actual_highest = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:y) || Point.new(-INFINITY, -INFINITY)
 
       [[x0, y0], actual_highest]
     end
@@ -435,35 +435,35 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   # Do I really need all of these check_a_foo methods?
   private def check_a_highest_ne(x0, y0, pst)
-    highest = ne_quadrant(x0, y0).max_by(&:y) || Pair.new(INFINITY, -INFINITY)
+    highest = ne_quadrant(x0, y0).max_by(&:y) || Point.new(INFINITY, -INFINITY)
     calc_highest = pst.highest_ne(x0, y0)
 
     assert_equal highest, calc_highest
   end
 
   private def check_a_highest_nw(x0, y0, pst)
-    highest = nw_quadrant(x0, y0).max_by(&:y) || Pair.new(-INFINITY, -INFINITY)
+    highest = nw_quadrant(x0, y0).max_by(&:y) || Point.new(-INFINITY, -INFINITY)
     calc_highest = pst.highest_nw(x0, y0)
 
     assert_equal highest, calc_highest
   end
 
   private def check_a_leftmost_ne(x0, y0, pst)
-    leftmost = ne_quadrant(x0, y0).min_by(&:x) || Pair.new(INFINITY, INFINITY)
+    leftmost = ne_quadrant(x0, y0).min_by(&:x) || Point.new(INFINITY, INFINITY)
     calc_leftmost = pst.leftmost_ne(x0, y0)
 
     assert_equal leftmost, calc_leftmost
   end
 
   private def check_a_rightmost_nw(x0, y0, pst)
-    rightmost = nw_quadrant(x0, y0).max_by(&:x) || Pair.new(-INFINITY, INFINITY)
+    rightmost = nw_quadrant(x0, y0).max_by(&:x) || Point.new(-INFINITY, INFINITY)
     calc_rightmost = pst.rightmost_nw(x0, y0)
 
     assert_equal rightmost, calc_rightmost
   end
 
   private def check_a_highest_3_sided(x0, x1, y0, pst)
-    highest = ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }.max_by(&:y) || Pair.new(INFINITY, -INFINITY)
+    highest = ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }.max_by(&:y) || Point.new(INFINITY, -INFINITY)
     calc_highest = pst.highest_3_sided(x0, x1, y0)
 
     assert_equal highest, calc_highest
@@ -479,7 +479,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   private def raw_data(size)
     list = (1..size).to_a
-    list.zip(list.shuffle).map { Pair.new(*_1) }
+    list.zip(list.shuffle).map { Point.new(*_1) }
   end
 
   # Points (x,y) in @data with x >= x0
