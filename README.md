@@ -21,7 +21,7 @@ MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
 Point = DataStructuresRMolinari::Point # anything responding to :x and :y is fine
 
 pst = MaxPrioritySearchTree.new([Point.new(1, 1)])
-puts pst.highest_ne(0, 0)
+puts pst.highest_ne(0, 0) # "Point(1,1)"
 ```
 
 ## Implementations
@@ -88,15 +88,15 @@ subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-There is a generic implementation, `GenericSegmentTree`, and concrete classes `MaxValSegmentTree` and
-`IndexOfMaxValSegmentTree`. The generic implementation is such that concrete classes can be written by providing a handful of
-(usually) simple lambdas and constants to the generic class's initializer. Working out the details require some knowledge of the
-internal mechanisms of a segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions of the concrete
-classes here for examples.
+There is a generic implementation (perhaps better described as "abstract"), `GenericSegmentTree`, and concrete classes
+`MaxValSegmentTree` and `IndexOfMaxValSegmentTree`. The generic implementation is such that concrete classes can be written by
+providing a handful of (usually) simple lambdas and constants to the generic class's initializer. Working out the details require
+some knowledge of the internal mechanisms of a segment tree, for which the link at cp-algorithms.com is very helpful. See the
+definitions of the concrete classes for examples.
 
 ## References
 [^edelkamp]: Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
 [^mccreight]: McCreight, E.M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
 [^de_2011]: De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
 [^de_2013]: De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.
-[^tarjan]: Tarjan, Robert E., van Leeuwen, Jan (1984). "Worst-case Analysis of Set Union Algorithms". Journal of the ACM. 31 (2): 245–281.
+[^tarjan]: Tarjan, Robert E., van Leeuwen, Jan (1984). _Worst-case Analysis of Set Union Algorithms_. Journal of the ACM. 31 (2): 245–281.
