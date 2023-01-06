@@ -29,4 +29,35 @@ class HeapTest < Test::Unit::TestCase
       last = v
     end
   end
+
+  def test_sort_with_min_heap
+    data = (1..50).to_a.shuffle
+    heap = Heap.new
+    data.each { |v| heap.insert(v, v) }
+
+    tops = []
+    tops << heap.pop until heap.empty?
+
+    assert(tops.each_cons(2).all? { |x, y| x < y })
+  end
+
+  def test_sort_with_max_heap
+    data = (1..50).to_a.shuffle
+    heap = Heap.new(max_heap: true)
+    data.each { |v| heap.insert(v, v) }
+
+    tops = []
+    tops << heap.pop until heap.empty?
+
+    assert(tops.each_cons(2).all? { |x, y| x > y })
+  end
+
+  def test_duplicate_enforcement
+    heap = Heap.new
+
+    heap.insert(1, 1)
+    assert_raise(Shared::DataError) do
+      heap.insert(1, 0)
+    end
+  end
 end

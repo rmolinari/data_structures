@@ -48,6 +48,7 @@ require_relative 'shared'
 #       multiple copies of a key rather than updating its priority is faster in practice than other approaches that have better
 #       theoretical performance.
 class DataStructuresRMolinari::Heap
+  include Shared
   include Shared::BinaryTreeArithmetic
 
   attr_reader :size
@@ -77,6 +78,8 @@ class DataStructuresRMolinari::Heap
   # @todo
   #   - check for duplicate
   def insert(value, priority)
+    raise DataError, "Heap already contains #{value}" if @index_of[value]
+
     priority *= -1 if @max_heap
 
     @size += 1

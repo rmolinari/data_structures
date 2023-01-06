@@ -18,7 +18,7 @@ Example usage after the gem is installed:
 require 'data_structures_rmolinari`
 
 MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
-Pair = DataStructuresRMolinari::Pair
+Pair = DataStructuresRMolinari::Pair # anything responding to :x and :y is fine
 
 pst = MaxPrioritySearchTree.new([Pair.new(1, 1)])
 puts pst.highest_ne(0, 0)
@@ -28,7 +28,7 @@ puts pst.highest_ne(0, 0)
 
 ### Disjoint Union
 
-We represent the set S(n) = {0, 1, ..., n} as the disjoint union of subsets. Alternatively, we represent a partition of S(n). The data
+We represent the set S(n) = {0, 1, ..., n-1} as the disjoint union of subsets. Alternatively, we represent a partition of S(n). The data
 structure provides very efficient implementation of the two key operations
 - `unite(e, f)`, which merges the subsets containing e and f; and
 - `find(e)`, which returns the canonical representative of the subset containing e. Two elements e and f are in the same subset
@@ -36,7 +36,20 @@ structure provides very efficient implementation of the two key operations
 
 ### Heap
 
-A binary heap with an `update` method, suitable for use as a priority queue. See https://en.wikipedia.org/wiki/Binary_heap and
+A binary heap with an `update` method, suitable for use as a priority queue. Operations:
+- `insert(value, priority)`, insert the given value with the stated priority.
+  - values must be distinct (but see #11).
+- `top`, returning the element with smallest priority
+- `pop`, return the element with smallest priority and remove it from the structure
+- `update(value, priority)`, update the priority of the given element
+
+`top` is O(1). The others are O(log n).
+
+By default we have a min-heap: the top element is the one with smallest priority. A configuration parameter at construction makes it
+a max-heap.
+
+
+See https://en.wikipedia.org/wiki/Binary_heap and
 Edelkamp et al.
 
 ### Priority Search Tree
@@ -50,8 +63,8 @@ See the papers McCreight (1985) and De et al (2011).
 
 Segment trees store information related to subintervals of a certain array. For example, they can be used to find the sum of the
 elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) time. Each node in the tree corresponds to a subarray
-of the array, in such a way that the values we store in the nodes can be combined efficiently to determined the desired result for
-arbitrary subarrays.
+of A in such a way that the values we store in the nodes can be combined efficiently to determined the desired result for arbitrary
+subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
