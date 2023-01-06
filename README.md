@@ -43,7 +43,7 @@ A binary heap with an `update` method, suitable for use as a priority queue. The
 - `pop`, return the element with smallest priority and remove it from the structure
 - `update(item, priority)`, update the priority of the given item, which must already be in the heap
 
-`top` is O(1). The others are O(log n).
+`top` is O(1). The others are O(log n) where n is the number of items in the heap.
 
 By default we have a min-heap: the top element is the one with smallest priority. A configuration parameter at construction makes it
 a max-heap.
