@@ -1,7 +1,8 @@
 # Data Structures
 
-This is a small collection of Ruby data structures that I have implemented for my own interest. Implementing the code for a data
-structure is almost always more educational than simply reading about it and is usually fun.
+This is a small collection of Ruby data structures that I have implemented for my own interest.  Implementing the code for a data
+structure is almost always more educational than simply reading about it and is usually fun.  I wrote some of them while
+participating in the Advent of Code (https://adventofcode.com/).
 
 These implementations are not particularly clever. They are based on the expository descriptions and pseudo-code I found as I read
 about each structure and so are not as fast as possible.
@@ -29,13 +30,14 @@ puts pst.highest_ne(0, 0) # "Point(1,1)"
 
 ### Disjoint Union
 
-We represent the set S(n) = {0, 1, ..., n-1} as the disjoint union of subsets. Alternatively, we represent a partition of S(n). The
+We represent the set S(n) = {0, 1, ..., n-1} as the disjoint union of subsets. Equivalently, we represent a partition of S(n). The
 data structure provides very efficient implementation of the two key operations
 - `unite(e, f)`, which merges the subsets containing e and f; and
 - `find(e)`, which returns the canonical representative of the subset containing e. Two elements e and f are in the same subset
   exactly when `find(e) == find(f)`.
 
-For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper by Tarjan and van Leeuwen.[^tarjan]
+For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL84]](#references) by Tarjan and
+van Leeuwen.
 
 ### Heap
 
@@ -54,12 +56,13 @@ a max-heap.
 Another configuration parameter allows the creation of a "non-addressable" heap. This makes it impossible to call `update`, but
 allows the insertion of duplicate items (which is sometimes useful) and slightly faster operation overall.
 
-See https://en.wikipedia.org/wiki/Binary_heap and Edelkamp et al.[^edelkamp]
+See https://en.wikipedia.org/wiki/Binary_heap and the paper by Edelkamp, Elmasry, and Katajainen [[EEK17]](#references).
 
 ### Priority Search Tree
 
-A PST stores a set P of two-dimensional points in a way that allows certain queries about P to be answered efficiently. See the
-papers McCreight[^mccreight] and De et al.[^de_2011]
+A PST stores a set P of two-dimensional points in a way that allows certain queries about P to be answered efficiently. The data
+structure was introduced by McCreight [[McR85]](#references). De, Maheshawari, Nandy, and Smid [[DMNS2011]](#references) showed
+how to build the structure in-place and we use their approach here.
 - `highest_ne(x0, y0)` and `highest_nw(x0, y0)`, the highest point in the quadrant to the northest/northwest of (x0, y0);
 - `leftmost_ne(x0, y0)`, the leftmost point in the quadrant to the northeast of (x0, y0);
 - `rightmost_nw(x0, y0)`, the rightmost point in the quadrant to the northwest of (x0, y0);
@@ -73,17 +76,18 @@ The implementation is in `MaxPrioritySearchTree` (MaxPST for short), so called b
 things, a max-heap on the y-coordinates.
 
 These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
-McCreight[^mccreight], keeping in mind that the data structure in that paper is actually a _MinPST_.
+[[McR85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.
 
-Here compass directions are the natural ones in the x-y plane with the positive x-axis pointing east and the positive y-axis
-pointing north. "Left", "right", and "highest" mean "west", "east", and "north".  The use of both compass- and spatial-directions is
-confusing but comes from the papers. There is an open issue to make this more consistent.
+In the method names, compass directions are the natural ones in the x-y plane with the positive x-axis pointing east and the
+positive y-axis pointing north. "Left", "right", and "highest" mean "west", "east", and "north".  The use of both compass- and
+spatial-directions is confusing but comes from the papers. There is an open issue to make this more consistent.
 
-De et al. generalize the structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can also answer queries in the southeast and
-southwest quadrants of the query point and in a downwards-infinite box.[^de_2013] (Otherwise we need to either implement a _MinPST_
-data structure - which is a duplication of work for the programmer - or create a separate _MaxPST_ with points under the mapping (x,
-y) -> (x, -y), which is a duplication of work for the computer.)  But the presentiation is hard to follow in places and the
-pseudocode is buggy. See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further details.
+In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_(MinmaxPST) that can also
+answer queries in the southeast and southwest quadrants of a query point and in a downwards-infinite box. (Otherwise we need to
+either implement a _MinPST_ data structure - which is a duplication of work for the programmer - or create a separate _MaxPST_ with
+points under the mapping (x, y) -> (x, -y), which is a duplication of work for the computer.)  But the presentiation is hard to
+follow in places and the pseudocode is buggy. See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further
+details.
 
 ### Segment Tree
 
@@ -94,15 +98,15 @@ subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-There is a generic implementation, `GenericSegmentTree` (perhaps better described as "abstract"), and concrete classes
-`MaxValSegmentTree` and `IndexOfMaxValSegmentTree`. The generic implementation is designed so that concrete classes can be written
-by providing a handful of simple lambdas and constants to the generic class's initializer. Figuring out the details requires some
-knowledge of the internal mechanisms of a segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions
-of the concrete classes for examples.
+There is a generic implementation, `GenericSegmentTree` (better described as "abstract"), and concrete classes `MaxValSegmentTree`
+and `IndexOfMaxValSegmentTree`. The generic implementation is designed so that concrete classes can be written by providing a
+handful of simple lambdas and constants to the generic class's initializer. Figuring out the details requires some knowledge of the
+internal mechanisms of a segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions of the concrete
+classes for examples.
 
-## References
-[^edelkamp]: Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2
-[^mccreight]: McCreight, E.M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
-[^de_2011]: De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
-[^de_2013]: De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.
-[^tarjan]: Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
+# References
+- [TvL84] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
+- [EEK17] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2.
+- [McR85] McCreight, E.M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
+- [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011.
+- [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.
