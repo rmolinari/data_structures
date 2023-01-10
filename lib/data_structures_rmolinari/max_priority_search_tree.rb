@@ -49,7 +49,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # @param data [Array] the set P of points presented as an array. The tree is built in the array in-place without cloning.
   #   - Each element of the array must respond to +#x+ and +#y+.
   #     - This is not checked explicitly but a missing method exception will be thrown when we try to call one of them.
-  #   - The +x+ values must be distinct, as must the +y+ values. We raise a +Shared::DataError+ if this isn't the case.
+  #   - The +x+ values must be distinct. We raise a +Shared::DataError+ if this isn't the case.
   #     - This is a restriction that simplifies some of the algorithm code. It can be removed as the cost of some extra work. Issue
   #       #9.
   #
@@ -74,7 +74,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # structure. Define p* as
   #
   # - (infty, -infty) if Q \intersect P is empty and
-  # - the highest (max-x) point in Q \intersect P otherwise.
+  # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
   #
   # This method returns p* in O(log n) time and O(1) extra space.
   def highest_ne(x0, y0)
@@ -87,7 +87,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # structure. Define p* as
   #
   # - (-infty, -infty) if Q \intersect P is empty and
-  # - the highest (max-y) point in Q \intersect P otherwise.
+  # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
   #
   # This method returns p* in O(log n) time and O(1) extra space.
   def highest_nw(x0, y0)
@@ -135,10 +135,10 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     #
     #   takes as input a point t and does the following: if t \in Q and y(t) > y(best) then it assignes best = t
     #
-    # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
+    # We break ties by preferring points with smaller x values
     update_highest = lambda do |node|
       t = @data[node]
-      if in_q.call(t) && t.y > best.y
+      if in_q.call(t) && (t.y > best.y || (t.y == best.y && t.x < best.x))
         best = t
       end
     end
@@ -261,7 +261,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     #
     # - If x0 <= x(c1) then all subtrees have large enough x values and we look for the leftmost node in c with a large enough y
     #   value. Both p and q are sent into that subtree.
-    # - If x0 >= x(ck) the the rightmost subtree is our only hope the rightmost subtree.
+    # - If x0 >= x(ck) the the rightmost subtree is our only hope
     # - Otherwise, x(c1) < x0 < x(ck) and we let i be least so that x(ci) <= x0 < x(c(i+1)). Then q becomes the lefmost cj in c not
     #   to the left of ci such that y(cj) >= y0, if any. p becomes ci if y(ci) >= y0 and q otherwise. If there is no such j, we put
     #   q = p. This may leave both of p, q undefined which means there is no useful way forward and we return nils to signal this to
@@ -346,7 +346,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # MaxPST. (Note that Q is empty if x1 < x0.) Define p* as
   #
   # - (infty, -infty) if Q \intersect P is empty and
-  # - the highest (max-x) point in Q \intersect P otherwise.
+  # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller x values.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
   def highest_3_sided(x0, x1, y0)
@@ -389,7 +389,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
     update_highest = lambda do |node|
       t = @data[node]
-      if in_q.call(t) && t.y > best.y
+      if in_q.call(t) && (t.y > best.y || (t.y == best.y && t.x < best.x))
         best = t
       end
     end
@@ -999,13 +999,14 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
   private def construct_pst
     raise DataError, 'Duplicate x values are not supported' if contains_duplicates?(@data, by: :x)
-    raise DataError, 'Duplicate y values are not supported' if contains_duplicates?(@data, by: :y)
 
-    # We follow the algorithm in the paper by De, Maheshwari et al.
+    # We follow the algorithm in the paper by De, Maheshwari et al, which takes O(n log^2 n) time. Their follow-up paper that
+    # defines the Min-max PST, describes how to do the construction in O(n log n) time, but it is more complex and probably not
+    # worth the trouble of both a bespoke heapsort the special sorting algorithm of Katajainen and Pasanen.
 
-    # Since we are building an implicit binary tree, things are simpler if the array is 1-based. This probably requires a malloc and
-    # data copy, which isn't great, but it's in the C layer so cheap compared to the O(n log^2 n) work we need to do for
-    # construction. In fact, we are probably doing O(n^2) work because of all the calls to #index_with_largest_y_in.
+    # Since we are building an implicit binary tree, things are simpler if the array is 1-based. This requires a malloc (perhaps)
+    # and memcpy (for sure), which isn't great, but it's in the C layer so cheap compared to the O(n log^2 n) work we need to do for
+    # construction.
     @data.unshift nil
 
     h = Math.log2(@size).floor
@@ -1052,63 +1053,14 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     end
   end
 
-  ########################################
-  # Tree arithmetic
-
-  # # First element and root of the tree structure
-  # private def root
-  #   1
-  # end
-
-  # # Indexing is from 1
-  # private def parent(i)
-  #   i >> 1
-  # end
-
-  # private def left(i)
-  #   i << 1
-  # end
-
-  # private def right(i)
-  #   1 + (i << 1)
-  # end
-
-  # private def level(i)
-  #   l = 0
-  #   while i > root
-  #     i >>= 1
-  #     l += 1
-  #   end
-  #   l
-  # end
-
-  # # i has no children
-  # private def leaf?(i)
-  #   i > @last_non_leaf
-  # end
-
-  # # i has exactly one child (the left)
-  # private def one_child?(i)
-  #   i == @parent_of_one_child
-  # end
-
-  # # i has two children
-  # private def two_children?(i)
-  #   i <= @last_parent_of_two_children
-  # end
-
-  # # i is the left child of its parent.
-  # private def left_child?(i)
-  #   (i & 1).zero?
-  # end
-
   private def swap(index1, index2)
     return if index1 == index2
 
     @data[index1], @data[index2] = @data[index2], @data[index1]
   end
 
-  # The index in @data[l..r] having the largest value for y
+  # The index in @data[l..r] having the largest value for y, breaking ties with the smaller x value. Since we are already sorted by
+  # x we don't actually need to check this.
   private def index_with_largest_y_in(l, r)
     return nil if r < l
 
@@ -1134,7 +1086,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   private def verify_properties
     # It's a max-heap in y
     (2..@size).each do |node|
-      raise InternalLogicError, "Heap property violated at child #{node}" unless @data[node].y < @data[parent(node)].y
+      byebug unless @data[node].y <= @data[parent(node)].y
+      raise InternalLogicError, "Heap property violated at child #{node}" unless @data[node].y <= @data[parent(node)].y
     end
 
     # Left subtree has x values less than all of the right subtree

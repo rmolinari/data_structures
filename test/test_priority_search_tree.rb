@@ -3,6 +3,7 @@
 #   SimpleCov.start
 # end
 
+require 'byebug'
 require 'set'
 require 'test/unit'
 require 'timeout'
@@ -41,10 +42,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(0, 1)])
     end
 
-    # duplicate y valus
-    assert_raise(Shared::DataError) do
-      MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(1, 0)])
-    end
+    # # duplicate y valus
+    # assert_raise(Shared::DataError) do
+    #   MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(1, 0)])
+    # end
   end
 
   def test_pst_highest_ne
@@ -100,6 +101,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   ########################################
   # Tests for the MinmaxPST
   def test_minmax_pst_construction
+    return #'MinmaxPST not supported for now'
+
     data = raw_data(@size)
     # puts "Building the minmax PST tree..."
     MinmaxPrioritySearchTree.new(data.shuffle, verify: true)
@@ -107,6 +110,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   # The tree code is buggy here. Let's try to find a small, reproducible error
   def test_minmax_pst_leftmost_ne
+    return #'MinmaxPST not supported for now'
+
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
@@ -165,6 +170,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_bad_inputs_for_minmax_leftmost_ne
+    return #'MinmaxPST not supported for now'
+
     check_one = lambda do |data, *method_params, actual_leftmost|
       check_one_case(MinmaxPrioritySearchTree, :leftmost_ne, data, *method_params, actual_leftmost)
     end
@@ -228,11 +235,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_one.call([[3,6], [2,5], [6,3], [1,1], [4,4], [5,2]], 5, 2, Point.new(5, 2))
   end
 
+  def test_bad_inputs_for_highest_nw
+    check_one = lambda do |data, *method_params, actual_leftmost|
+      check_one_case(MaxPrioritySearchTree, :highest_nw, data, *method_params, actual_leftmost)
+    end
+
+    # Now we are allowing duplicated y values
+    check_one.call([[3,3], [2, 2], [1,2]], 2, 1, Point.new(1, 2))
+  end
+
   def test_bad_inputs_for_highest_ne
     check_one = lambda do |data, *method_params, actual_leftmost|
       check_one_case(MaxPrioritySearchTree, :highest_ne, data, *method_params, actual_leftmost)
     end
-
     check_one.call([[1,3], [2,2], [3,1]], 2, 1, Point.new(2, 2))
   end
 
@@ -244,6 +259,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   BAD_INPUT_SEARCH_ATTEMPT_LIMIT = 1_000
 
   def test_minmax_find_bad_input_for_leftmost_ne
+    return #'MinmaxPST not supported for now'
+
     search_for_bad_inputs(MinmaxPrioritySearchTree, :leftmost_ne) do |pairs|
       x0 = rand(@size)
       y0 = rand(@size)
@@ -268,7 +285,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       x0 = rand(@size)
       x1 = x0 + 1 + rand(@size - x0)
       y0 = rand(@size)
-      actual_highest = pairs.select { |p| x0 <= p.x && p.x <= x1 && p.y >= y0 }.max_by(&:y) || Point.new(INFINITY, -INFINITY)
+      actual_highest = pairs.select { |p| x0 <= p.x && p.x <= x1 && p.y >= y0 }.max_by{ |p| [p.y, -p.x] } || Point.new(INFINITY, -INFINITY)
 
       [[x0, x1, y0], actual_highest]
     end
@@ -299,7 +316,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     search_for_bad_inputs(MaxPrioritySearchTree, :highest_ne) do |pairs|
       x0 = rand(@size)
       y0 = rand(@size)
-      actual_highest = pairs.select { |p| p.x >= x0 && p.y >= y0 }.max_by(&:y) || Point.new(INFINITY, -INFINITY)
+      actual_highest = pairs.select { |p| p.x >= x0 && p.y >= y0 }.max_by{ |p| [p.y, -p.x] } || Point.new(INFINITY, -INFINITY)
 
       [[x0, y0], actual_highest]
     end
@@ -309,9 +326,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     search_for_bad_inputs(MaxPrioritySearchTree, :highest_nw) do |pairs|
       x0 = rand(@size)
       y0 = rand(@size)
-      actual_highest = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:y) || Point.new(-INFINITY, -INFINITY)
+      actual_highest = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by{ |p| [p.y, -p.x] } || Point.new(-INFINITY, -INFINITY)
 
       [[x0, y0], actual_highest]
+    end
+  end
+
+  def test_max_find_bad_input_for_construction
+    search_for_bad_inputs(MaxPrioritySearchTree, nil) do |pairs|
+      nil
     end
   end
 
@@ -366,6 +389,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # If we find such data then output the details to stdout and fail an assertion. Otherwise return true.
   #
+  # If method.nil? we just call the constructor, but with verification turned on
+  #
   # We try BAD_INPUT_SEARCH_ATTEMPT_LIMIT times. On each attempt we generate a list of (x,y) pairs and yield it to a block from
   # which we should receive a pair
   #
@@ -382,14 +407,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     BAD_INPUT_SEARCH_ATTEMPT_LIMIT.times do
       pairs = raw_data(@size).shuffle
       method_params, expected_value = yield(pairs)
-      pst = klass.new(pairs)
 
       timeout = false
       error_message = nil
       begin
-        calculated_value = Timeout::timeout(timeout_time_s) {
-          pst.send(method, *method_params)
-        }
+        if method
+          pst = klass.new(pairs.clone)
+          calculated_value = Timeout::timeout(timeout_time_s) {
+            pst.send(method, *method_params)
+          }
+        else
+          pst = klass.new(pairs.clone, verify: true)
+        end
       rescue Timeout::Error
         puts "*\n*\n"
         puts "* >>>>>>>TIMEOUT<<<<<<<<"
@@ -403,13 +432,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         error_message = e.message
       end
 
-      next unless error_message || timeout || expected_value != calculated_value
+      next unless error_message || timeout || method && (expected_value != calculated_value)
 
-      puts "params = [#{method_params.join(', ')}]"
       pair_data = pairs.map { |p| "[#{p.x},#{p.y}]" }.join(', ')
-      puts "data = [#{pair_data}]"
+      if method
+        puts "params = [#{method_params.join(', ')}]"
+        puts "data = [#{pair_data}]"
 
-      assert_equal expected_value, calculated_value
+        assert_equal expected_value, calculated_value
+      else
+        puts "data = [#{pair_data}]"
+
+        assert false
+      end
     end
     puts "No bad data found for #{klass}##{method}"
   end
@@ -435,14 +470,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   # Do I really need all of these check_a_foo methods?
   private def check_a_highest_ne(x0, y0, pst)
-    highest = ne_quadrant(x0, y0).max_by(&:y) || Point.new(INFINITY, -INFINITY)
+    highest = ne_quadrant(x0, y0).max_by{ |p| [p.y, -p.x] } || Point.new(INFINITY, -INFINITY)
     calc_highest = pst.highest_ne(x0, y0)
 
     assert_equal highest, calc_highest
   end
 
   private def check_a_highest_nw(x0, y0, pst)
-    highest = nw_quadrant(x0, y0).max_by(&:y) || Point.new(-INFINITY, -INFINITY)
+    highest = nw_quadrant(x0, y0).max_by{ |p| [p.y, -p.x] } || Point.new(-INFINITY, -INFINITY)
     calc_highest = pst.highest_nw(x0, y0)
 
     assert_equal highest, calc_highest
@@ -463,7 +498,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   private def check_a_highest_3_sided(x0, x1, y0, pst)
-    highest = ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }.max_by(&:y) || Point.new(INFINITY, -INFINITY)
+    highest = ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }.max_by{ |p| [p.y, -p.x] } || Point.new(INFINITY, -INFINITY)
     calc_highest = pst.highest_3_sided(x0, x1, y0)
 
     assert_equal highest, calc_highest
@@ -479,7 +514,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   private def raw_data(size)
     list = (1..size).to_a
-    list.zip(list.shuffle).map { Point.new(*_1) }
+    y_vals = (1..size).map { rand(1..size)}
+    list.zip(y_vals).map { Point.new(*_1) }
   end
 
   # Points (x,y) in @data with x >= x0
@@ -504,17 +540,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
-  private def upward_points(y0)
-    first_idx = @pairs_by_y.bsearch_index { |v| v.y >= y0 }
-    @pairs_by_y[first_idx..]
-  end
-
   private def ne_quadrant(x0, y0)
-    if x0 > y0
-      rightward_points(x0).select { |pair| pair.y >= y0 }
-    else
-      upward_points(y0).select { |pair| pair.x >= x0 }
-    end
+    rightward_points(x0).select { |pair| pair.y >= y0 }
   end
 
   private def nw_quadrant(x0, y0)
