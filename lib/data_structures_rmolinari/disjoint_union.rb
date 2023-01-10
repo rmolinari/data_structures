@@ -10,7 +10,7 @@
 # See https://en.wikipedia.org/wiki/Disjoint-set_data_structure for a good introduction.
 #
 # The code uses several ideas from Tarjan and van Leeuwen for efficiency. We use "union by rank" in +unite+ and path-halving in
-# +find+. Together, these make the amortized cost for each of n such operations effectively constant.
+# +find+. Together, these make the amortized cost of each opperation effectively constant.
 #
 # - Tarjan, Robert E., van Leeuwen, Jan (1984). _Worst-case analysis of set union algorithms_. Journal of the ACM. 31 (2): 245–281.
 #

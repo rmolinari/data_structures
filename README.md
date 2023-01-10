@@ -7,7 +7,7 @@ participating in the Advent of Code (https://adventofcode.com/).
 These implementations are not particularly clever. They are based on the expository descriptions and pseudo-code I found as I read
 about each structure and so are not as fast as possible.
 
-The code is available in gem form: https://rubygems.org/gems/data_structures_rmolinari.
+The code is available at a gem: https://rubygems.org/gems/data_structures_rmolinari.
 
 ## Usage
 
@@ -36,12 +36,13 @@ data structure provides very efficient implementation of the two key operations
 - `find(e)`, which returns the canonical representative of the subset containing e. Two elements e and f are in the same subset
   exactly when `find(e) == find(f)`.
 
-For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL84]](#references) by Tarjan and
+For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL1984]](#references) by Tarjan and
 van Leeuwen.
 
 ### Heap
 
 A binary heap with an `update` method, suitable for use as a priority queue. There are several supported operations:
+
 - `insert(item, priority)`, insert the given item with the stated priority.
   - By default, items must be distinct.
 - `top`, returning the element with smallest priority
@@ -56,13 +57,14 @@ a max-heap.
 Another configuration parameter allows the creation of a "non-addressable" heap. This makes it impossible to call `update`, but
 allows the insertion of duplicate items (which is sometimes useful) and slightly faster operation overall.
 
-See https://en.wikipedia.org/wiki/Binary_heap and the paper by Edelkamp, Elmasry, and Katajainen [[EEK17]](#references).
+See https://en.wikipedia.org/wiki/Binary_heap and the paper by Edelkamp, Elmasry, and Katajainen [[EEK2017]](#references).
 
 ### Priority Search Tree
 
 A PST stores a set P of two-dimensional points in a way that allows certain queries about P to be answered efficiently. The data
-structure was introduced by McCreight [[McR85]](#references). De, Maheshawari, Nandy, and Smid [[DMNS2011]](#references) showed
+structure was introduced by McCreight [[McC1985]](#references). De, Maheshawari, Nandy, and Smid [[DMNS2011]](#references) showed
 how to build the structure in-place and we use their approach here.
+
 - `highest_ne(x0, y0)` and `highest_nw(x0, y0)`, the highest point in the quadrant to the northest/northwest of (x0, y0);
 - `leftmost_ne(x0, y0)`, the leftmost point in the quadrant to the northeast of (x0, y0);
 - `rightmost_nw(x0, y0)`, the rightmost point in the quadrant to the northwest of (x0, y0);
@@ -76,18 +78,17 @@ The implementation is in `MaxPrioritySearchTree` (MaxPST for short), so called b
 things, a max-heap on the y-coordinates.
 
 These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
-[[McR85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.
+[[McC85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.
 
 In the method names, compass directions are the natural ones in the x-y plane with the positive x-axis pointing east and the
 positive y-axis pointing north. "Left", "right", and "highest" mean "west", "east", and "north".  The use of both compass- and
 spatial-directions is confusing but comes from the papers. There is an open issue to make this more consistent.
 
-In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_(MinmaxPST) that can also
-answer queries in the southeast and southwest quadrants of a query point and in a downwards-infinite box. (Otherwise we need to
-either implement a _MinPST_ data structure - which is a duplication of work for the programmer - or create a separate _MaxPST_ with
-points under the mapping (x, y) -> (x, -y), which is a duplication of work for the computer.)  But the presentiation is hard to
-follow in places and the pseudocode is buggy. See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further
-details.
+In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
+also answer queries in the southeast and southwest quadrants of a query point and in a downwards-infinite box. But the presentiation
+is hard to follow in places and the paper's pseudocode is buggy. See the comments in the fragmentary class
+`MinMaxPrioritySearchTree` for further details. In the sort of toy problems that this Ruby code is suitable for it is easy enough to
+build a MaxPST with the points mapped by (x, y) -> (x, -y).
 
 ### Segment Tree
 
@@ -105,8 +106,8 @@ internal mechanisms of a segment tree, for which the link at cp-algorithms.com i
 classes for examples.
 
 # References
-- [TvL84] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
-- [EEK17] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2.
-- [McR85] McCreight, E.M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
+- [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
+- [EEK2017] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2.
+- [McC1985] McCreight, E.M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
 - [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011.
 - [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.

@@ -17,7 +17,7 @@ module DataStructuresRMolinari
   ########################################
   # Concrete instances of Segment Tree
   #
-  # @todo consider moving these into generic_segment_tree.rb
+  # @todo consider moving these into generic_segment_tree.rb and renaming that file
 
   # A segment tree that for an array A(0...n) answers questions of the form "what is the maximum value in the subinterval A(i..j)?"
   # in O(log n) time.
