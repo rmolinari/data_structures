@@ -1,7 +1,7 @@
 require_relative 'shared'
 
-# A Segment Tree, which can be used for various interval-related purposes, like efficiently finding the sum (or min or max) on a
-# arbitrary subarray of a given array.
+# The template of Segment Tree, which can be used for various interval-related purposes, like efficiently finding the sum (or min or
+# max) on a arbitrary subarray of a given array.
 #
 # There is an excellent description of the data structure at https://cp-algorithms.com/data_structures/segment_tree.html. The
 # Wikipedia article (https://en.wikipedia.org/wiki/Segment_tree) appears to describe a different data structure which is sometimes
@@ -16,7 +16,7 @@ require_relative 'shared'
 # initializer and the definitions of concrete realisations like MaxValSegmentTree.
 #
 # We do O(n) work to build the internal data structure at initialization. Then we answer queries in O(log n) time.
-class DataStructuresRMolinari::GenericSegmentTree
+class DataStructuresRMolinari::SegmentTreeTemplate
   include Shared::BinaryTreeArithmetic
 
   # Construct a concrete instance of a Segment Tree. See details at the links above for the underlying concepts here.

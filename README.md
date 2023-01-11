@@ -98,11 +98,10 @@ subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-There is a generic implementation, `GenericSegmentTree` (better described as "abstract"), and concrete classes `MaxValSegmentTree`
-and `IndexOfMaxValSegmentTree`. The generic implementation is designed so that concrete classes can be written by providing a
-handful of simple lambdas and constants to the generic class's initializer. Figuring out the details requires some knowledge of the
-internal mechanisms of a segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions of the concrete
-classes for examples.
+Generic code is provided in `SegmentTreeTemplate`. Concrete classes are written by providing a handful of simple lambdas and
+constants to the template class's initializer. For now we provide the concrete classes `MaxValSegmentTree` and
+`IndexOfMaxValSegmentTree`. Figuring out the details requires some knowledge of the internal mechanisms of a segment tree, for which
+the link at cp-algorithms.com is very helpful. See the definitions of the concrete classes for examples.
 
 # References
 - [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
