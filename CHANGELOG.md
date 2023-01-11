@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- MaxPrioritySearchTree allows duplicate y values. Ties are broken with a preference for smaller values of x.
+
+### Removed
+- MinmaxPrioritySearchTree is no longer available
+
 ## [0.3.0] 2023-01-06
 
 ### Added
