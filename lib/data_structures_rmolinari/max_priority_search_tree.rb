@@ -1,3 +1,4 @@
+require 'must_be'
 require 'set'
 require_relative 'shared'
 

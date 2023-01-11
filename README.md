@@ -86,9 +86,8 @@ spatial-directions is confusing but comes from the papers. There is an open issu
 
 In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
 also answer queries in the southeast and southwest quadrants of a query point and in a downwards-infinite box. But the presentiation
-is hard to follow in places and the paper's pseudocode is buggy. See the comments in the fragmentary class
-`MinMaxPrioritySearchTree` for further details. In the sort of toy problems that this Ruby code is suitable for it is easy enough to
-build a MaxPST with the points mapped by (x, y) -> (x, -y).
+is hard to follow in places and the paper's pseudocode is buggy.[^minmaxpst] In the sort of toy problems that this Ruby code is
+suitable for it is easy enough to build a MaxPST with the points mapped by (x, y) -> (x, -y).
 
 ### Segment Tree
 
@@ -111,3 +110,5 @@ classes for examples.
 - [McC1985] McCreight, E.M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
 - [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011.
 - [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.
+
+[^minmaxpst]  See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further details.

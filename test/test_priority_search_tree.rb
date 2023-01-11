@@ -15,7 +15,6 @@ Point = Shared::Point
 InternalLogicError = Shared::InternalLogicError
 
 MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
-MinmaxPrioritySearchTree = DataStructuresRMolinari::MinmaxPrioritySearchTree
 
 class PrioritySearchTreeTest < Test::Unit::TestCase
   INFINITY = Float::INFINITY
@@ -99,27 +98,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   ########################################
-  # Tests for the MinmaxPST
-  def test_minmax_pst_construction
-    return #'MinmaxPST not supported for now'
-
-    data = raw_data(@size)
-    # puts "Building the minmax PST tree..."
-    MinmaxPrioritySearchTree.new(data.shuffle, verify: true)
-  end
-
-  # The tree code is buggy here. Let's try to find a small, reproducible error
-  def test_minmax_pst_leftmost_ne
-    return #'MinmaxPST not supported for now'
-
-    100.times do
-      x0 = rand(@size)
-      y0 = rand(@size)
-      check_a_leftmost_ne(x0, y0, minmax_pst)
-    end
-  end
-
-  ########################################
   # Some regression tests on inputs found to be bad during testing
 
   private def check_one_case(klass, method, data, *method_params, expected_val)
@@ -167,33 +145,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       3, 4, 1,
       Point.new(3, 2)
     )
-  end
-
-  def test_bad_inputs_for_minmax_leftmost_ne
-    return #'MinmaxPST not supported for now'
-
-    check_one = lambda do |data, *method_params, actual_leftmost|
-      check_one_case(MinmaxPrioritySearchTree, :leftmost_ne, data, *method_params, actual_leftmost)
-    end
-    # Some inputs on which the code was found to be buggy
-    check_one.call(
-      [[4,10], [2,1], [8,2], [3,5], [7,7], [9,9], [10,8], [1,4], [5,3], [6,6]],
-      5, 6,
-      Point.new(6, 6)
-    )
-
-    check_one.call(
-      [
-        [20,32], [1,1], [17,2], [2,31], [15,26], [24,30], [30,29], [5,4], [9,10], [11,18], [16,3], [19,8], [22,11], [28,5],
-        [31,7], [3,21], [6,9], [7,22], [8,28], [10,25], [12,23], [13,19], [14,6], [18,27], [21,13], [23,14], [25,24], [26,12],
-        [27,17], [29,20], [32,16], [4,15]
-      ],
-      4, 11,
-      Point.new(4, 15)
-    )
-
-    data = [[10,11], [5,2], [11,1], [2,8], [4,9], [8,10], [9,7], [1,5], [3,3], [6,6], [7,4]]
-    check_one.call(data, 3, 9, Point.new(4, 9))
   end
 
   def test_bad_inputs_for_max_enumerate_3_sided
@@ -257,18 +208,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # They are all no-ops unless the environment variable find_bad is set
 
   BAD_INPUT_SEARCH_ATTEMPT_LIMIT = 1_000
-
-  def test_minmax_find_bad_input_for_leftmost_ne
-    return #'MinmaxPST not supported for now'
-
-    search_for_bad_inputs(MinmaxPrioritySearchTree, :leftmost_ne) do |pairs|
-      x0 = rand(@size)
-      y0 = rand(@size)
-      actual_leftmost = pairs.select { |p| p.x >= x0 && p.y >= y0 }.min_by(&:x) || Point.new(INFINITY, INFINITY)
-
-      [[x0, y0], actual_leftmost]
-    end
-  end
 
   def test_max_find_bad_input_for_leftmost_ne
     search_for_bad_inputs(MaxPrioritySearchTree, :leftmost_ne) do |pairs|
@@ -462,10 +401,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   private def max_pst
     @max_pst ||= MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
-  end
-
-  private def minmax_pst
-    @minmax_pst ||= MinmaxPrioritySearchTree.new(@pairs_by_x.shuffle)
   end
 
   # Do I really need all of these check_a_foo methods?
