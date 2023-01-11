@@ -477,9 +477,17 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     assert_equal expected_vals, calculated_vals
   end
 
+  # By default we take x values 1, 2, ..., size and choose random integer y values in 1..size.
+  #
+  # If the environment variable 'floats' is set, instead choose random values in 0..1 for both coordinates.
   private def raw_data(size)
-    list = (1..size).to_a
-    list.zip(list.shuffle).map { Point.new(*_1) }
+    if ENV['floats']
+      (1..size).map { Point.new(rand, rand) }
+    else
+      list = (1..size).to_a
+      y_vals = (1..size).map { rand(1..size)}
+      list.zip(y_vals).map { Point.new(*_1) }
+    end
   end
 
   # Points (x,y) in @data with x >= x0
