@@ -18,11 +18,12 @@
 #   - allow caller to expand the size of the universe. This operation is called "make set".
 #     - All we need to do is increase the size of @d, set the parent pointers, define the new ranks (zero), and update @size.
 class DataStructuresRMolinari::DisjointUnion
+  include Shared
+
   # The number of subsets in the partition.
   attr_reader :subset_count
 
-  # @param size the size of the universe, which must be known at the time of construction. The elements 0, 1, ..., size - 1 start
-  #   out in disjoint singleton subsets.
+  # @param size the initial size of the universe. The elements 0, 1, ..., size - 1 start out in disjoint singleton subsets.
   def initialize(size)
     @size = size
     # Initialize to
@@ -53,6 +54,8 @@ class DataStructuresRMolinari::DisjointUnion
   # @param e must be one of 0, 1, ..., size-1.
   # @return (Integer) one of 0, 1, ..., size-1.
   def find(e)
+    check_value(e)
+
     # We implement find with "halving" to shrink the length of paths to the root. See Tarjan and van Leeuwin p 252.
     x = e
     x = @d[x] = @d[@d[x]] while @d[@d[x]] != @d[x]
@@ -60,7 +63,7 @@ class DataStructuresRMolinari::DisjointUnion
   end
 
   private def check_value(v)
-    raise DataError, "Value must be given and be in (0..#{@size - 1})" unless v && v.between?(0, @size - 1)
+    raise Shared::DataError, "Value must be given and be in (0..#{@size - 1})" unless v && v.between?(0, @size - 1)
   end
 
   private def link(e, f)
