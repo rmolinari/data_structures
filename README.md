@@ -111,4 +111,4 @@ classes for examples.
 - [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011.
 - [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.
 
-[^minmaxpst]  See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further details.
+[^minmaxpst]: See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further details.
