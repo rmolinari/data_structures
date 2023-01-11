@@ -42,7 +42,7 @@ class SegmentTreeTest < Test::Unit::TestCase
     seg_tree = klass.new(mutable_data)
     (0...(mutable_data.size)).each do |idx|
       mutable_data[idx] += rand(-5..5)
-      seg_tree.update_at(idx)
+      seg_tree.update_val(idx, mutable_data[idx])
       check_all_intervals(seg_tree, method, mutable_data.size) { |i, j| block.call(i, j) }
     end
   end

@@ -23,20 +23,13 @@ module DataStructuresRMolinari
   # A segment tree that for an array A(0...n) answers questions of the form "what is the maximum value in the subinterval A(i..j)?"
   # in O(log n) time.
   class MaxValSegmentTree
-    extend Forwardable
-
-    # Tell the tree that the value at idx has changed
-    def_delegator :@structure, :update_at
+    include GenericSegmentTree
 
     # @param data an object that contains values at integer indices based at 0, via +data[i]+.
     #   - This will usually be an Array, but it could also be a hash or a proc.
     def initialize(data)
-      @structure = GenericSegmentTree.new(
-        combine:               ->(a, b) { [a, b].max },
-        single_cell_array_val: ->(i) { data[i] },
-        size:                  data.size,
-        identity:              -Shared::INFINITY
-      )
+      @data = data
+      build!
     end
 
     # The maximum value in A(i..j).
@@ -44,26 +37,45 @@ module DataStructuresRMolinari
     # The arguments must be integers in 0...(A.size)
     # @return the largest value in A(i..j) or -Infinity if i > j.
     def max_on(i, j)
-      @structure.query_on(i, j)
+      query_on(i, j)
+    end
+
+    # @data must respond to []=
+    #
+    # TODO: if this is too restrictive, insist that calling code updates data itself.
+    def update_val(i, new_val)
+      @data[i] = new_val
+      update_at(i)
+    end
+
+    private
+
+    # Needed by the mixin
+    def combine(a, b)
+      [a, b].max
+    end
+
+    def single_cell_array_val(i)
+      @data[i]
+    end
+
+    def size
+      @size ||= @data.size
+    end
+
+    def identity
+      -Shared::INFINITY
     end
   end
 
   # A segment tree that for an array A(0...n) answers questions of the form "what is the index of the maximal value in the
   # subinterval A(i..j)?" in O(log n) time.
   class IndexOfMaxValSegmentTree
-    extend Forwardable
-
-    # Tell the tree that the value at idx has changed
-    def_delegator :@structure, :update_at
-
+    include GenericSegmentTree
     # @param (see MaxValSegmentTree#initialize)
     def initialize(data)
-      @structure = GenericSegmentTree.new(
-        combine:               ->(p1, p2) { p1[1] >= p2[1] ? p1 : p2 },
-        single_cell_array_val: ->(i) { [i, data[i]] },
-        size:                  data.size,
-        identity:              nil
-      )
+      @data = data
+      build!
     end
 
     # The index of the maximum value in A(i..j)
@@ -73,7 +85,35 @@ module DataStructuresRMolinari
     #   - If there is more than one entry with that value, return one the indices. There is no guarantee as to which one.
     #   - Return +nil+ if i > j
     def index_of_max_val_on(i, j)
-      @structure.query_on(i, j)&.first # discard the value part of the pair
+      query_on(i, j).first
     end
+
+    # @data must respond to []=
+    #
+    # TODO: if this is too restrictive, insist that calling code updates data itself.
+    def update_val(i, new_val)
+      @data[i] = new_val
+      update_at(i)
+    end
+
+    private
+
+    # Needed by the mixin
+    def combine(pair1, pair2)
+      pair1[1] >= pair2[1] ? pair1 : pair2
+    end
+
+    def single_cell_array_val(i)
+      [i, @data[i]]
+    end
+
+    def size
+      @size ||= @data.size
+    end
+
+    def identity
+      nil
+    end
+
   end
 end

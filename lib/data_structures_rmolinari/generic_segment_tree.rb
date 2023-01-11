@@ -12,38 +12,54 @@ require_relative 'shared'
 # which is faster, at least for large datasets and cache-relevant compiled code. These issues don't really apply to code written in
 # Ruby.
 #
-# This is a generic implementation, intended to allow easy configuration for concrete instances. See the parameters to the
-# initializer and the definitions of concrete realisations like MaxValSegmentTree.
+# This is a mixin intended to be included to define concrete instance of the Segment Tree. We expect the including class to define
+# the following methods:
 #
-# We do O(n) work to build the internal data structure at initialization. Then we answer queries in O(log n) time.
-class DataStructuresRMolinari::GenericSegmentTree
+# - +combine(a, b)+ takes two values and produces an appropriate combined value
+#   - For example, if we are calculating sums over subintervals, combine(a, b) = a + b, while if we are doing maxima we will return
+#     max(a, b).
+#   - Things get more complicated when we are calculating, say, the _index_ of the maximal value in a subinterval. Now it is not
+#     enough simply to store that index at each tree node, because to combine the indices from two child nodes we need to know both
+#     the index of the maximal element in each child node's interval, but also the maximal values themselves, so we know which one
+#     "wins" for the parent node. This affects the sort of work we need to do when combining and the value provided by the
+#     +single_cell_array_val+ lambda.
+# - +single_cell_array_val(i)+ the value we need to store in the node of the tree corresponding to the array interval i..i
+#   - This will often simply be the value data[i], but in some cases it will be something else. For example, when we are calculating
+#     the index of the maximal value on each subinterval we need [i, data[i]] here.
+#   - If +update_at+ is called later, this method must reflect the updated value(s)
+# - +size+ gives the size of the underlying data array and is used in certain internal arithmetic.
+# - +identiy+ the value to return when querying on an empty interval
+#   - for sums, this will be zero; for maxima, this will be -Infinity, etc
+#
+# (Knowing what the correct implementations are for a particular concrete instance requires an understanding of the internal
+# workings of the Segment Tree. See the description at cp-algorithms.com referred to above, and the places where this mixin is
+# used.)
+#
+# The module provides three methods to including classes:
+# - +build+, which performs the initial construction of the Segment Tree,
+# - +query_on(i, j)+, which returns the value corresonding to the subinterval i..j, and
+# - +update_at(i)+, which indicates that the value at index i of the underlying data array has changed and that internal values need
+#   to be updated.
+#
+# +build+ is O(n) and the other methods are O(log n).
+module DataStructuresRMolinari::GenericSegmentTree
   include Shared::BinaryTreeArithmetic
 
   # Construct a concrete instance of a Segment Tree. See details at the links above for the underlying concepts here.
-  # @param combine a lambda that takes two values and munges them into a combined value.
-  #   - For example, if we are calculating sums over subintervals, combine.call(a, b) = a + b, while if we are doing maxima we will
-  #     return max(a, b).
-  #   - Things get more complicated when we are calculating, say, the _index_ of the maximal value in a subinterval. Now it is not
-  #     enough simply to store that index at each tree node, because to combine the indices from two child nodes we need to know
-  #     both the index of the maximal element in each child node's interval, but also the maximal values themselves, so we know
-  #     which one "wins" for the parent node. This affects the sort of work we need to do when combining and the value provided by
-  #     the +single_cell_array_val+ lambda.
-  # @param single_cell_array_val a lambda that takes an index i and returns the value we need to store in the #build
-  #     operation for the subinterval i..i.
-  #     - This will often simply be the value data[i], but in some cases it will be something else. For example, when we are
-  #       calculating the index of the maximal value on each subinterval we need [i, data[i]] here.
-  #     - If +update_at+ is called later, this lambda must close over the underlying data in a way that captures the updated value.
-  # @param size the size of the underlying data array, used in certain internal arithmetic.
   # @param identity the value to return when we are querying on an empty interval
-  #   - for sums, this will be zero; for maxima, this will be -Infinity, etc
-  def initialize(combine:, single_cell_array_val:, size:, identity:)
-    @combine = combine
-    @single_cell_array_val = single_cell_array_val
-    @size = size
-    @identity = identity
+  # def initialize(combine:, single_cell_array_val:, size:, identity:)
+  #   @combine = combine
+  #   @single_cell_array_val = single_cell_array_val
+  #   @size = size
+  #   @identity = identity
 
+  #   @tree = []
+  #   build(root, 0, @size - 1)
+  # end
+
+  def build!
     @tree = []
-    build(root, 0, @size - 1)
+    build_it(root, 0, size - 1)
   end
 
   # The desired value (max, sum, etc.) on the subinterval left..right.
@@ -53,9 +69,9 @@ class DataStructuresRMolinari::GenericSegmentTree
   # The type of the return value depends on the concrete instance of the segment tree. We return the _identity_ element provided at
   # construction time if the interval is empty.
   def query_on(left, right)
-    raise DataError, "Bad query interval #{left}..#{right}" if left.negative? || right >= @size
+    raise DataError, "Bad query interval #{left}..#{right}" if left.negative? || right >= size
 
-    return @identity if left > right # empty interval
+    return identity if left > right # empty interval
 
     determine_val(root, left, right, 0, @size - 1)
   end
@@ -67,7 +83,7 @@ class DataStructuresRMolinari::GenericSegmentTree
   # Note that we don't need the updated value itself. We get that by calling the lambda +single_cell_array_val+ supplied at
   # construction.
   def update_at(idx)
-    raise DataError, 'Cannot update an index outside the initial range of the underlying data' unless (0...@size).cover?(idx)
+    raise DataError, 'Cannot update an index outside the initial range of the underlying data' unless (0...size).cover?(idx)
 
     update_val_at(idx, root, 0, @size - 1)
   end
@@ -86,7 +102,7 @@ class DataStructuresRMolinari::GenericSegmentTree
       determine_val(right(tree_idx), left, right, mid + 1, tree_r)
     else
       # Our interval is split between the two, so we need to combine the results from the children.
-      @combine.call(
+      combine(
         determine_val(left(tree_idx),  left,    mid,   tree_l,  mid),
         determine_val(right(tree_idx), mid + 1, right, mid + 1, tree_r)
       )
@@ -98,7 +114,7 @@ class DataStructuresRMolinari::GenericSegmentTree
       # We have found the spot!
       raise InternalLogicError, 'tree_l == tree_r, but they do not agree with the idx holding the updated value' unless tree_l == idx
 
-      @tree[tree_idx] = @single_cell_array_val.call(tree_l)
+      @tree[tree_idx] = single_cell_array_val(tree_l)
     else
       # Recursively update the appropriate subtree
       mid = midpoint(tree_l, tree_r)
@@ -109,7 +125,7 @@ class DataStructuresRMolinari::GenericSegmentTree
       else
         update_val_at(idx, right(tree_idx), mid + 1, tree_r)
       end
-      @tree[tree_idx] = @combine.call(@tree[left], @tree[right])
+      @tree[tree_idx] = combine(@tree[left], @tree[right])
     end
   end
 
@@ -117,19 +133,19 @@ class DataStructuresRMolinari::GenericSegmentTree
   #
   # - tree_idx is the index into @tree
   # - tree_l..tree_r is the subinterval of the underlying data that node tree_idx corresponds to
-  private def build(tree_idx, tree_l, tree_r)
+  private def build_it(tree_idx, tree_l, tree_r)
     if tree_l == tree_r
-      @tree[tree_idx] = @single_cell_array_val.call(tree_l) # single-cell interval
+      @tree[tree_idx] = single_cell_array_val(tree_l) # single-cell interval
     else
       # divide and conquer
       mid = midpoint(tree_l, tree_r)
       left = left(tree_idx)
       right = right(tree_idx)
 
-      build(left, tree_l, mid)
-      build(right, mid + 1, tree_r)
+      build_it(left, tree_l, mid)
+      build_it(right, mid + 1, tree_r)
 
-      @tree[tree_idx] = @combine.call(@tree[left], @tree[right])
+      @tree[tree_idx] = combine(@tree[left], @tree[right])
     end
   end
 
