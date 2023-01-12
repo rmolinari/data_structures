@@ -5,29 +5,26 @@ require_relative 'shared'
 # A priority search tree (PST) stores a set, P, of two-dimensional points (x,y) in a way that allows efficient answers to certain
 # questions about P.
 #
-# This is a _Min[inmal]_ Priority Search Tree (MinPST), a slight variant of the MaxPST. Where a MaxPST can answer queries about
-# regions infinite in in the positive y direction, a MinPST can handle regions infinite in the negative y direction. (A MinmaxPST
-# can handle both kinds of region, but that has not been implemented.)
+# This is a _Mininmal_ Priority Search Tree (MinPST), a slight variant of the MaxPST. Where a MaxPST can answer queries about
+# regions infinite in the positive y direction, a MinPST can handle regions infinite in the negative y direction. (A MinmaxPST can
+# handle both kinds of region but has not been implemented.)
 #
-# The data structure was introduced in 1985 by Edward McCreight. Later, De, Maheshwari, Nandy, and Smid showed how to construct a
-# PST in-place (using only O(1) extra memory), at the expense of some slightly more complicated code for the various supported
+# The PST data structure was introduced in 1985 by Edward McCreight. Later, De, Maheshwari, Nandy, and Smid showed how to construct
+# a PST in-place (using only O(1) extra memory), at the expense of some slightly more complicated code for the various supported
 # operations. It is their approach that we have implemented. See the class +MaxPrioritySearchTree+ for more details.
 #
 # Here we implement the MinPST by adding a thin layer of code over a MaxPST and reflecting all points through the x-axis.
 #
-# This means a few things
-# - performance will be slightly slower than for the MaxPST due to the bookkeeping. It is unlikely to be noticable in practice.
-# - whereas the "direct" implementation of MaxPST means that client code gets the same (x, y) objects back in results as it passed
-#   into the contructor, that's not the case here.
+# This means a few things.
+# - The bookkeeping means that performance will be slightly slower than for the MaxPST due to the bookkeeping. It is unlikely to be
+#   noticable in practice.
+# - MaxPST builds the tree structure in place, modifying the data array passed it. Indeed, this is the point of the approach of De
+#   et al. But we don't do that, as we create a separate array of Points.
+# - Whereas the implementation of MaxPST means that client code gets the same (x, y) objects back in results as it passed into the
+#   contructor, that's not the case here.
 #   - we map each point in the input - which is an object responding to +#x+ and +#y+ - to an instance of +Point+, and will return
 #    (different) instances of +Point+ in response to queries.
 #   - client code is unlikely to care, but be aware of this, just in case.
-#
-# The PST structure is an implicit, balanced binary tree with the following properties:
-# * The tree is a _max-heap_ in the y coordinate. That is, the point at each node has a y-value no greater than its parent.
-# * For each node p, the x-values of all the nodes in the left subtree of p are less than the x-values of all the nodes in the right
-#   subtree of p. Note that this says nothing about the x-value at the node p itself. The tree is thus _almost_ a binary search tree
-#   in the x coordinate.
 #
 # Given a set of n points, we can answer the following questions quickly:
 #
@@ -57,9 +54,9 @@ class DataStructuresRMolinari::MinPrioritySearchTree
 
   # Construct a MinPST from the collection of points in +data+.
   #
-  # @param data [Array] the set P of points presented as an array. The tree is built in the array in-place without cloning.
+  # @param data [Array] the set P of points as an array. The internal data structure is constructed in-place inside this array
+  #     without cloning it. Indeed, each element of data is replaced by a different object.
   #   - Each element of the array must respond to +#x+ and +#y+.
-  #     - This is not checked explicitly but a missing method exception will be thrown when we try to call one of them.
   #   - The +x+ values must be distinct. We raise a +Shared::DataError+ if this isn't the case.
   #     - This is a restriction that simplifies some of the algorithm code. It can be removed as the cost of some extra work. Issue
   #       #9.
@@ -67,7 +64,10 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # @param verify [Boolean] when truthy, check that the properties of a PST are satisified after construction, raising an exception
   #        if not.
   def initialize(data, verify: false)
-    @max_pst = MaxPrioritySearchTree.new(data.map { |pt| flip(pt) }, verify:)
+    (0...(data.size)).each do |i|
+      data[i] = flip data[i]
+    end
+    @max_pst = MaxPrioritySearchTree.new(data, verify:)
   end
 
   ########################################

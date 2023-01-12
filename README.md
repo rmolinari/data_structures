@@ -89,7 +89,8 @@ things, a max-heap on the y-coordinates.
 These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
 [[McC85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.
 
-We also provide a `MinPrioritySearchTree`, which answers analagous queries in the southward-infinite quadrants and 3-sided regions.
+We also provide a `MinPrioritySearchTree`, which answers analagous queries in the southward-infinite quadrants and 3-sided
+regions.
 
 In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
 answer queries in all four quadrants and both "kinds" of 3-sided boxes. Having one of these would save the trouble of constructing
