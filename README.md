@@ -30,11 +30,14 @@ puts pst.largest_y_in_ne(0, 0) # "Point(1,1)"
 
 ### Disjoint Union
 
-We represent the set S(n) = {0, 1, ..., n-1} as the disjoint union of subsets. Equivalently, we represent a partition of S(n). The
+We represent a set S of non-negative integers as the disjoint union of subsets. Equivalently, we represent a partition of S. The
 data structure provides very efficient implementation of the two key operations
 - `unite(e, f)`, which merges the subsets containing e and f; and
 - `find(e)`, which returns the canonical representative of the subset containing e. Two elements e and f are in the same subset
   exactly when `find(e) == find(f)`.
+
+It also provides
+- `make_set(v)`, add a new value `v` to the set S, starting out in a singleton subset.
 
 For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL1984]](#references) by Tarjan and
 van Leeuwen.
@@ -51,8 +54,8 @@ A binary heap with an `update` method, suitable for use as a priority queue. The
 
 `top` is O(1). The others are O(log n) where n is the number of items in the heap.
 
-By default we have a min-heap: the top element is the one with smallest priority. A configuration parameter at construction makes it
-a max-heap.
+By default we have a min-heap: the top element is the one with smallest priority. A configuration parameter at construction can make
+it a max-heap.
 
 Another configuration parameter allows the creation of a "non-addressable" heap. This makes it impossible to call `update`, but
 allows the insertion of duplicate items (which is sometimes useful) and slightly faster operation overall.
@@ -89,7 +92,7 @@ These queries appear rather abstract at first but there are interesting applicat
 In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
 also answer queries in the southeast and southwest quadrants of a query point and in a downwards-infinite box. But the presentiation
 is hard to follow in places and the paper's pseudocode is buggy.[^minmaxpst] In the sort of toy problems that this Ruby code is
-suitable for it is easy enough to build a MaxPST with the points mapped by (x, y) -> (x, -y).
+suitable for, we can implement a MinPST as a MaxPST with the points mapped by (x, y) -> (x, -y) (see #17).
 
 ### Segment Tree
 
