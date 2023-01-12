@@ -17,11 +17,11 @@ require_relative 'shared'
 #
 # Given a set of n points, we can answer the following questions quickly:
 #
-# - +leftmost_ne+: for x0 and y0, what is the leftmost point (x, y) in P satisfying x >= x0 and y >= y0?
-# - +rightmost_nw+: for x0 and y0, what is the rightmost point (x, y) in P satisfying x <= x0 and y >= y0?
-# - +highest_ne+: for x0 and y0, what is the highest point (x, y) in P satisfying x >= x0 and y >= y0?
-# - +highest_nw+: for x0 and y0, what is the highest point (x, y) in P satisfying x <= x0 and y >= y0?
-# - +highest_3_sided+: for x0, x1, and y0, what is the highest point (x, y) in P satisfying x >= x0, x <= x1 and y >= y0?
+# - +smallest_x_in_ne+: for x0 and y0, what is the leftmost point (x, y) in P satisfying x >= x0 and y >= y0?
+# - +largest_x_in_nw+: for x0 and y0, what is the rightmost point (x, y) in P satisfying x <= x0 and y >= y0?
+# - +largest_y_in_ne+: for x0 and y0, what is the highest point (x, y) in P satisfying x >= x0 and y >= y0?
+# - +largest_y_in_nw+: for x0 and y0, what is the highest point (x, y) in P satisfying x <= x0 and y >= y0?
+# - +largest_y_in_3_sided+: for x0, x1, and y0, what is the highest point (x, y) in P satisfying x >= x0, x <= x1 and y >= y0?
 # - +enumerate_3_sided+: for x0, x1, and y0, enumerate all points in P satisfying x >= x0, x <= x1 and y >= y0.
 #
 # (Here, "leftmost/rightmost" means "minimal/maximal x", and "highest" means "maximal y".)
@@ -61,9 +61,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     @size = @data.size
 
     construct_pst
-    return unless verify
 
-    verify_properties
+    verify_properties if verify
   end
 
   ########################################
@@ -78,8 +77,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def highest_ne(x0, y0)
-    highest_in_quadrant(x0, y0, :ne)
+  def largest_y_in_ne(x0, y0)
+    largest_y_in_quadrant(x0, y0, :ne)
   end
 
   # Return the highest point in P to the "northwest" of (x0, y0).
@@ -91,14 +90,14 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def highest_nw(x0, y0)
-    highest_in_quadrant(x0, y0, :nw)
+  def largest_y_in_nw(x0, y0)
+    largest_y_in_quadrant(x0, y0, :nw)
   end
 
-  # The basic algorithm is from De et al. section 3.1. We have generalaized it slightly to allow it to calculate both highest_ne and
-  # highest_nw
+  # The basic algorithm is from De et al. section 3.1. We have generalaized it slightly to allow it to calculate both largest_y_in_ne and
+  # largest_y_in_nw
   #
-  # Note that highest_ne(x0, y0) = highest_3_sided(x0, infinty, y0) so we don't really need this. But it's a bit faster than the
+  # Note that largest_y_in_ne(x0, y0) = largest_y_in_3_sided(x0, infinty, y0) so we don't really need this. But it's a bit faster than the
   # general case and is a simple algorithm that introduces a typical way that an algorithm interacts with the data structure.
   #
   # From the paper:
@@ -109,7 +108,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #     - If Q intersect P is empty then p* = best
   #
   # Here, P is the set of points in our data structure and T_p is the subtree rooted at p
-  private def highest_in_quadrant(x0, y0, quadrant)
+  private def largest_y_in_quadrant(x0, y0, quadrant)
     quadrant.must_be_in [:ne, :nw]
 
     p = root
@@ -195,7 +194,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the leftmost (min-x) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def leftmost_ne(x0, y0)
+  def smallest_x_in_ne(x0, y0)
     extremal_in_x_dimension(x0, y0, :ne)
   end
 
@@ -208,14 +207,14 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the leftmost (min-x) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def rightmost_nw(x0, y0)
+  def largest_x_in_nw(x0, y0)
     extremal_in_x_dimension(x0, y0, :nw)
   end
 
-  # A genericized version of the paper's leftmost_ne that can calculate either leftmost_ne or rightmost_nw as specifies via a
+  # A genericized version of the paper's smallest_x_in_ne that can calculate either smallest_x_in_ne or largest_x_in_nw as specifies via a
   # parameter.
   #
-  # Quadrant is either :ne (which gives leftmost_ne) or :nw (which gives rightmost_nw).
+  # Quadrant is either :ne (which gives smallest_x_in_ne) or :nw (which gives largest_x_in_nw).
   #
   # From De et al:
   #
@@ -246,7 +245,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     #   takes as input a point t and does the following: if t \in Q and x(t) < x(best) then it assignes best = t
     #
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
-    update_leftmost = lambda do |node|
+    update_best = lambda do |node|
       t = @data[node]
       if in_q.call(t) && sign * t.x < sign * best.x
         best = t
@@ -268,7 +267,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     #   q = p. This may leave both of p, q undefined which means there is no useful way forward and we return nils to signal this to
     #   calling code.
     #
-    # The same logic applies to rightmost_nw, though everything is "backwards"
+    # The same logic applies to largest_x_in_nw, though everything is "backwards"
     # - membership of Q depends on having a small-enough value of x, rather than a large-enough one
     # - among the ci, values towards the end of the array tend not to be in Q while values towards the start of the array tend to be
     #  in Q
@@ -303,14 +302,14 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       new_p ||= new_q # if nodes[i] is no good, send p along with q
       new_q ||= new_p # but if there is no worthwhile value for q we should send it along with p
 
-      return [new_q, new_p] if quadrant == :nw # swap for the rightmost_nw case.
+      return [new_q, new_p] if quadrant == :nw # swap for the largest_x_in_nw case.
 
       [new_p, new_q]
     end
 
     until leaf?(p)
-      update_leftmost.call(p)
-      update_leftmost.call(q)
+      update_best.call(p)
+      update_best.call(q)
 
       if p == q
         if one_child?(p)
@@ -325,7 +324,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
           q = p # p itself is just one layer above the leaves, or is itself a leaf
         elsif one_child?(q)
           # This generic approach is not as fast as the bespoke checks described in the paper. But it is easier to maintain the code
-          # this way and allows easy implementation of rightmost_nw
+          # this way and allows easy implementation of largest_x_in_nw
           p, q = determine_next_nodes.call(left(p), right(p), left(q))
         else
           p, q = determine_next_nodes.call(left(p), right(p), left(q), right(q))
@@ -333,8 +332,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
         break unless p # we've run out of useful nodes
       end
     end
-    update_leftmost.call(p) if p
-    update_leftmost.call(q) if q
+    update_best.call(p) if p
+    update_best.call(q) if q
     best
   end
 
@@ -350,7 +349,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller x values.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def highest_3_sided(x0, x1, y0)
+  def largest_y_in_3_sided(x0, x1, y0)
     # From the paper:
     #
     #    The three real numbers x0, x1, and y0 define the three-sided range Q = [x0,x1] X [y0,∞). If Q \intersect P̸ is not \empty,
@@ -571,7 +570,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     # My high-level understanding of the algorithm
     # --------------------------------------------
     #
-    # We need to find all elements of Q \intersect P, so it isn't enough, as it was in highest_3_sided simply to keep track of p and
+    # We need to find all elements of Q \intersect P, so it isn't enough, as it was in largest_y_in_3_sided simply to keep track of p and
     # q. We need to track four nodes, p, p', q', and q which are (with a little handwaving) respectively
     #
     # - the rightmost node to the left of Q' = [x0, x1] X [-infinity, infinity],
@@ -693,8 +692,6 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     # The four key helpers described in the paper
 
     # Handle the next step of the subtree at p
-    #
-    # I need to go through this with paper, pencil, and some diagrams.
     enumerate_left = lambda do
       if leaf?(p)
         left = false

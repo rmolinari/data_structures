@@ -23,7 +23,7 @@ MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
 Point = DataStructuresRMolinari::Point # anything responding to :x and :y is fine
 
 pst = MaxPrioritySearchTree.new([Point.new(1, 1)])
-puts pst.highest_ne(0, 0) # "Point(1,1)"
+puts pst.largest_y_in_ne(0, 0) # "Point(1,1)"
 ```
 
 ## Implementations
@@ -65,11 +65,17 @@ A PST stores a set P of two-dimensional points in a way that allows certain quer
 structure was introduced by McCreight [[McC1985]](#references). De, Maheshawari, Nandy, and Smid [[DMNS2011]](#references) showed
 how to build the structure in-place and we use their approach here.
 
-- `highest_ne(x0, y0)` and `highest_nw(x0, y0)`, the highest point in the quadrant to the northest/northwest of (x0, y0);
-- `leftmost_ne(x0, y0)`, the leftmost point in the quadrant to the northeast of (x0, y0);
-- `rightmost_nw(x0, y0)`, the rightmost point in the quadrant to the northwest of (x0, y0);
-- `highest_3_sided(x0, x1, y0)`, the highest point in the region specified by x0 <= x <= x1 and y0 <= y; and
+- `largest_y_in_ne(x0, y0)` and `largest_y_in_nw(x0, y0)`, the highest point in the quadrant to the northest/northwest of (x0, y0);
+- `smallest_x_in_ne(x0, y0)`, the leftmost point in the quadrant to the northeast of (x0, y0);
+- `largest_x_in_nw(x0, y0)`, the rightmost point in the quadrant to the northwest of (x0, y0);
+- `largest_y_in_3_sided(x0, x1, y0)`, the highest point in the region specified by x0 <= x <= x1 and y0 <= y; and
 - `enumerate_3_sided(x0, x1, y0)`, enumerate all the points in that region.
+
+Here compass directions are the natural ones in the x-y plane with the positive x-axis pointing east and the positive y-axis
+pointing north.
+
+Note that [[DMNS2011]](#references) used different names for these operations. A term like "largest_y" was "highest" and
+"smallest_x" was "leftmost".
 
 The single-point queries run in O(log n) time, where n is the size of P, while `enumerate_3_sided` runs in O(m + log n), where m is
 the number of points actually enumerated.
@@ -79,10 +85,6 @@ things, a max-heap on the y-coordinates.
 
 These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
 [[McC85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.
-
-In the method names, compass directions are the natural ones in the x-y plane with the positive x-axis pointing east and the
-positive y-axis pointing north. "Left", "right", and "highest" mean "west", "east", and "north".  The use of both compass- and
-spatial-directions is confusing but comes from the papers. There is an open issue to make this more consistent.
 
 In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
 also answer queries in the southeast and southwest quadrants of a query point and in a downwards-infinite box. But the presentiation

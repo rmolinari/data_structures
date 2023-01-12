@@ -72,7 +72,7 @@ class DataStructuresRMolinari::MinmaxPrioritySearchTree
   #     - p and q are at the same level of T and x(p) <= x(q)
   #
   # Here T(x) is the subtree rooted at x
-  def leftmost_ne(x0, y0)
+  def smallest_x_in_ne(x0, y0)
     best = Point.new(INFINITY, INFINITY)
     p = q = root
 
@@ -281,7 +281,7 @@ class DataStructuresRMolinari::MinmaxPrioritySearchTree
   # Otherwise, p* is the point in P_Q with maximal y value.
   #
   # This method returns p*
-  # def highest_3_sided_up(x0, x1, y0)
+  # def largest_y_in_3_sided_up(x0, x1, y0)
   #   best = Point.new(INFINITY, -INFINITY)
 
   #   in_q = lambda do |pair|
@@ -395,7 +395,7 @@ class DataStructuresRMolinari::MinmaxPrioritySearchTree
   # quadrant.
   #
   # Algorithm is from De et al. section 3.1
-  def highest_ne(x0, y0)
+  def largest_y_in_ne(x0, y0)
     raise "Write me"
     # From the paper:
     #

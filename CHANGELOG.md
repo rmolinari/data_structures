@@ -4,7 +4,11 @@
 
 ### Changed
 
-- MaxPrioritySearchTree allows duplicate y values. Ties are broken with a preference for smaller values of x.
+- MaxPrioritySearchTree
+  - Duplicate y values are now allowed. Ties are broken with a preference for smaller values of x.
+  - Method names have changed
+    - Instead of "highest", "leftmost", "rightmost" we use "largest_y", "smallest_x", "largest_x"
+    - For example, +highest_ne+ is now +largest_y_in_nw+
 - DisjointUnion
   - the size argument to initializer is optional. The default value is 0.
   - elements can be added to the "universe" of known values with +make_set+
