@@ -30,6 +30,12 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   ########################################
   # Tests for the (vanilla) MaxPST
+  #
+  # Note that the time these tests take to run is dominated by the work we do in the test code to determine what the correct answer
+  # is. Over 99.5% of the time in a typical test is taken up by the code determining what the expected result is.
+  #
+  # Having dumb code work out the correct answer is the right thing to do, but it means there are some slow tests! The relative
+  # slowness of the brute-force approach is a good indication of how much time the PST datastructure saves us.
 
   # Construct the data structure and validate that the key properties are actually satisifed.
   def test_pst_construction
@@ -69,7 +75,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   ########################################
-  # Tests for the MinPST
+  # Analagous tests for the MinPST
 
   def test_min_pst_smallest_y_in_se
     check_quadrant_calc(min_pst, :min, :y, :se)
@@ -281,15 +287,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # These aren't actually tests and make no assertions. THey do nothing unless the >profile< environment variable is set.
 
   def test_profiling
-    method = :enumerate_3_sided
+    # method = :enumerate_3_sided
+    method = :largest_x_in_nw
+    pst = MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
     profile(method) do
-      pst = MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
-      100.times do
-        x0 = rand(@size)
-        x1 = rand(@size - x0) + x0
-        y0 = rand(@size)
-        pst.send(method, x0, x1, y0)
-      end
+      check_quadrant_calc(pst, :max, :y, :nw)
+      # 100.times do
+      #   x0 = rand(@size)
+      #   # x1 = rand(x0..@size)
+      #   y0 = rand(@size)
+      #   # pst.send(method, x0, x1, y0)
+      #   pst.send(method, x0, y0)
+      # end
     end
   end
 
@@ -430,7 +439,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     criterion.must_be_in [:min, :max, :all]
     dimension.must_be :y if dimension
 
-    10.times do
+    100.times do
       x0 = rand(@size)
       x1 = rand(x0..@size)
       y0 = rand(@size)
