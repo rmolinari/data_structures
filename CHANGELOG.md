@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- MinPrioritySearchTree added
+  - it's just a thin layer on top of a MaxPrioritySearchTree with negated y values.
+
 ## [0.4.0] 2023-01-12
 
 ### Changed

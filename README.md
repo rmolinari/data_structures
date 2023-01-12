@@ -89,10 +89,11 @@ things, a max-heap on the y-coordinates.
 These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
 [[McC85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.
 
+We also provide a `MinPrioritySearchTree`, which answers analagous queries in the southward-infinite quadrants and 3-sided regions.
+
 In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
-also answer queries in the southeast and southwest quadrants of a query point and in a downwards-infinite box. But the presentiation
-is hard to follow in places and the paper's pseudocode is buggy.[^minmaxpst] In the sort of toy problems that this Ruby code is
-suitable for, we can implement a MinPST as a MaxPST with the points mapped by (x, y) -> (x, -y) (see #17).
+answer queries in all four quadrants and both "kinds" of 3-sided boxes. Having one of these would save the trouble of constructing
+both a MaxPST and MinPST. But the presentiation is hard to follow in places and the paper's pseudocode is buggy.[^minmaxpst].
 
 ### Segment Tree
 
