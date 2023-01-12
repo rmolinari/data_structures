@@ -40,18 +40,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     assert_raise(Shared::DataError) do
       MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(0, 1)])
     end
-
-    # # duplicate y valus
-    # assert_raise(Shared::DataError) do
-    #   MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(1, 0)])
-    # end
   end
 
   def test_pst_largest_y_in_ne
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check_a_largest_y_in_ne(x0, y0, max_pst)
+      check(max_pst, :largest_y_in_ne, x0, y0, best_in(:ne, x0, y0, by: :max_y) || Point.new(INFINITY, -INFINITY))
     end
   end
 
@@ -59,7 +54,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check_a_largest_y_in_nw(x0, y0, max_pst)
+      check(max_pst, :largest_y_in_nw, x0, y0, best_in(:nw, x0, y0, by: :max_y) || Point.new(-INFINITY, -INFINITY))
     end
   end
 
@@ -67,7 +62,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check_a_smallest_x_in_ne(x0, y0, max_pst)
+      check(max_pst, :smallest_x_in_ne, x0, y0, best_in(:ne, x0, y0, by: :min_x) || Point.new(INFINITY, INFINITY))
     end
   end
 
@@ -75,25 +70,25 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check_a_largest_x_in_nw(x0, y0, max_pst)
+      check(max_pst, :largest_x_in_nw, x0, y0, best_in(:nw, x0, y0, by: :max_x) || Point.new(-INFINITY, INFINITY))
     end
   end
 
   def test_pst_largest_y_in_3_sided
     100.times do
       x0 = rand(@size)
-      x1 = x0 + 1 + rand(@size - x0)
+      x1 = rand(x0..@size)
       y0 = rand(@size)
-      check_a_largest_y_in_3_sided(x0, x1, y0, max_pst)
+      check(max_pst, :largest_y_in_3_sided, x0, x1, y0, best_in(:three_sided, x0, x1, y0, by: :max_y) || Point.new(INFINITY, -INFINITY))
     end
   end
 
   def test_pst_enumerate_3_sided
     100.times do
       x0 = rand(@size)
-      x1 = x0 + 1 + rand(@size - x0)
+      x1 = rand(x0..@size)
       y0 = rand(@size)
-      check_an_enumerate_3_sided(x0, x1, y0, max_pst)
+      check(max_pst, :enumerate_3_sided, x0, x1, y0, best_in(:three_sided, x0, x1, y0, by: :all))
     end
   end
 
@@ -403,48 +398,46 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @max_pst ||= MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
   end
 
-  # Do I really need all of these check_a_foo methods?
-  private def check_a_largest_y_in_ne(x0, y0, pst)
-    highest = ne_quadrant(x0, y0).max_by{ |p| [p.y, -p.x] } || Point.new(INFINITY, -INFINITY)
-    calc_highest = pst.largest_y_in_ne(x0, y0)
-
-    assert_equal highest, calc_highest
+  private def check(pst, method, *args, expected)
+    calculated = pst.send(method, *args)
+    assert_equal expected, calculated
   end
 
-  private def check_a_largest_y_in_nw(x0, y0, pst)
-    highest = nw_quadrant(x0, y0).max_by{ |p| [p.y, -p.x] } || Point.new(-INFINITY, -INFINITY)
-    calc_highest = pst.largest_y_in_nw(x0, y0)
+  # The "best" value in a given region by a given criterion
+  #
+  # region: one of :ne, :nw, :three_sided
+  # *args: the arguments that specify the bounds of the region.
+  #        - when region is :ne or :nw it will be values x0, y0 that specify the corner (x0, y0) of the region
+  #        - when region is :three_sided it will be the three values x0, x1, y0 that specify the 3-sided region
+  # by: the critereon used to choose the "best" point in the region
+  #        - :min_x, max_x
+  #        - :max_y, with ties broken in favor of smaller values of x
+  #        - :all, which isn't a criterion at all. We take all the points in the region and make a set from them.
+  private def best_in(region, *args, by: :all)
+    data = case region
+           when :ne
+             ne_quadrant(*args)
+           when :nw
+             nw_quadrant(*args)
+           when :three_sided
+             x0, x1, y0 = args
+             ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }
+           else
+             raise "can't work out the region #{region}"
+           end
 
-    assert_equal highest, calc_highest
-  end
-
-  private def check_a_smallest_x_in_ne(x0, y0, pst)
-    leftmost = ne_quadrant(x0, y0).min_by(&:x) || Point.new(INFINITY, INFINITY)
-    calc_leftmost = pst.smallest_x_in_ne(x0, y0)
-
-    assert_equal leftmost, calc_leftmost
-  end
-
-  private def check_a_largest_x_in_nw(x0, y0, pst)
-    rightmost = nw_quadrant(x0, y0).max_by(&:x) || Point.new(-INFINITY, INFINITY)
-    calc_rightmost = pst.largest_x_in_nw(x0, y0)
-
-    assert_equal rightmost, calc_rightmost
-  end
-
-  private def check_a_largest_y_in_3_sided(x0, x1, y0, pst)
-    highest = ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }.max_by{ |p| [p.y, -p.x] } || Point.new(INFINITY, -INFINITY)
-    calc_highest = pst.largest_y_in_3_sided(x0, x1, y0)
-
-    assert_equal highest, calc_highest
-  end
-
-  private def check_an_enumerate_3_sided(x0, x1, y0, pst)
-    expected_vals = Set.new(ne_quadrant(x0, y0).reject { |pair| pair.x > x1 })
-    calculated_vals = Set.new
-    pst.enumerate_3_sided(x0, x1, y0) { |pt| calculated_vals << pt }
-
-    assert_equal expected_vals, calculated_vals
+    case by
+    when :min_x
+      data.min_by(&:x)
+    when :max_x
+      data.max_by(&:x)
+    when :max_y
+      data.max_by { |p| [p.y, -p.x] } # tie broken in favor of smallest x
+    when :all
+      Set.new data
+    else
+      raise "can't work out selection criterion #{by}"
+    end
   end
 
   # By default we take x values 1, 2, ..., size and choose random integer y values in 1..size.
