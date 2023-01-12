@@ -2,7 +2,7 @@ require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'data_structures_rmolinari'
-  s.version     = '0.4.0'
+  s.version     = '0.4.1'
   s.summary     = 'Several miscellaneous data structures I have implemented to learn about them.'
   s.description = <<~DESC
     This small gem contains several data structures that I have implemented in Ruby to learn how they work.
