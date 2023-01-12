@@ -12,6 +12,7 @@ require_relative 'data_structures_rmolinari/disjoint_union'
 require_relative 'data_structures_rmolinari/generic_segment_tree'
 require_relative 'data_structures_rmolinari/heap'
 require_relative 'data_structures_rmolinari/max_priority_search_tree'
+require_relative 'data_structures_rmolinari/min_priority_search_tree'
 
 # A namespace to hold the provided classes. We want to avoid polluting the global namespace with names like "Heap"
 module DataStructuresRMolinari

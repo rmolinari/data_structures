@@ -1,0 +1,171 @@
+require 'must_be'
+require 'set'
+require_relative 'shared'
+
+# A priority search tree (PST) stores a set, P, of two-dimensional points (x,y) in a way that allows efficient answers to certain
+# questions about P.
+#
+# This is a _Min[inmal]_ Priority Search Tree (MinPST), a slight variant of the MaxPST. Where a MaxPST can answer queries about
+# regions infinite in in the positive y direction, a MinPST can handle regions infinite in the negative y direction. (A MinmaxPST
+# can handle both kinds of region, but that has not been implemented.)
+#
+# The data structure was introduced in 1985 by Edward McCreight. Later, De, Maheshwari, Nandy, and Smid showed how to construct a
+# PST in-place (using only O(1) extra memory), at the expense of some slightly more complicated code for the various supported
+# operations. It is their approach that we have implemented. See the class +MaxPrioritySearchTree+ for more details.
+#
+# Here we implement the MinPST by adding a thin layer of code over a MaxPST and reflecting all points through the x-axis.
+#
+# This means a few things
+# - performance will be slightly slower than for the MaxPST due to the bookkeeping. It is unlikely to be noticable in practice.
+# - whereas the "direct" implementation of MaxPST means that client code gets the same (x, y) objects back in results as it passed
+#   into the contructor, that's not the case here.
+#   - we map each point in the input - which is an object responding to +#x+ and +#y+ - to an instance of +Point+, and will return
+#    (different) instances of +Point+ in response to queries.
+#   - client code is unlikely to care, but be aware of this, just in case.
+#
+# The PST structure is an implicit, balanced binary tree with the following properties:
+# * The tree is a _max-heap_ in the y coordinate. That is, the point at each node has a y-value no greater than its parent.
+# * For each node p, the x-values of all the nodes in the left subtree of p are less than the x-values of all the nodes in the right
+#   subtree of p. Note that this says nothing about the x-value at the node p itself. The tree is thus _almost_ a binary search tree
+#   in the x coordinate.
+#
+# Given a set of n points, we can answer the following questions quickly:
+#
+# - +smallest_x_in_se+: for x0 and y0, what is the "leftmost" point (x, y) in P satisfying x >= x0 and y <= y0?
+# - +largest_x_in_sw+: for x0 and y0, what is the "rightmost" point (x, y) in P satisfying x <= x0 and y <= y0?
+# - +smallest_y_in_se+: for x0 and y0, what is the "lowest" point (x, y) in P satisfying x >= x0 and y <= y0?
+# - +smallest_y_in_nw+: for x0 and y0, what is the lowest point (x, y) in P satisfying x <= x0 and y <= y0?
+# - +smallest_y_in_3_sided+: for x0, x1, and y0, what is the lowest point (x, y) in P satisfying x >= x0, x <= x1 and y <= y0?
+# - +enumerate_3_sided+: for x0, x1, and y0, enumerate all points in P satisfying x >= x0, x <= x1 and y <= y0.
+#
+# (Here, "leftmost/rightmost" means "minimal/maximal x", and "lowest" means "minimal y".)
+#
+# The first 5 operations take O(log n) time.
+#
+# The final operation (enumerate) takes O(m + log n) time, where m is the number of points that are enumerated.
+#
+# In the current implementation no two points can share an x-value. This (rather severe) restriction can be relaxed with some more
+# complicated code, but it hasn't been written yet. See issue #9.
+#
+# References:
+# * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
+# * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational
+#   Geometry, 2011
+class DataStructuresRMolinari::MinPrioritySearchTree
+  include Shared
+  include BinaryTreeArithmetic
+
+  # Construct a MinPST from the collection of points in +data+.
+  #
+  # @param data [Array] the set P of points presented as an array. The tree is built in the array in-place without cloning.
+  #   - Each element of the array must respond to +#x+ and +#y+.
+  #     - This is not checked explicitly but a missing method exception will be thrown when we try to call one of them.
+  #   - The +x+ values must be distinct. We raise a +Shared::DataError+ if this isn't the case.
+  #     - This is a restriction that simplifies some of the algorithm code. It can be removed as the cost of some extra work. Issue
+  #       #9.
+  #
+  # @param verify [Boolean] when truthy, check that the properties of a PST are satisified after construction, raising an exception
+  #        if not.
+  def initialize(data, verify: false)
+    @max_pst = MaxPrioritySearchTree.new(data.map { |pt| flip(pt) }, verify:)
+  end
+
+  ########################################
+  # "Lowest" points in SE and SW quadrants
+
+  # Return the "lowest" point in P to the "southeast" of (x0, y0).
+  #
+  # Let Q = [x0, infty) X (infty, y0] be the southeast quadrant defined by the point (x0, y0) and let P be the points in this data
+  # structure. Define p* as
+  #
+  # - (infty, infty) if Q \intersect P is empty and
+  # - the lowest (min-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
+  #
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def smallest_y_in_se(x0, y0)
+    flip @max_pst.largest_y_in_ne(x0, -y0)
+  end
+
+  # Return the "lowest" point in P to the "southwest" of (x0, y0).
+  #
+  # Let Q = (-infty, x0] X (-infty, y0] be the southwest quadrant defined by the point (x0, y0) and let P be the points in this data
+  # structure. Define p* as
+  #
+  # - (-infty, infty) if Q \intersect P is empty and
+  # - the lowest (min-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
+  #
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def smallest_y_in_sw(x0, y0)
+    flip @max_pst.largest_y_in_nw(x0, -y0)
+  end
+
+  ########################################
+  # Leftmost SE and Rightmost SW
+
+  # Return the leftmost (min-x) point in P to the southeast of (x0, y0).
+  #
+  # Let Q = [x0, infty) X (infty, y0] be the southeast quadrant defined by the point (x0, y0) and let P be the points in this data
+  # structure. Define p* as
+  #
+  # - (infty, -infty) if Q \intersect P is empty and
+  # - the leftmost (min-x) point in Q \intersect P otherwise.
+  #
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def smallest_x_in_se(x0, y0)
+    flip @max_pst.smallest_x_in_ne(x0, -y0)
+  end
+
+  # Return the rightmost (max-x) point in P to the southwest of (x0, y0).
+  #
+  # Let Q = (-infty, x0] X (infty, y0] be the southwest quadrant defined by the point (x0, y0) and let P be the points in this data
+  # structure. Define p* as
+  #
+  # - (-infty, -infty) if Q \intersect P is empty and
+  # - the leftmost (min-x) point in Q \intersect P otherwise.
+  #
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def largest_x_in_sw(x0, y0)
+    flip @max_pst.largest_x_in_nw(x0, -y0)
+  end
+
+  ########################################
+  # Lowest 3 Sided
+
+  # Return the lowest point of P in the box bounded by x0, x1, and y0.
+  #
+  # Let Q = [x0, x1] X (infty, y0] be the "three-sided" box bounded by x0, x1, and y0, and let P be the set of points in the
+  # MaxPST. (Note that Q is empty if x1 < x0.) Define p* as
+  #
+  # - (infty, infty) if Q \intersect P is empty and
+  # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller x values.
+  #
+  # This method returns p* in O(log n) time and O(1) extra space.
+  def smallest_y_in_3_sided(x0, x1, y0)
+    flip @max_pst.largest_y_in_3_sided(x0, x1, -y0)
+  end
+
+  ########################################
+  # Enumerate 3 sided
+
+  # Enumerate the points of P in the box bounded by x0, x1, and y0.
+  #
+  # Let Q = [x0, x1] X [y0, infty) be the "three-sided" box bounded by x0, x1, and y0, and let P be the set of points in the
+  # MaxPST. (Note that Q is empty if x1 < x0.) We find an enumerate all the points in Q \intersect P.
+  #
+  # If the calling code provides a block then we +yield+ each point to it. Otherwise we return a set containing all the points in
+  # the intersection.
+  #
+  # This method runs in O(m + log n) time and O(1) extra space, where m is the number of points found.
+  def enumerate_3_sided(x0, x1, y0, &block)
+    if block
+      @max_pst.enumerate_3_sided(x0, x1, -y0) { yield block }
+    else
+      Set.new( @max_pst.enumerate_3_sided(x0, x1, -y0).map { |pt| flip pt } )
+    end
+  end
+
+  # (x, y) -> (x, -y)
+  private def flip(point)
+    Point.new(point.x, -point.y)
+  end
+end

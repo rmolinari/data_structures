@@ -16,6 +16,7 @@ Point = Shared::Point
 InternalLogicError = Shared::InternalLogicError
 
 MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
+MinPrioritySearchTree = DataStructuresRMolinari::MinPrioritySearchTree
 
 class PrioritySearchTreeTest < Test::Unit::TestCase
   INFINITY = Float::INFINITY
@@ -43,28 +44,55 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
-  def test_pst_largest_y_in_ne
-    check_quadrant_calc(:max, :y, :ne)
+  def test_max_pst_largest_y_in_ne
+    check_quadrant_calc(max_pst, :max, :y, :ne)
   end
 
-  def test_pst_largest_y_in_nw
-    check_quadrant_calc(:max, :y, :nw)
+  def test_max_pst_largest_y_in_nw
+    check_quadrant_calc(max_pst, :max, :y, :nw)
   end
 
-  def test_pst_smallest_x_in_ne
-    check_quadrant_calc(:min, :x, :ne)
+  def test_max_pst_smallest_x_in_ne
+    check_quadrant_calc(max_pst, :min, :x, :ne)
   end
 
-  def test_pst_largest_x_in_nw
-    check_quadrant_calc(:max, :x, :nw)
+  def test_max_pst_largest_x_in_nw
+    check_quadrant_calc(max_pst, :max, :x, :nw)
   end
 
-  def test_pst_largest_y_in_3_sided
-    check_3_sided_calc(:max, :y)
+  def test_max_pst_largest_y_in_3_sided
+    check_3_sided_calc(max_pst, :max, :y)
   end
 
-  def test_pst_enumerate_3_sided
-    check_3_sided_calc(:all, nil)
+  def test_max_pst_enumerate_3_sided
+    check_3_sided_calc(max_pst, :all, nil)
+  end
+
+  ########################################
+  # Tests for the MinPST
+
+  def test_min_pst_smallest_y_in_se
+    check_quadrant_calc(min_pst, :min, :y, :se)
+  end
+
+  def test_min_pst_smallest_y_in_sw
+    check_quadrant_calc(min_pst, :min, :y, :sw)
+  end
+
+  def test_min_pst_smallest_x_in_se
+    check_quadrant_calc(min_pst, :min, :x, :se)
+  end
+
+  def test_min_pst_largest_x_in_sw
+    check_quadrant_calc(min_pst, :max, :x, :sw)
+  end
+
+  def test_min_pst_smallest_y_in_3_sided
+    check_3_sided_calc(min_pst, :min, :y)
+  end
+
+  def test_min_pst_enumerate_3_sided
+    check_3_sided_calc(min_pst, :all, nil)
   end
 
   ########################################
@@ -373,20 +401,24 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @max_pst ||= MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
   end
 
+  private def min_pst
+    @min_pst ||= MinPrioritySearchTree.new(@pairs_by_x.shuffle)
+  end
+
   # Check that a MaxPST calculation in a quadrant gives the correct result
   #
   # - criterion: :min or :max
   # - dimension: :x or :y
   # - region: :ne or :nw
-  private def check_quadrant_calc(criterion, dimension, region)
+  private def check_quadrant_calc(pst, criterion, dimension, region)
     criterion.must_be_in [:min, :max]
     dimension.must_be_in [:x, :y]
-    region.must_be_in [:ne, :nw]
+    region.must_be_in [:ne, :nw, :se, :sw]
 
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check_calculation(max_pst, criterion, dimension, region, x0, y0)
+      check_calculation(pst, criterion, dimension, region, x0, y0)
     end
   end
 
@@ -394,15 +426,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # - criterion: :max or :all
   # - dimension: :y or nil
-  private def check_3_sided_calc(criterion, dimension)
-    criterion.must_be_in [:max, :all]
+  private def check_3_sided_calc(pst, criterion, dimension)
+    criterion.must_be_in [:min, :max, :all]
     dimension.must_be :y if dimension
 
     100.times do
       x0 = rand(@size)
       x1 = rand(x0..@size)
       y0 = rand(@size)
-      check_calculation(max_pst, criterion, dimension, :three_sided, x0, x1, y0)
+      check_calculation(pst, criterion, dimension, :three_sided, x0, x1, y0)
     end
   end
 
@@ -416,7 +448,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # TODO: have it work out the default_result itself.
   private def check_calculation(pst, property, dimension, region, *args)
-    region.must_be_in [:ne, :nw, :three_sided]
+    is_min_pst = pst.is_a? MinPrioritySearchTree
+
+    region.must_be_in [:ne, :nw, :se, :sw, :three_sided]
     dimension.must_be_in [:x, :y, nil]
     property.must_be_in [:min, :max, :all]
 
@@ -424,7 +458,11 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     raise 'dimension must be given unless we are enumerating' if property != :all && !dimension
 
     # TODO: allow this when we have a MinPST
-    raise 'minimizing in the y-dimension is not supported' if property == :min && dimension == :y
+    if is_min_pst
+      raise 'maximizing in the y-dimension is not supported by a MinPST' if property == :max && dimension == :y
+    else
+      raise 'minimizing in the y-dimension is not supported by a MaxPST' if property == :min && dimension == :y
+    end
 
     # Work out what the "default" value would be if there aren't any points in the region
     default_result = nil
@@ -448,8 +486,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
         default_x = property == :min ? INFINITY : -INFINITY
       elsif dimension == :y
         default_y = -INFINITY
-        default_x = region == :nw ? -INFINITY : INFINITY
+        default_x = if [:nw, :sw].include? region
+                      -INFINITY
+                    else
+                      INFINITY
+                    end
       end
+      default_y = -default_y if is_min_pst
+
       default_result = Point.new(default_x, default_y)
     end
 
@@ -477,6 +521,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
              ne_quadrant(*args)
            when :nw
              nw_quadrant(*args)
+           when :se
+             se_quadrant(*args)
+           when :sw
+             sw_quadrant(*args)
            when :three_sided
              x0, x1, y0 = args
              ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }
@@ -491,6 +539,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       data.max_by(&:x)
     when :max_y
       data.max_by { |p| [p.y, -p.x] } # tie broken in favor of smallest x
+    when :min_y
+      data.min_by { |p| [p.y, p.x] } # tie broken in favor of smallest x
     when :all
       Set.new data
     else
@@ -539,5 +589,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   private def nw_quadrant(x0, y0)
     leftward_points(x0).select { |pair| pair.y >= y0 }
+  end
+
+  private def se_quadrant(x0, y0)
+    rightward_points(x0).select { |pair| pair.y <= y0 }
+  end
+
+  private def sw_quadrant(x0, y0)
+    leftward_points(x0).select { |pair| pair.y <= y0 }
   end
 end
