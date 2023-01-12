@@ -4,6 +4,7 @@
 # end
 
 require 'byebug'
+require 'must_be'
 require 'set'
 require 'test/unit'
 require 'timeout'
@@ -43,53 +44,27 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_pst_largest_y_in_ne
-    100.times do
-      x0 = rand(@size)
-      y0 = rand(@size)
-      check_calculation(max_pst, :max, :y, :ne, x0, y0, Point.new(INFINITY, -INFINITY))
-    end
+    check_quadrant_calc(:max, :y, :ne)
   end
 
   def test_pst_largest_y_in_nw
-    100.times do
-      x0 = rand(@size)
-      y0 = rand(@size)
-      check_calculation(max_pst, :max, :y, :nw, x0, y0, Point.new(-INFINITY, -INFINITY))
-    end
+    check_quadrant_calc(:max, :y, :nw)
   end
 
   def test_pst_smallest_x_in_ne
-    100.times do
-      x0 = rand(@size)
-      y0 = rand(@size)
-      check_calculation(max_pst, :min, :x, :ne, x0, y0, Point.new(INFINITY, INFINITY))
-    end
+    check_quadrant_calc(:min, :x, :ne)
   end
 
   def test_pst_largest_x_in_nw
-    100.times do
-      x0 = rand(@size)
-      y0 = rand(@size)
-      check_calculation(max_pst, :max, :x, :nw, x0, y0, Point.new(-INFINITY, INFINITY))
-    end
+    check_quadrant_calc(:max, :x, :nw)
   end
 
   def test_pst_largest_y_in_3_sided
-    100.times do
-      x0 = rand(@size)
-      x1 = rand(x0..@size)
-      y0 = rand(@size)
-      check_calculation(max_pst, :max, :y, :three_sided, x0, x1, y0, Point.new(INFINITY, -INFINITY))
-    end
+    check_3_sided_calc(:max, :y)
   end
 
   def test_pst_enumerate_3_sided
-    100.times do
-      x0 = rand(@size)
-      x1 = rand(x0..@size)
-      y0 = rand(@size)
-      check_calculation(max_pst, :all, nil, :three_sided, x0, x1, y0, nil)
-    end
+    check_3_sided_calc(:all, nil)
   end
 
   ########################################
@@ -398,6 +373,39 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @max_pst ||= MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
   end
 
+  # Check that a MaxPST calculation in a quadrant gives the correct result
+  #
+  # - criterion: :min or :max
+  # - dimension: :x or :y
+  # - region: :ne or :nw
+  private def check_quadrant_calc(criterion, dimension, region)
+    criterion.must_be_in [:min, :max]
+    dimension.must_be_in [:x, :y]
+    region.must_be_in [:ne, :nw]
+
+    100.times do
+      x0 = rand(@size)
+      y0 = rand(@size)
+      check_calculation(max_pst, criterion, dimension, region, x0, y0)
+    end
+  end
+
+  # Check that a MaxPST calculation in a three sided region gives the correct result
+  #
+  # - criterion: :max or :all
+  # - dimension: :y or nil
+  private def check_3_sided_calc(criterion, dimension)
+    criterion.must_be_in [:max, :all]
+    dimension.must_be :y if dimension
+
+    100.times do
+      x0 = rand(@size)
+      x1 = rand(x0..@size)
+      y0 = rand(@size)
+      check_calculation(max_pst, criterion, dimension, :three_sided, x0, x1, y0)
+    end
+  end
+
   # Check that the PST correctly finds the desired point in a stated region
   #
   # property: :min, :max, or :all (for enumerate)
@@ -407,11 +415,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # default_result: the result to expect when there are no points in the target region
   #
   # TODO: have it work out the default_result itself.
-  private def check_calculation(pst, property, dimension, region, *args, default_result)
+  private def check_calculation(pst, property, dimension, region, *args)
     region.must_be_in [:ne, :nw, :three_sided]
     dimension.must_be_in [:x, :y, nil]
     property.must_be_in [:min, :max, :all]
 
+    raise 'x-dimension calculations not supported in 3-sided region' if region == :three_sided && dimension == :x
+    raise 'dimension must be given unless we are enumerating' if property != :all && !dimension
+
+    # TODO: allow this when we have a MinPST
+    raise 'minimizing in the y-dimension is not supported' if property == :min && dimension == :y
+
+    # Work out what the "default" value would be if there aren't any points in the region
+    default_result = nil
     if property == :all
       method = "enumerate_3_sided"
       criterion = :all
@@ -422,6 +438,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
       method = "#{method_word1}_#{method_word2}_in_#{method_word4}".to_sym
       criterion = "#{property}_#{dimension}".to_sym
+
+      # TODO: do this property for MinPST when we get one
+      if region == :three_sided
+        default_x = INFINITY
+        default_y = -INFINITY
+      elsif dimension == :x
+        default_y = INFINITY
+        default_x = property == :min ? INFINITY : -INFINITY
+      elsif dimension == :y
+        default_y = -INFINITY
+        default_x = region == :nw ? -INFINITY : INFINITY
+      end
+      default_result = Point.new(default_x, default_y)
     end
 
     expected = best_in(region, *args, by: criterion) || default_result
