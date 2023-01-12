@@ -46,7 +46,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check(max_pst, :largest_y_in_ne, x0, y0, best_in(:ne, x0, y0, by: :max_y) || Point.new(INFINITY, -INFINITY))
+      check_calculation(max_pst, :max, :y, :ne, x0, y0, Point.new(INFINITY, -INFINITY))
     end
   end
 
@@ -54,7 +54,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check(max_pst, :largest_y_in_nw, x0, y0, best_in(:nw, x0, y0, by: :max_y) || Point.new(-INFINITY, -INFINITY))
+      check_calculation(max_pst, :max, :y, :nw, x0, y0, Point.new(-INFINITY, -INFINITY))
     end
   end
 
@@ -62,7 +62,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check(max_pst, :smallest_x_in_ne, x0, y0, best_in(:ne, x0, y0, by: :min_x) || Point.new(INFINITY, INFINITY))
+      check_calculation(max_pst, :min, :x, :ne, x0, y0, Point.new(INFINITY, INFINITY))
     end
   end
 
@@ -70,7 +70,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@size)
       y0 = rand(@size)
-      check(max_pst, :largest_x_in_nw, x0, y0, best_in(:nw, x0, y0, by: :max_x) || Point.new(-INFINITY, INFINITY))
+      check_calculation(max_pst, :max, :x, :nw, x0, y0, Point.new(-INFINITY, INFINITY))
     end
   end
 
@@ -79,7 +79,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       x0 = rand(@size)
       x1 = rand(x0..@size)
       y0 = rand(@size)
-      check(max_pst, :largest_y_in_3_sided, x0, x1, y0, best_in(:three_sided, x0, x1, y0, by: :max_y) || Point.new(INFINITY, -INFINITY))
+      check_calculation(max_pst, :max, :y, :three_sided, x0, x1, y0, Point.new(INFINITY, -INFINITY))
     end
   end
 
@@ -88,7 +88,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       x0 = rand(@size)
       x1 = rand(x0..@size)
       y0 = rand(@size)
-      check(max_pst, :enumerate_3_sided, x0, x1, y0, best_in(:three_sided, x0, x1, y0, by: :all))
+      check_calculation(max_pst, :all, nil, :three_sided, x0, x1, y0, nil)
     end
   end
 
@@ -398,23 +398,52 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @max_pst ||= MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
   end
 
-  private def check(pst, method, *args, expected)
+  # Check that the PST correctly finds the desired point in a stated region
+  #
+  # property: :min, :max, or :all (for enumerate)
+  # dimension: the dimension we are "optimizing", :x or :y, ignored when property is :all
+  # region: :ne, :nw, :three_sided
+  # args: the args that bound the region
+  # default_result: the result to expect when there are no points in the target region
+  #
+  # TODO: have it work out the default_result itself.
+  private def check_calculation(pst, property, dimension, region, *args, default_result)
+    region.must_be_in [:ne, :nw, :three_sided]
+    dimension.must_be_in [:x, :y, nil]
+    property.must_be_in [:min, :max, :all]
+
+    if property == :all
+      method = "enumerate_3_sided"
+      criterion = :all
+    else
+      method_word1 = property == :min ? :smallest : :largest
+      method_word2 = dimension
+      method_word4 = region == :three_sided ? '3_sided' : region
+
+      method = "#{method_word1}_#{method_word2}_in_#{method_word4}".to_sym
+      criterion = "#{property}_#{dimension}".to_sym
+    end
+
+    expected = best_in(region, *args, by: criterion) || default_result
     calculated = pst.send(method, *args)
     assert_equal expected, calculated
   end
 
-  # The "best" value in a given region by a given criterion
+  # The "best" value in a given region by a given criterion.
+  #
+  # So we are calculating the hard way what the PST is about to find for us.
   #
   # region: one of :ne, :nw, :three_sided
   # *args: the arguments that specify the bounds of the region.
-  #        - when region is :ne or :nw it will be values x0, y0 that specify the corner (x0, y0) of the region
-  #        - when region is :three_sided it will be the three values x0, x1, y0 that specify the 3-sided region
+  #   - when region is :ne or :nw it will be values x0, y0 that specify the corner (x0, y0) of the region
+  #   - when region is :three_sided it will be the three values x0, x1, y0 that specify the 3-sided region
   # by: the critereon used to choose the "best" point in the region
-  #        - :min_x, max_x
-  #        - :max_y, with ties broken in favor of smaller values of x
-  #        - :all, which isn't a criterion at all. We take all the points in the region and make a set from them.
+  #   - :min_x, max_x
+  #   - :max_y, with ties broken in favor of smaller values of x
+  #   - :all, which isn't a criterion at all. We take all the points in the region and make a set from them. This is useful when
+  #     testing an 'enumerate' method.
   private def best_in(region, *args, by: :all)
-    data = case region
+    data = case region.to_sym
            when :ne
              ne_quadrant(*args)
            when :nw
@@ -423,10 +452,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
              x0, x1, y0 = args
              ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }
            else
-             raise "can't work out the region #{region}"
+             raise "can't handle region #{region}"
            end
 
-    case by
+    case by.to_sym
     when :min_x
       data.min_by(&:x)
     when :max_x
@@ -436,7 +465,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     when :all
       Set.new data
     else
-      raise "can't work out selection criterion #{by}"
+      raise "can't handle selection criterion #{by}"
     end
   end
 
