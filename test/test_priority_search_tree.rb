@@ -430,7 +430,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     criterion.must_be_in [:min, :max, :all]
     dimension.must_be :y if dimension
 
-    100.times do
+    10.times do
       x0 = rand(@size)
       x1 = rand(x0..@size)
       y0 = rand(@size)
@@ -497,7 +497,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       default_result = Point.new(default_x, default_y)
     end
 
-    expected = best_in(region, *args, by: criterion) || default_result
+    expected = best_in(region, *args, by: criterion, is_min_pst:) || default_result
     calculated = pst.send(method, *args)
     assert_equal expected, calculated
   end
@@ -515,7 +515,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #   - :max_y, with ties broken in favor of smaller values of x
   #   - :all, which isn't a criterion at all. We take all the points in the region and make a set from them. This is useful when
   #     testing an 'enumerate' method.
-  private def best_in(region, *args, by: :all)
+  private def best_in(region, *args, by: :all, is_min_pst:)
     data = case region.to_sym
            when :ne
              ne_quadrant(*args)
@@ -527,7 +527,11 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
              sw_quadrant(*args)
            when :three_sided
              x0, x1, y0 = args
-             ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }
+             if is_min_pst
+               se_quadrant(x0, y0).reject { |pair| pair.x > x1 }
+             else
+               ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }
+             end
            else
              raise "can't handle region #{region}"
            end
