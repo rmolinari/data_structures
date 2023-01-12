@@ -23,22 +23,35 @@ class DataStructuresRMolinari::DisjointUnion
   # The number of subsets in the partition.
   attr_reader :subset_count
 
-  # @param size the initial size of the universe. The elements 0, 1, ..., size - 1 start out in disjoint singleton subsets.
-  def initialize(size)
-    @size = size
+  # @param initial_size the initial size of the universe. The elements 0, 1, ..., initial_size - 1 start out in disjoint singleton
+  # subsets.
+  def initialize(initial_size = 0)
     # Initialize to
-    @d = (0...size).to_a
-    @rank = [0] * size
+    @d = (0...initial_size).to_a
+    @rank = [0] * initial_size
 
-    @subset_count = size
+    @subset_count = initial_size
+  end
+
+  # Add a new subset to the universe containing the element +new_v+
+  # @param new_v the new element, starting in its own singleton subset
+  #   - it must be a non-negative integer, not already part of the universe of elements.
+  def make_set(new_v)
+    raise DataError, "Element #{new_v} must be a non-negative integer" unless new_v.is_a?(Integer) && !new_v.negative?
+    raise DataError, "Element #{new_v} is already present" if @d[new_v]
+
+    @d[new_v] = new_v
+    @rank[new_v] = 0
+    @subset_count += 1
   end
 
   # Declare that e and f are equivalent, i.e., in the same subset. If they are already in the same subset this is a no-op.
   #
-  # Each argument must be one of 0, 1, ..., size-1.
+  # Each argument must be in the universe of elements
   def unite(e, f)
     check_value(e)
     check_value(f)
+
     raise 'Uniting an element with itself is meaningless' if e == f
 
     e_root = find(e)
@@ -51,8 +64,8 @@ class DataStructuresRMolinari::DisjointUnion
 
   # The canonical representative of the subset containing e. Two elements d and e are in the same subset exactly when find(d) ==
   # find(e).
-  # @param e must be one of 0, 1, ..., size-1.
-  # @return (Integer) one of 0, 1, ..., size-1.
+  # @param e must be in the universe of elements
+  # @return (Integer) one of the universe of elements
   def find(e)
     check_value(e)
 
@@ -63,7 +76,7 @@ class DataStructuresRMolinari::DisjointUnion
   end
 
   private def check_value(v)
-    raise Shared::DataError, "Value must be given and be in (0..#{@size - 1})" unless v && v.between?(0, @size - 1)
+    raise Shared::DataError, "Value #{v} is not part of the univserse." unless @d[v]
   end
 
   private def link(e, f)

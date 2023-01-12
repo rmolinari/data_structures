@@ -5,6 +5,9 @@
 ### Changed
 
 - MaxPrioritySearchTree allows duplicate y values. Ties are broken with a preference for smaller values of x.
+- DisjointUnion
+  - size argument to initializer is optional. The default value is 0.
+  - elements can be added to the "universe" of known values with +make_set+
 
 ### Removed
 - MinmaxPrioritySearchTree is no longer available

@@ -30,4 +30,28 @@ class DisjointUnionTest < Test::Unit::TestCase
       du.find(10)
     end
   end
+
+  def test_make_set
+    du = DisjointUnion.new # empty
+
+    assert_raise(Shared::DataError) do
+      du.find(0)
+    end
+
+    du.make_set(0)
+    assert_equal 0, du.find(0)
+
+    # Try non-contiguous
+    du.make_set(10)
+    assert_equal 0, du.find(0)
+    assert_equal 2, du.subset_count
+
+    du.unite(0, 10)
+    assert_equal 1, du.subset_count
+    assert_equal du.find(0), du.find(10)
+
+    assert_raise(Shared::DataError) do
+      du.find(2)
+    end
+  end
 end
