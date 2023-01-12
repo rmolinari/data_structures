@@ -7,7 +7,7 @@ participating in the Advent of Code (https://adventofcode.com/).
 These implementations are not particularly clever. They are based on the expository descriptions and pseudo-code I found as I read
 about each structure and so are not as fast as possible.
 
-The code is available at a gem: https://rubygems.org/gems/data_structures_rmolinari.
+The code is available as a gem: https://rubygems.org/gems/data_structures_rmolinari.
 
 ## Usage
 
@@ -65,17 +65,17 @@ A PST stores a set P of two-dimensional points in a way that allows certain quer
 structure was introduced by McCreight [[McC1985]](#references). De, Maheshawari, Nandy, and Smid [[DMNS2011]](#references) showed
 how to build the structure in-place and we use their approach here.
 
-- `largest_y_in_ne(x0, y0)` and `largest_y_in_nw(x0, y0)`, the highest point in the quadrant to the northest/northwest of (x0, y0);
-- `smallest_x_in_ne(x0, y0)`, the leftmost point in the quadrant to the northeast of (x0, y0);
-- `largest_x_in_nw(x0, y0)`, the rightmost point in the quadrant to the northwest of (x0, y0);
+- `largest_y_in_ne(x0, y0)` and `largest_y_in_nw(x0, y0)`, the "highest" (max-y) point in the quadrant to the northest/northwest of
+  (x0, y0);
+- `smallest_x_in_ne(x0, y0)`, the "leftmost" (min-x) point in the quadrant to the northeast of (x0, y0);
+- `largest_x_in_nw(x0, y0)`, the "rightmost" (max-x) point in the quadrant to the northwest of (x0, y0);
 - `largest_y_in_3_sided(x0, x1, y0)`, the highest point in the region specified by x0 <= x <= x1 and y0 <= y; and
 - `enumerate_3_sided(x0, x1, y0)`, enumerate all the points in that region.
 
 Here compass directions are the natural ones in the x-y plane with the positive x-axis pointing east and the positive y-axis
 pointing north.
 
-Note that [[DMNS2011]](#references) used different names for these operations. A term like "largest_y" was "highest" and
-"smallest_x" was "leftmost".
+There is no `smallest_x_in_3_sided(x0, x1, y0)`. Just use `smallest_x_in_ne(x0, y0)`.
 
 The single-point queries run in O(log n) time, where n is the size of P, while `enumerate_3_sided` runs in O(m + log n), where m is
 the number of points actually enumerated.
