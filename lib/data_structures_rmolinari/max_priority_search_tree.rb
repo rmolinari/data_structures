@@ -10,7 +10,7 @@ require_relative 'shared'
 # operations. It is their approach that we have implemented.
 #
 # The PST structure is an implicit, balanced binary tree with the following properties:
-# * The tree is a _max-heap_ in the y coordinate. That is, the point at each node has a y-value less than its parent.
+# * The tree is a _max-heap_ in the y coordinate. That is, the point at each node has a y-value no greater than its parent.
 # * For each node p, the x-values of all the nodes in the left subtree of p are less than the x-values of all the nodes in the right
 #   subtree of p. Note that this says nothing about the x-value at the node p itself. The tree is thus _almost_ a binary search tree
 #   in the x coordinate.
@@ -30,8 +30,8 @@ require_relative 'shared'
 #
 # The final operation (enumerate) takes O(m + log n) time, where m is the number of points that are enumerated.
 #
-# In the current implementation no two points can share an x-value and no two points can share a y-value. This (rather severe)
-# restriction can be relaxed with some more complicated code.
+# In the current implementation no two points can share an x-value. This (rather severe) restriction can be relaxed with some more
+# complicated code, but it hasn't been written yet. See issue #9.
 #
 #
 # There is a related data structure called the Min-max priority search tree so we have called this a "Max priority search tree", or
