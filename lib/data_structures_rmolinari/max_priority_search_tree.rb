@@ -30,9 +30,8 @@ require_relative 'shared'
 #
 # The final operation (enumerate) takes O(m + log n) time, where m is the number of points that are enumerated.
 #
-# In the current implementation no two points can share an x-value. This (rather severe) restriction can be relaxed with some more
-# complicated code, but it hasn't been written yet. See issue #9.
-#
+# In the current implementation no two points can share an x-value. This restriction can be relaxed with some more complicated code,
+# but it hasn't been written yet. See issue #9.
 #
 # There is a related data structure called the Min-max priority search tree so we have called this a "Max priority search tree", or
 # MaxPST.
@@ -53,16 +52,24 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #   - The +x+ values must be distinct. We raise a +Shared::DataError+ if this isn't the case.
   #     - This is a restriction that simplifies some of the algorithm code. It can be removed as the cost of some extra work. Issue
   #       #9.
-  #
+  # @param dynamic [Boolean] when truthy the PST is _dynamic_. This means the root can be deleted, which is useful in certain
+  #        algorithms than use a PST.
+  #        - a dynamic PST needs more bookwork for some internal work and so slows things down a little.
   # @param verify [Boolean] when truthy, check that the properties of a PST are satisified after construction, raising an exception
   #        if not.
-  def initialize(data, verify: false)
+  def initialize(data, dynamic: false, verify: false)
     @data = data
     @size = @data.size
+    @member_count = @size # these can diverge for dynamic PSTs
+    @dynamic = dynamic
 
     construct_pst
 
     verify_properties if verify
+  end
+
+  def empty?
+    @member_count.zero?
   end
 
   ########################################
@@ -154,9 +161,9 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       elsif p_val.y < y0
         # p is too low for Q, so the entire subtree is too low as well
         return best
-      elsif one_child?(p)
+      elsif (child = one_child?(p))
         # With just one child we need to check it
-        p = left(p)
+        p = child
       elsif exclusionary_x.call(@data[preferred_child.call(p)].x)
         # right(p) might be in Q, but nothing in the left subtree can be, by the PST property on x.
         p = preferred_child.call(p)
@@ -993,6 +1000,106 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   end
 
   ########################################
+  # Delete Top
+  #
+
+  # Delete the top element of the PST. This is possible only for dynamic PSTs
+  #
+  # @return [Point] the top element that was deleted
+  def delete_top!
+    raise LogicError, 'delete_top! not supported for PSTs that are not dynamic' unless dynamic?
+    raise DataError, 'delete_top! not possible for empty PSTs' unless @member_count.positive?
+
+    i = root
+    while !leaf?(i)
+      if (child = one_child?(i))
+        next_node = child
+      else
+        next_node = left(i)
+
+        if better_y?(right(i), next_node)
+          next_node = right(i)
+        end
+      end
+      swap(i, next_node)
+      i = next_node
+    end
+    @member_count -= 1
+    @data[i]
+  end
+
+  ########################################
+  # Helpers for the internal guts of things
+
+  private def dynamic?
+    @dynamic
+  end
+
+  # i has no children
+  private def leaf?(i)
+    return i > @last_non_leaf unless dynamic?
+
+    !(in_tree?(left(i)) || in_tree?(right(i)))
+  end
+
+  # i has exactly one child. We return the unique child if there is one, and nil otherwise
+
+  # Unless the PST is dynamic this will be the left child. Otherwise it could be either
+  private def one_child?(i)
+    if dynamic?
+      l_child = left(i)
+      r_child = right(i)
+      left_is_in_tree = in_tree?(l_child)
+      return nil unless left_is_in_tree ^ in_tree?(r_child)
+      return l_child if left_is_in_tree
+
+      r_child
+    else
+      return left(i) if i == @parent_of_one_child
+
+      nil
+    end
+  end
+
+  # i has two children
+  private def two_children?(i)
+    i <= @last_parent_of_two_children unless dynamic?
+
+    in_tree?(left(i)) && in_tree?(right(i))
+  end
+
+  # Does the value at index i have a "better" y value than the value at index j.
+  #
+  # A value is better if it is larger, or if it is equal and the x value is smaller (which is how we break the tie)
+  private def better_y?(i, j)
+    val_i = @data[i]
+    val_j = @data[j]
+    return true if val_i.y > val_j.y
+    return false if val_i.y < val_j.y
+
+    val_i.x < val_j.x
+  end
+
+  # Is node i in the tree?
+  private def in_tree?(i)
+    return i <= @size unless dynamic?
+
+    return false if empty?
+    return false if i > @size
+    return true if i == root
+
+    better_y?(parent(i), i)
+
+    # p = parent(i)
+    # return true if @data[i].y < @data[p].y
+    # return false if @data[i].y > @data[p].y
+
+    # # the y values are equal so the tie is broken by x. We are "normal", and in the tree, if our value of x is worse than our
+    # # parent's value
+    # @data[i].x > @data[p].x
+  end
+
+  ########################################
   # Build the initial stucture
 
   private def construct_pst
@@ -1058,7 +1165,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   end
 
   # The index in @data[l..r] having the largest value for y, breaking ties with the smaller x value. Since we are already sorted by
-  # x we don't actually need to check this.
+  # x we don't actually need to check the x value.
   private def index_with_largest_y_in(l, r)
     return nil if r < l
 

@@ -22,10 +22,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   INFINITY = Float::INFINITY
 
   def setup
-    @size = (ENV['test_size'] || 100_000).to_i
-    @pairs_by_x = raw_data(@size)
-    @pairs_by_y = @pairs_by_x.sort_by(&:y)
-    @min_x, @max_x = @pairs_by_x.map(&:x).minmax
+    @size = (ENV['test_size'] || 10_000).to_i
+    raw_data = raw_data(@size)
+    @point_finder = PointFinder.new(raw_data)
+    @dynamic_point_finder = PointFinder.new(raw_data)
   end
 
   ########################################
@@ -72,6 +72,56 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_max_pst_enumerate_3_sided
     check_3_sided_calc(max_pst, :all, nil)
+  end
+
+  ##############################
+  # ...and for the "dynamic" version
+
+  def test_dynamic_max_pst_largest_y_in_ne
+    before_and_after_deletion do |pst|
+      check_quadrant_calc(pst, :max, :y, :ne)
+    end
+  end
+
+  def test_dynamic_max_pst_largest_y_in_nw
+    before_and_after_deletion do |pst|
+      check_quadrant_calc(dynamic_max_pst, :max, :y, :nw)
+    end
+  end
+
+  def test_dynamic_max_pst_smallest_x_in_ne
+    before_and_after_deletion do |pst|
+      check_quadrant_calc(dynamic_max_pst, :min, :x, :ne)
+    end
+  end
+
+  def test_dynamic_max_pst_largest_x_in_nw
+    before_and_after_deletion do |pst|
+      check_quadrant_calc(dynamic_max_pst, :max, :x, :nw)
+    end
+  end
+
+  def test_dynamic_max_pst_largest_y_in_3_sided
+    before_and_after_deletion do |pst|
+      check_3_sided_calc(dynamic_max_pst, :max, :y)
+    end
+  end
+
+  def test_dynamic_max_pst_enumerate_3_sided
+    before_and_after_deletion do |pst|
+      check_3_sided_calc(dynamic_max_pst, :all, nil)
+    end
+  end
+
+  private def before_and_after_deletion
+    dynamic_context do
+      pst = dynamic_max_pst
+      yield pst
+
+      deleted_pt = pst.delete_top!
+      @dynamic_point_finder.delete!(deleted_pt)
+      yield pst
+    end
   end
 
   ########################################
@@ -287,9 +337,11 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # These aren't actually tests and make no assertions. THey do nothing unless the >profile< environment variable is set.
 
   def test_profiling
+    return unless ENV['profile']
+
     # method = :enumerate_3_sided
     method = :largest_x_in_nw
-    pst = MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
+    pst = MaxPrioritySearchTree.new(@point_finder.points.shuffle)
     profile(method) do
       check_quadrant_calc(pst, :max, :y, :nw)
       # 100.times do
@@ -407,11 +459,23 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # Helpers
 
   private def max_pst
-    @max_pst ||= MaxPrioritySearchTree.new(@pairs_by_x.shuffle)
+    @max_pst ||= MaxPrioritySearchTree.new(@point_finder.points.shuffle)
+  end
+
+  private def dynamic_max_pst
+    @dynamic_max_pst ||= MaxPrioritySearchTree.new(@point_finder.points.shuffle, dynamic: true)
+
+    if @dynamic_max_pst.empty?
+      # make a new one
+      @dynamic_max_pst = MaxPrioritySearchTree.new(@point_finder.points.shuffle, dynamic: true)
+      @dynamic_point_finder.reset!
+    end
+
+    @dynamic_max_pst
   end
 
   private def min_pst
-    @min_pst ||= MinPrioritySearchTree.new(@pairs_by_x.shuffle)
+    @min_pst ||= MinPrioritySearchTree.new(@point_finder.points.shuffle)
   end
 
   # Check that a MaxPST calculation in a quadrant gives the correct result
@@ -420,6 +484,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # - dimension: :x or :y
   # - region: :ne or :nw
   private def check_quadrant_calc(pst, criterion, dimension, region)
+    pst.must_be
     criterion.must_be_in [:min, :max]
     dimension.must_be_in [:x, :y]
     region.must_be_in [:ne, :nw, :se, :sw]
@@ -527,19 +592,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   private def best_in(region, *args, by: :all, is_min_pst:)
     data = case region.to_sym
            when :ne
-             ne_quadrant(*args)
+             @point_finder.ne_quadrant(*args)
            when :nw
-             nw_quadrant(*args)
+             @point_finder.nw_quadrant(*args)
            when :se
-             se_quadrant(*args)
+             @point_finder.se_quadrant(*args)
            when :sw
-             sw_quadrant(*args)
+             @point_finder.sw_quadrant(*args)
            when :three_sided
              x0, x1, y0 = args
              if is_min_pst
-               se_quadrant(x0, y0).reject { |pair| pair.x > x1 }
+               @point_finder.three_sided_down(x0, x1, y0)
              else
-               ne_quadrant(x0, y0).reject { |pair| pair.x > x1 }
+               @point_finder.three_sided_up(x0, x1, y0)
              end
            else
              raise "can't handle region #{region}"
@@ -574,41 +639,91 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
-  # Points (x,y) in @data with x >= x0
-  private def rightward_points(x0)
-    return @pairs_by_x if x0 <= @min_x
-    return [] if x0 > @max_x
+  # A little class to filter points that are in a particular region. This does much of the work of a PST in a very slow way and is
+  # used when testing results returned by a PST
+  class PointFinder
+    # Doesn't respect delete!
+    attr_reader :points
 
-    first_idx = @pairs_by_x.bsearch_index { |v| v.x >= x0 }
-    @pairs_by_x[first_idx..]
-  end
+    def initialize(points)
+      @points = points.clone
+      @points_by_x = points.sort_by(&:x)
+      @min_x, @max_x = @points_by_x.map(&:x).minmax
+      @deletions = []
+    end
 
-  # Points (x,y) in @data with x <= x0
-  private def leftward_points(x0)
-    return @pairs_by_x if x0 >= @max_x
-    return [] if x0 < @min_x
+    # Declare the given point deleted. We don't actually check it is in the set of points we are monitoring
+    def delete!(point)
+      @deletions << point
+    end
 
-    first_idx = @pairs_by_x.bsearch_index { |v| v.x >= x0 }
-    if @pairs_by_x[first_idx].x == x0
-      @pairs_by_x[..first_idx]
-    else
-      @pairs_by_x[...first_idx]
+    # Forget all deletions
+    def clear!
+      @deletions = []
+    end
+
+    def ne_quadrant(x0, y0)
+      rightward_points(x0).select { |pair| pair.y >= y0 }
+    end
+
+    def nw_quadrant(x0, y0)
+      leftward_points(x0).select { |pair| pair.y >= y0 }
+    end
+
+    def se_quadrant(x0, y0)
+      rightward_points(x0).select { |pair| pair.y <= y0 }
+    end
+
+    def sw_quadrant(x0, y0)
+      leftward_points(x0).select { |pair| pair.y <= y0 }
+    end
+
+    def three_sided_up(x0, x1, y0)
+      ne_quadrant(x0, y0).reject { |pt| pt.x > x1 }
+    end
+
+    def three_sided_down(x0, x1, y0)
+      se_quadrant(x0, y0).reject { |pt| pt.x > x1 }
+    end
+
+    # Points (x,y) in @data with x >= x0
+    private def rightward_points(x0)
+      points = if x0 <= @min_x
+                 @points_by_x
+               elsif x0 > @max_x
+                 []
+               else
+                 first_idx = @points_by_x.bsearch_index { |v| v.x >= x0 }
+                 @points_by_x[first_idx..]
+               end
+      points - @deletions
+    end
+
+    # Points (x,y) in @data with x <= x0
+    private def leftward_points(x0)
+      points = if x0 >= @max_x
+                 @points_by_x
+               elsif x0 < @min_x
+                 []
+               else
+                 first_idx = @points_by_x.bsearch_index { |v| v.x >= x0 }
+                 if @points_by_x[first_idx].x == x0
+                   @points_by_x[..first_idx]
+                 else
+                   @points_by_x[...first_idx]
+                 end
+               end
+      points - @deletions
     end
   end
 
-  private def ne_quadrant(x0, y0)
-    rightward_points(x0).select { |pair| pair.y >= y0 }
-  end
+  # Yield to the block while in "dynamic" context. We check correct return values against the @dynamic_point_finder
+  private def dynamic_context
+    old_point_finder = @point_finder
+    @point_finder = @dynamic_point_finder
 
-  private def nw_quadrant(x0, y0)
-    leftward_points(x0).select { |pair| pair.y >= y0 }
-  end
+    yield
 
-  private def se_quadrant(x0, y0)
-    rightward_points(x0).select { |pair| pair.y <= y0 }
-  end
-
-  private def sw_quadrant(x0, y0)
-    leftward_points(x0).select { |pair| pair.y <= y0 }
+    @point_finder = old_point_finder
   end
 end

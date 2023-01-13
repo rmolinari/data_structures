@@ -50,21 +50,6 @@ module Shared
       l
     end
 
-    # i has no children
-    private def leaf?(i)
-      i > @last_non_leaf
-    end
-
-    # i has exactly one child (the left)
-    private def one_child?(i)
-      i == @parent_of_one_child
-    end
-
-    # i has two children
-    private def two_children?(i)
-      i <= @last_parent_of_two_children
-    end
-
     # i is the left child of its parent.
     private def left_child?(i)
       (i & 1).zero?
