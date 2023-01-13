@@ -5,7 +5,7 @@
 ### Added
 
 - MinPrioritySearchTree added
-  - it's just a thin layer on top of a MaxPrioritySearchTree with negated y values.
+  - it's a thin layer on top of a MaxPrioritySearchTree with negated y values.
 
 ## [0.4.0] 2023-01-12
 
@@ -15,10 +15,10 @@
   - Duplicate y values are now allowed. Ties are broken with a preference for smaller values of x.
   - Method names have changed
     - Instead of "highest", "leftmost", "rightmost" we use "largest_y", "smallest_x", "largest_x"
-    - For example, +highest_ne+ is now +largest_y_in_nw+
+    - For example, `highest_ne` is now `largest_y_in_nw`
 - DisjointUnion
   - the size argument to initializer is optional. The default value is 0.
-  - elements can be added to the "universe" of known values with +make_set+
+  - elements can be added to the "universe" of known values with `make_set`
 
 ### Removed
 - MinmaxPrioritySearchTree is no longer available

@@ -94,7 +94,7 @@ regions.
 
 In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
 answer queries in all four quadrants and both "kinds" of 3-sided boxes. Having one of these would save the trouble of constructing
-both a MaxPST and MinPST. But the presentiation is hard to follow in places and the paper's pseudocode is buggy.[^minmaxpst].
+both a MaxPST and MinPST. But the presentiation is hard to follow in places and the paper's pseudocode is buggy.[^minmaxpst]
 
 ### Segment Tree
 
