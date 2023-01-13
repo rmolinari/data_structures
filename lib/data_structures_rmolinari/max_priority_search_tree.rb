@@ -641,14 +641,14 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
           if @data[current].y >= y0
             report.call(current)
           end
-          if !leaf?(current) && @data[left(current)].y >= y0
+          if !leaf?(current) && in_tree?(left(current)) && @data[left(current)].y >= y0
             current = left(current)
           else
             state = 1
           end
         when 1
           # State 1: we've already handled this node and its left subtree. Should we descend to the right subtree?
-          if two_children?(current) && @data[right(current)].y >= y0
+          if in_tree?(right(current)) && @data[right(current)].y >= y0
             current = right(current)
             state = 0
           else
@@ -719,14 +719,15 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
         return
       end
 
-      if one_child?(p)
-        if x_range.cover? @data[left(p)].x
-          add_leftmost_inner_node.call(left(p))
+      if (only_child = one_child?(p))
+        child_val = @data[only_child]
+        if x_range.cover? child_val.x
+          add_leftmost_inner_node.call(only_child)
           left = false
-        elsif @data[left(p)].x < x0
-          p = left(p)
+        elsif child_val.x < x0
+          p = only_child
         else
-          q = left(p)
+          q = only_child
           right = true
           left = false
         end
@@ -775,25 +776,26 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
         return
       end
 
-      left_val = @data[left(p_in)]
-      if one_child?(p_in)
-        if x_range.cover? left_val.x
-          p_in = left(p_in)
-        elsif left_val.x < x0
+      if (only_child = one_child?(p_in))
+        child_val = @data[only_child]
+        if x_range.cover? child_val.x
+          p_in = only_child
+        elsif child_val.x < x0
           # We aren't in the [x0, x1] zone any more and have moved out to the left
-          p = left(p_in)
+          p = only_child
           deactivate_p_in.call
           left = true
         else
           # similar, but we've moved out to the right. Note that left(p_in) is the leftmost node to the right of Q.
           raise 'q_in should not be active (by the val of left(p_in))' if right_in
 
-          q = left(p_in)
+          q = only_child
           deactivate_p_in.call
           right = true
         end
       else
         # p' has two children
+        left_val = @data[left(p_in)]
         right_val = @data[right(p_in)]
         if left_val.x < x0
           if right_val.x < x0
@@ -849,16 +851,17 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
         return
       end
 
-      if one_child?(q)
-        if x_range.cover? @data[left(q)].x
-          add_rightmost_inner_node.call(left(q))
+      if (only_child = one_child?(q))
+        child_val = @data[only_child]
+        if x_range.cover? child_val.x
+          add_rightmost_inner_node.call(only_child)
           right = false
-        elsif @data[left(q)].x < x0
-          p = left(q)
+        elsif child_val.x < x0
+          p = only_child
           left = true
           right = false
         else
-          q = left(q)
+          q = only_child
         end
         return
       end
@@ -908,18 +911,18 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
         return
       end
 
-      left_val = @data[left(q_in)]
-      if one_child?(q_in)
-        if x_range.cover? left_val.x
-          q_in = left(q_in)
-        elsif left_val.x < x0
+      if (only_child = one_child?(q_in))
+        child_val = @data[only_child]
+        if x_range.cover? child_val.x
+          q_in = only_child
+        elsif child_val.x < x0
           # We have moved out to the left
-          p = left(q_in)
+          p = only_child
           right_in = false
           left = true
         else
           # We have moved out to the right
-          q = left(q_in)
+          q = only_child
           right_in = false
           right = true
         end
@@ -927,6 +930,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       end
 
       # q' has two children
+      left_val = @data[left(q_in)]
       right_val = @data[right(q_in)]
       if left_val.x < x0
         raise InternalLogicError, 'p_in cannot be active, by the value in the left child of q_in' if left_in
@@ -988,7 +992,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     end
 
     while left || left_in || right_in || right
-      # byebug if $do_it
+      byebug if $do_it
       raise InternalLogicError, 'It should not be that q_in is active but p_in is not' if right_in && !left_in
 
       set_i = []
