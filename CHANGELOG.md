@@ -7,6 +7,10 @@
 - MinPrioritySearchTree added
   - it's a thin layer on top of a MaxPrioritySearchTree with negated y values.
 
+## [0.4.1] 2023-01-12
+
+- Update this file for the gem (though I forgot to add this comment first!)
+
 ## [0.4.0] 2023-01-12
 
 ### Changed
