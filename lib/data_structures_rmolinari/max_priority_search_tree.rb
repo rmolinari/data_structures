@@ -314,13 +314,15 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       [new_p, new_q]
     end
 
-    until leaf?(p)
+    # Now that we have the possibility of dynamic PSTs we need to worry about more cases. For example, p might be a leaf even though
+    # q is not
+    until leaf?(p) && leaf?(q)
       update_best.call(p)
       update_best.call(q)
 
       if p == q
-        if one_child?(p)
-          p = q = left(p)
+        if (child = one_child?(p))
+          p = q = child
         else
           q = right(p)
           p = left(p)
@@ -328,13 +330,23 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       else
         # p != q
         if leaf?(q)
-          q = p # p itself is just one layer above the leaves, or is itself a leaf
-        elsif one_child?(q)
+          q = p
+        elsif leaf?(p)
+          p = q
+        else
+          p_only_child = one_child?(p)
+          q_only_child = one_child?(q)
           # This generic approach is not as fast as the bespoke checks described in the paper. But it is easier to maintain the code
           # this way and allows easy implementation of largest_x_in_nw
-          p, q = determine_next_nodes.call(left(p), right(p), left(q))
-        else
-          p, q = determine_next_nodes.call(left(p), right(p), left(q), right(q))
+          if p_only_child && q_only_child
+            p, q = determine_next_nodes.call(p_only_child, q_only_child)
+          elsif p_only_child
+            p, q = determine_next_nodes.call(p_only_child, left(q), right(q))
+          elsif q_only_child
+            p, q = determine_next_nodes.call(left(p), right(p), q_only_child)
+          else
+            p, q = determine_next_nodes.call(left(p), right(p), left(q), right(q))
+          end
         end
         break unless p # we've run out of useful nodes
       end
@@ -409,15 +421,15 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     #   become a child of (the original) p.
     check_left = lambda do
       if leaf?(p)
-        left = false # Question: did p ever get checked as a potential winner?
-      elsif one_child?(p)
-        if x_range.cover? @data[left(p)].x
-          update_highest.call(left(p))
+        left = false
+      elsif (only_child = one_child?(p))
+        if x_range.cover? @data[only_child].x
+          update_highest.call(only_child)
           left = false # can't do y-better in the subtree
-        elsif @data[left(p)].x < x0
-          p = left(p)
+        elsif @data[only_child].x < x0
+          p = only_child
         else
-          q = left(p)
+          q = only_child
           right = true
           left = false
         end
@@ -464,16 +476,16 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     check_right = lambda do
       if leaf?(q)
         right = false
-      elsif one_child?(q)
-        if x_range.cover? @data[left(q)].x
-          update_highest.call(left(q))
+      elsif (only_child = one_child?(q))
+        if x_range.cover? @data[only_child].x
+          update_highest.call(only_child)
           right = false # can't do y-better in the subtree
-        elsif @data[left(q)].x < x0
-          p = left(q)
+        elsif @data[only_child].x < x0
+          p = only_child
           left = true
           right = false
         else
-          q = left(q)
+          q = only_child
         end
       else
         # q has two children
@@ -505,6 +517,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
         end
       end
     end
+
+    return best if empty?
 
     root_val = @data[root]
 

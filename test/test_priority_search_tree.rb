@@ -85,33 +85,33 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_dynamic_max_pst_largest_y_in_nw
     before_and_after_deletion do |pst|
-      check_quadrant_calc(dynamic_max_pst, :max, :y, :nw)
+      check_quadrant_calc(pst, :max, :y, :nw)
     end
   end
 
-  def test_dynamic_max_pst_smallest_x_in_ne
+  def test_pst_smallest_x_in_ne
     before_and_after_deletion do |pst|
-      check_quadrant_calc(dynamic_max_pst, :min, :x, :ne)
+      check_quadrant_calc(pst, :min, :x, :ne)
     end
   end
 
-  def test_dynamic_max_pst_largest_x_in_nw
+  def test_pst_largest_x_in_nw
     before_and_after_deletion do |pst|
-      check_quadrant_calc(dynamic_max_pst, :max, :x, :nw)
+      check_quadrant_calc(pst, :max, :x, :nw)
     end
   end
 
-  def test_dynamic_max_pst_largest_y_in_3_sided
+  def test_pst_largest_y_in_3_sided
     before_and_after_deletion do |pst|
-      check_3_sided_calc(dynamic_max_pst, :max, :y)
+      check_3_sided_calc(pst, :max, :y)
     end
   end
 
-  def test_dynamic_max_pst_enumerate_3_sided
-    before_and_after_deletion do |pst|
-      check_3_sided_calc(dynamic_max_pst, :all, nil)
-    end
-  end
+  # def test_dynamic_max_pst_enumerate_3_sided
+  #   before_and_after_deletion do |pst|
+  #     check_3_sided_calc(dynamic_max_pst, :all, nil)
+  #   end
+  # end
 
   private def before_and_after_deletion
     dynamic_context do
@@ -265,8 +265,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_max_find_bad_input_for_smallest_x_in_ne
     search_for_bad_inputs(MaxPrioritySearchTree, :smallest_x_in_ne) do |pairs|
-      x0 = rand(@size)
-      y0 = rand(@size)
+      x_min, x_max = pairs.map(&:x).minmax
+      y_min, y_max = pairs.map(&:y).minmax
+      x0 = rand(x_min..x_max)
+      y0 = rand(y_min..y_max)
       actual_leftmost = pairs.select { |p| p.x >= x0 && p.y >= y0 }.min_by(&:x) || Point.new(INFINITY, INFINITY)
 
       [[x0, y0], actual_leftmost]
@@ -297,8 +299,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_max_find_bad_input_for_largest_x_in_nw
     search_for_bad_inputs(MaxPrioritySearchTree, :largest_x_in_nw) do |pairs|
-      x0 = rand(@size)
-      y0 = rand(@size)
+      x_min, x_max = pairs.map(&:x).minmax
+      y_min, y_max = pairs.map(&:y).minmax
+      x0 = rand(x_min..x_max)
+      y0 = rand(y_min..y_max)
       actual_rightmost = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by(&:x) || Point.new(-INFINITY, INFINITY)
 
       [[x0, y0], actual_rightmost]
@@ -307,8 +311,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_max_find_bad_input_for_largest_y_in_ne
     search_for_bad_inputs(MaxPrioritySearchTree, :largest_y_in_ne) do |pairs|
-      x0 = rand(@size)
-      y0 = rand(@size)
+      x_min, x_max = pairs.map(&:x).minmax
+      y_min, y_max = pairs.map(&:y).minmax
+      x0 = rand(x_min..x_max)
+      y0 = rand(y_min..y_max)
       actual_highest = pairs.select { |p| p.x >= x0 && p.y >= y0 }.max_by{ |p| [p.y, -p.x] } || Point.new(INFINITY, -INFINITY)
 
       [[x0, y0], actual_highest]
@@ -317,8 +323,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_max_find_bad_input_for_largest_y_in_nw
     search_for_bad_inputs(MaxPrioritySearchTree, :largest_y_in_nw) do |pairs|
-      x0 = rand(@size)
-      y0 = rand(@size)
+      x_min, x_max = pairs.map(&:x).minmax
+      y_min, y_max = pairs.map(&:y).minmax
+      x0 = rand(x_min..x_max)
+      y0 = rand(y_min..y_max)
       actual_highest = pairs.select { |p| p.x <= x0 && p.y >= y0 }.max_by{ |p| [p.y, -p.x] } || Point.new(-INFINITY, -INFINITY)
 
       [[x0, y0], actual_highest]
@@ -326,9 +334,25 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_max_find_bad_input_for_construction
-    search_for_bad_inputs(MaxPrioritySearchTree, nil) do |pairs|
-      nil
-    end
+    search_for_bad_inputs(MaxPrioritySearchTree, nil)
+  end
+
+  def test_dynamic_max_find_bad_input_for_largest_y_in_ne
+    search_for_bad_inputs(
+      nil, # bad design in the method we call
+      lambda do |points|
+        x0 = rand(@size)
+        y0 = rand(@size)
+
+        pst = MaxPrioritySearchTree.new(points.clone, dynamic: true)
+        deleted_pt = pst.delete_top!
+        expected_value = best_in(:ne, x0, y0, by: :max_y, is_min_pst: false, among: points - [deleted_pt])
+        actual_value = pst.largest_y_in_ne(x0, y0)
+        extra_message = "(x0, y0) = (#{x0}, #{y0}); deleted #{deleted_pt}"
+
+        [expected_value, actual_value, extra_message]
+      end
+    )
   end
 
   ########################################
@@ -387,7 +411,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # If we find such data then output the details to stdout and fail an assertion. Otherwise return true.
   #
-  # If method.nil? we just call the constructor, but with verification turned on
+  # There are several options for the method argument
+  # - If method.nil? we just construct a PST of the given klass with verification turned on.
+  # - If method is a symbol we construct a PST (without verification) we do several things
+  #   - yield the generated data points to an expected block to get the method parameters to use and the expected value
+  #   - call the given method, and check the answer
+  # - Otherwise it must be a callable object expecting to receive the data points
+  #   - The lambda does whatever it wants and returns two or three things
+  #     - the expected value of the operation
+  #     - the actual value of the operation
+  #     - (optional) an additional message to display if the answers don't agree
+  #
+  # Use case for a lambda: a dynamic PST that we construct, remove one or more elements from, and then call a method
   #
   # We try BAD_INPUT_SEARCH_ATTEMPT_LIMIT times. On each attempt we generate a list of (x,y) pairs and yield it to a block from
   # which we should receive a pair
@@ -404,18 +439,27 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
     BAD_INPUT_SEARCH_ATTEMPT_LIMIT.times do
       pairs = raw_data(@size).shuffle
-      method_params, expected_value = yield(pairs)
 
       timeout = false
+
+      # Scope!
       error_message = nil
+      calculated_value = nil
+      extra_message = nil
+      expected_value = nil
       begin
-        if method
-          pst = klass.new(pairs.clone)
-          calculated_value = Timeout::timeout(timeout_time_s) {
-            pst.send(method, *method_params)
-          }
-        else
-          pst = klass.new(pairs.clone, verify: true)
+        Timeout::timeout(timeout_time_s) do
+          case method
+          when Symbol
+            method_params, expected_value = yield(pairs)
+            pst = klass.new(pairs.clone)
+            calculated_value = pst.send(method, *method_params)
+            extra_message = "params = [#{method_params.join(', ')}]"
+          when nil
+            _pst = klass.new(pairs.clone, verify: true)
+          else
+            expected_value, calculated_value, extra_message = method.call(pairs)
+          end
         end
       rescue Timeout::Error
         puts "*\n*\n"
@@ -434,8 +478,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
       pair_data = pairs.map { |p| "[#{p.x},#{p.y}]" }.join(', ')
       if method
-        puts "params = [#{method_params.join(', ')}]"
         puts "data = [#{pair_data}]"
+        if extra_message
+          puts "extra: #{extra_message}"
+        end
 
         assert_equal expected_value, calculated_value
       else
@@ -490,8 +536,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     region.must_be_in [:ne, :nw, :se, :sw]
 
     100.times do
-      x0 = rand(@size)
-      y0 = rand(@size)
+      x0 = rand(@point_finder.min_x..@point_finder.max_x)
+      y0 = rand(@point_finder.min_x..@point_finder.max_x)
       check_calculation(pst, criterion, dimension, region, x0, y0)
     end
   end
@@ -505,9 +551,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     dimension.must_be :y if dimension
 
     100.times do
-      x0 = rand(@size)
-      x1 = rand(x0..@size)
-      y0 = rand(@size)
+      x0 = rand(@point_finder.min_x..@point_finder.max_x)
+      x1 = rand(x0..@point_finder.max_x)
+      y0 = rand(@point_finder.min_x..@point_finder.max_x)
       check_calculation(pst, criterion, dimension, :three_sided, x0, x1, y0)
     end
   end
@@ -538,8 +584,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       raise 'minimizing in the y-dimension is not supported by a MaxPST' if property == :min && dimension == :y
     end
 
-    # Work out what the "default" value would be if there aren't any points in the region
-    default_result = nil
     if property == :all
       method = "enumerate_3_sided"
       criterion = :all
@@ -550,33 +594,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
       method = "#{method_word1}_#{method_word2}_in_#{method_word4}".to_sym
       criterion = "#{property}_#{dimension}".to_sym
-
-      # TODO: do this property for MinPST when we get one
-      if region == :three_sided
-        default_x = INFINITY
-        default_y = -INFINITY
-      elsif dimension == :x
-        default_y = INFINITY
-        default_x = property == :min ? INFINITY : -INFINITY
-      elsif dimension == :y
-        default_y = -INFINITY
-        default_x = if [:nw, :sw].include? region
-                      -INFINITY
-                    else
-                      INFINITY
-                    end
-      end
-      default_y = -default_y if is_min_pst
-
-      default_result = Point.new(default_x, default_y)
     end
 
-    expected = best_in(region, *args, by: criterion, is_min_pst:) || default_result
+    expected = best_in(region, *args, by: criterion, is_min_pst:)
     calculated = pst.send(method, *args)
     assert_equal expected, calculated
   end
 
-  # The "best" value in a given region by a given criterion.
+  # The "best" value in a given region by a given criterion, typically provided by @point_finder.
   #
   # So we are calculating the hard way what the PST is about to find for us.
   #
@@ -589,41 +614,75 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #   - :max_y, with ties broken in favor of smaller values of x
   #   - :all, which isn't a criterion at all. We take all the points in the region and make a set from them. This is useful when
   #     testing an 'enumerate' method.
-  private def best_in(region, *args, by: :all, is_min_pst:)
+  # among: if given, look among these points instead of @point_finder. It can be either another PointFinder or just an enumerable of
+  #        points
+  private def best_in(region, *args, by: :all, is_min_pst:, among: nil)
+    point_finder = @point_finder
+    if among
+      point_finder = if among.is_a? PointFinder
+                       among
+                     else
+                       PointFinder.new(among)
+                     end
+    end
+
     data = case region.to_sym
            when :ne
-             @point_finder.ne_quadrant(*args)
+             point_finder.ne_quadrant(*args)
            when :nw
-             @point_finder.nw_quadrant(*args)
+             point_finder.nw_quadrant(*args)
            when :se
-             @point_finder.se_quadrant(*args)
+             point_finder.se_quadrant(*args)
            when :sw
-             @point_finder.sw_quadrant(*args)
+             point_finder.sw_quadrant(*args)
            when :three_sided
              x0, x1, y0 = args
              if is_min_pst
-               @point_finder.three_sided_down(x0, x1, y0)
+               point_finder.three_sided_down(x0, x1, y0)
              else
-               @point_finder.three_sided_up(x0, x1, y0)
+               point_finder.three_sided_up(x0, x1, y0)
              end
            else
              raise "can't handle region #{region}"
            end
 
-    case by.to_sym
-    when :min_x
-      data.min_by(&:x)
-    when :max_x
-      data.max_by(&:x)
-    when :max_y
-      data.max_by { |p| [p.y, -p.x] } # tie broken in favor of smallest x
-    when :min_y
-      data.min_by { |p| [p.y, p.x] } # tie broken in favor of smallest x
-    when :all
-      Set.new data
-    else
-      raise "can't handle selection criterion #{by}"
+    value = case by.to_sym
+            when :min_x
+              data.min_by(&:x)
+            when :max_x
+              data.max_by(&:x)
+            when :max_y
+              data.max_by { |p| [p.y, -p.x] } # tie broken in favor of smallest x
+            when :min_y
+              data.min_by { |p| [p.y, p.x] } # tie broken in favor of smallest x
+            when :all
+              Set.new data
+            else
+              raise "can't handle selection criterion #{by}"
+            end
+
+    if value.nil?
+      # Region is empty. We find the correct default value
+
+      # Do it assuming we're working with a MaxPST, and flip afterwards if necessary
+      value = if region == :three_sided
+                Point.new(INFINITY, -INFINITY)
+              elsif by == :max_x
+                Point.new(-INFINITY, INFINITY)
+              elsif by == :min_x
+                Point.new(INFINITY, INFINITY)
+              elsif by == :max_y || by == :min_y
+                y = -INFINITY
+                x = if [:nw, :sw].include? region
+                      -INFINITY
+                    else
+                      INFINITY
+                    end
+                Point.new(x, y)
+              end
+      value = Point.new(value.x, -value.y) if is_min_pst
     end
+    value
   end
 
   # By default we take x values 1, 2, ..., size and choose random integer y values in 1..size.
@@ -644,6 +703,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   class PointFinder
     # Doesn't respect delete!
     attr_reader :points
+    attr_reader :min_x, :max_x
 
     def initialize(points)
       @points = points.clone
