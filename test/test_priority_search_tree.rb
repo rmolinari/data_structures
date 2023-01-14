@@ -72,6 +72,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_max_pst_enumerate_3_sided
     check_3_sided_calc(max_pst, :all, nil)
+    check_3_sided_calc(max_pst, :all, nil, enumerate_via_block: true)
   end
 
   ##############################
@@ -107,11 +108,12 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
-  # def test_dynamic_max_pst_enumerate_3_sided
-  #   before_and_after_deletion do |pst|
-  #     check_3_sided_calc(dynamic_max_pst, :all, nil)
-  #   end
-  # end
+  def test_dynamic_max_pst_enumerate_3_sided
+    before_and_after_deletion do |pst|
+      check_3_sided_calc(dynamic_max_pst, :all, nil)
+      check_3_sided_calc(dynamic_max_pst, :all, nil, enumerate_via_block: true)
+    end
+  end
 
   private def before_and_after_deletion
     dynamic_context do
@@ -149,18 +151,11 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_min_pst_enumerate_3_sided
     check_3_sided_calc(min_pst, :all, nil)
+    check_3_sided_calc(min_pst, :all, nil, enumerate_via_block: true)
   end
 
   ########################################
   # Some regression tests on inputs found to be bad during testing
-
-  private def check_one_case(klass, method, data, *method_params, expected_val)
-    calculated_val = Timeout::timeout(timeout_time_s) do
-      pst = klass.new(data.map { |x, y| Point.new(x, y) })
-      calculated_val = pst.send(method, *method_params)
-    end
-    assert_equal expected_val, calculated_val
-  end
 
   def test_bad_inputs_for_max_smallest_x_in_ne
     check_one = lambda do |data, *method_params, actual_highest|
@@ -256,6 +251,16 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_one.call([[1,3], [2,2], [3,1]], 2, 1, Point.new(2, 2))
   end
 
+  def test_bad_inputs_for_dynamic_largest_x_in_nw
+    check_one_dynamic_case(
+      MaxPrioritySearchTree, :largest_x_in_nw,
+      [[7,5], [9,3], [5,8], [2,2], [8,5], [6,7], [1,7], [10,10], [4,4], [3,1]],
+      9, 1,
+      [[10, 10], [5, 8], [1, 7], [6, 7], [7, 5], [8, 5], [4, 4], [9, 3], [2, 2], [3, 1]],
+      [-INFINITY, INFINITY]
+    )
+  end
+
   def test_bad_inputs_for_dynamic_enumerate_3_sided
     check_one = lambda do |points, *method_params, deleted_point, expected_points|
       points = points.map { Point.new(*_1) }
@@ -271,6 +276,28 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_one.call([[2,2], [1,2], [3,2]], 3, 3, 2, [1, 2], [[3, 2]])
     check_one.call([[1,3], [3,2], [2,2]], 1, 2, 2, [1, 3], [[2, 2]])
     check_one.call([[1,3], [2,3], [3,3]], 1, 1, 3, [1, 3], [])
+  end
+
+  private def check_one_case(klass, method, data, *method_params, expected_val)
+    calculated_val = Timeout::timeout(timeout_time_s) do
+      pst = klass.new(data.map { |x, y| Point.new(x, y) })
+      calculated_val = pst.send(method, *method_params)
+    end
+    assert_equal expected_val, calculated_val
+  end
+
+  private def check_one_dynamic_case(klass, method, points, *method_params, deleted_points, expected_val)
+    points.map! { Point.new(*_1) }
+    deleted_points = Set.new(deleted_points.map { Point.new(*_1) })
+    expected_result = Point.new(*expected_val)
+
+    dynamic_pst = klass.new(points, dynamic: true)
+    actually_deleted_points = Set.new
+    deleted_points.size.times do
+      actually_deleted_points << dynamic_pst.delete_top!
+    end
+    assert_equal deleted_points, actually_deleted_points # check we are deleting what we expect
+    assert_equal expected_result, dynamic_pst.send(method, *method_params)
   end
 
   ########################################
@@ -393,21 +420,29 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     x0 = rand(x_min..x_max)
     y0 = rand(y_min..y_max)
 
+    deleted_pts = []
     pst = MaxPrioritySearchTree.new(points.clone, dynamic: true)
-    deleted_pt = pst.delete_top!
+
+    # Delete some points
+    loop do
+      deleted_pts << pst.delete_top!
+      break if pst.empty? || rand > 0.9
+    end
+
+    deleted_list = "[#{deleted_pts.join(', ')}]"
 
     if region == :three_sided
       x1 = rand(x0..x_max)
-      extra_message = "(x0, x1, y0) = (#{x0}, #{x1}, #{y0}); deleted #{deleted_pt}"
+      extra_message = "(x0, x1, y0) = (#{x0}, #{x1}, #{y0}); deleted #{deleted_list}"
 
-      expected_value = best_in(region, x0, x1, y0, by: criterion, among: points - [deleted_pt])
+      expected_value = best_in(region, x0, x1, y0, by: criterion, among: points - deleted_pts)
       actual_value = pst.send(method, x0, x1, y0)
 
       [expected_value, actual_value, extra_message]
     else
-      extra_message = "(x0, y0) = (#{x0}, #{y0}); deleted #{deleted_pt}"
+      extra_message = "(x0, y0) = (#{x0}, #{y0}); deleted #{deleted_list}"
 
-      expected_value = best_in(region, x0, y0, by: criterion, among: points - [deleted_pt])
+      expected_value = best_in(region, x0, y0, by: criterion, among: points - deleted_pts)
       actual_value = pst.send(method, x0, y0)
 
       [expected_value, actual_value, extra_message]
@@ -601,7 +636,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # - criterion: :max or :all
   # - dimension: :y or nil
-  private def check_3_sided_calc(pst, criterion, dimension)
+  private def check_3_sided_calc(pst, criterion, dimension, enumerate_via_block: false)
     criterion.must_be_in [:min, :max, :all]
     dimension.must_be :y if dimension
 
@@ -609,7 +644,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       x0 = rand(@point_finder.min_x..@point_finder.max_x)
       x1 = rand(x0..@point_finder.max_x)
       y0 = rand(@point_finder.min_x..@point_finder.max_x)
-      check_calculation(pst, criterion, dimension, :three_sided, x0, x1, y0)
+      check_calculation(pst, criterion, dimension, :three_sided, x0, x1, y0, enumerate_via_block:)
     end
   end
 
@@ -619,9 +654,11 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # dimension: the dimension we are "optimizing", :x or :y, ignored when property is :all
   # region: :ne, :nw, :three_sided
   # args: the args that bound the region
+  # enumerate_via_block: we are enumerating a set of points. Instead of receiving the set as a return value, get them via a block to
+  #       which the called code is expected to yield
   #
   # TODO: have it work out the default_result itself.
-  private def check_calculation(pst, property, dimension, region, *args)
+  private def check_calculation(pst, property, dimension, region, *args, enumerate_via_block: false)
     is_min_pst = pst.is_a? MinPrioritySearchTree
 
     region.must_be_in [:ne, :nw, :se, :sw, :three_sided]
@@ -630,6 +667,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
     raise 'x-dimension calculations not supported in 3-sided region' if region == :three_sided && dimension == :x
     raise 'dimension must be given unless we are enumerating' if property != :all && !dimension
+    raise 'enumeration via a block only makes sense with a property of :all' if enumerate_via_block && property != :all
 
     # TODO: allow this when we have a MinPST
     if is_min_pst
@@ -651,7 +689,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     expected = best_in(region, *args, by: criterion, is_min_pst:)
-    calculated = pst.send(method, *args)
+    calculated = if enumerate_via_block
+                   vals = Set.new
+                   pst.send(method, *args) { vals << _1 }
+                   vals
+                 else
+                   pst.send(method, *args)
+                 end
     assert_equal expected, calculated
   end
 
@@ -803,6 +847,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
     # Points (x,y) in @data with x >= x0
     private def rightward_points(x0)
+      return [] if points.empty?
+
       points = if x0 <= @min_x
                  @points_by_x
                elsif x0 > @max_x
@@ -816,6 +862,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
     # Points (x,y) in @data with x <= x0
     private def leftward_points(x0)
+      return [] if points.empty?
+
       points = if x0 >= @max_x
                  @points_by_x
                elsif x0 < @min_x

@@ -30,6 +30,12 @@ require_relative 'shared'
 #
 # The final operation (enumerate) takes O(m + log n) time, where m is the number of points that are enumerated.
 #
+# If the MaxPST is constructed to be "dynamic" we also have an operation that deletes the top element.
+#
+# - +delete_top!+: remove the top (max-y) element of the tree and return it.
+#
+# It runs in O(log n) time, where n is the size of the PST when it was initially created.
+#
 # In the current implementation no two points can share an x-value. This restriction can be relaxed with some more complicated code,
 # but it hasn't been written yet. See issue #9.
 #
@@ -241,6 +247,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       best = Point.new(-INFINITY, INFINITY)
     end
 
+    return best if empty?
+
     p = q = root
 
     in_q = lambda do |pair|
@@ -393,6 +401,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     # Sometimes we don't have a relevant node to the left or right of Q. The booleans L and R (which we call left and right) track
     # whether p and q are defined at the moment.
     best = Point.new(INFINITY, -INFINITY)
+    return best if empty?
+
     p = q = left = right = nil
 
     x_range = (x0..x1)
@@ -616,6 +626,11 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     p = p_in = q_in = q = nil
 
     result = Set.new
+    if empty?
+      return if block_given?
+
+      return result
+    end
 
     report = lambda do |node|
       if block_given?
@@ -1020,7 +1035,11 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # Delete Top
   #
 
-  # Delete the top element of the PST. This is possible only for dynamic PSTs
+  # Delete the top (max-y) element of the PST. This is possible only for dynamic PSTs
+  #
+  # It runs in guaranteed O(log n) time, where n is the size of the PST when it was intially constructed. As elements are deleted
+  # the internal tree structure is no longer guaranteed to be balanced and so we cannot guarantee operation in O(log n') time, where
+  # n' is the current size. In practice, "random" deletion is likely to leave the tree almost balanced.
   #
   # @return [Point] the top element that was deleted
   def delete_top!
@@ -1208,7 +1227,6 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   private def verify_properties
     # It's a max-heap in y
     (2..@size).each do |node|
-      byebug unless @data[node].y <= @data[parent(node)].y
       raise InternalLogicError, "Heap property violated at child #{node}" unless @data[node].y <= @data[parent(node)].y
     end
 

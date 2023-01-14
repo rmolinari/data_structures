@@ -4,7 +4,11 @@ module Shared
   INFINITY = Float::INFINITY
 
   # An (x, y) coordinate pair.
-  Point = Struct.new(:x, :y)
+  Point = Struct.new(:x, :y) do
+    def to_s
+      "[#{x}, #{y}]"
+    end
+  end
 
   # @private
 
