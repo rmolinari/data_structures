@@ -37,9 +37,11 @@ require_relative 'shared'
 #
 # (Here, "leftmost/rightmost" means "minimal/maximal x", and "lowest" means "minimal y".)
 #
-# The first 5 operations take O(log n) time.
+# The first 5 operations take O(log n) time and O(1) extra space.
 #
-# The final operation (enumerate) takes O(m + log n) time, where m is the number of points that are enumerated.
+# The final operation (enumerate) takes O(m + log n) time and O(1) extra space, where m is the number of points that are enumerated.
+#
+# As with the MaxPST the MinPST can be contructed to be "dynamic" and provide a +delete_top!+ operation running in O(log n) time.
 #
 # In the current implementation no two points can share an x-value. This (rather severe) restriction can be relaxed with some more
 # complicated code, but it hasn't been written yet. See issue #9.
@@ -63,11 +65,11 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   #
   # @param verify [Boolean] when truthy, check that the properties of a PST are satisified after construction, raising an exception
   #        if not.
-  def initialize(data, verify: false)
+  def initialize(data, dynamic: false, verify: false)
     (0...(data.size)).each do |i|
       data[i] = flip data[i]
     end
-    @max_pst = MaxPrioritySearchTree.new(data, verify:)
+    @max_pst = MaxPrioritySearchTree.new(data, dynamic:, verify:)
   end
 
   ########################################
@@ -156,12 +158,26 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # the intersection.
   #
   # This method runs in O(m + log n) time and O(1) extra space, where m is the number of points found.
-  def enumerate_3_sided(x0, x1, y0, &block)
-    if block
-      @max_pst.enumerate_3_sided(x0, x1, -y0) { yield block }
+  def enumerate_3_sided(x0, x1, y0)
+    if block_given?
+      @max_pst.enumerate_3_sided(x0, x1, -y0) { |point| yield(flip point) }
     else
-      Set.new( @max_pst.enumerate_3_sided(x0, x1, -y0).map { |pt| flip pt } )
+      Set.new( @max_pst.enumerate_3_sided(x0, x1, -y0).map { |pt| flip pt })
     end
+  end
+
+  ########################################
+  # Delete top
+
+  # Delete the top (min-y) element of the PST. This is possible only for dynamic PSTs
+  #
+  # It runs in guaranteed O(log n) time, where n is the size of the PST when it was intially constructed. As elements are deleted
+  # the internal tree structure is no longer guaranteed to be balanced and so we cannot guarantee operation in O(log n') time, where
+  # n' is the current size. In practice, "random" deletion is likely to leave the tree almost balanced.
+  #
+  # @return [Point] the top element that was deleted
+  def delete_top!
+    flip @max_pst.delete_top!
   end
 
   # (x, y) -> (x, -y)
