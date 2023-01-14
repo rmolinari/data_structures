@@ -992,7 +992,6 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     end
 
     while left || left_in || right_in || right
-      byebug if $do_it
       raise InternalLogicError, 'It should not be that q_in is active but p_in is not' if right_in && !left_in
 
       set_i = []

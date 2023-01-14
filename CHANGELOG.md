@@ -7,6 +7,9 @@
 - MinPrioritySearchTree added
   - it's a thin layer on top of a MaxPrioritySearchTree with negated y values.
 
+- MaxPrioritySearchTree
+  - A "dynamic" constructor option now allows deletion of the "top" (root) node. This is useful in certain algorithms.
+
 ## [0.4.1] 2023-01-12
 
 - Update this file for the gem (though I forgot to add this comment first!)

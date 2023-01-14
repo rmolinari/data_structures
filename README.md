@@ -26,9 +26,9 @@ pst = MaxPrioritySearchTree.new([Point.new(1, 1)])
 puts pst.largest_y_in_ne(0, 0) # "Point(1,1)"
 ```
 
-## Implementations
+# Implementations
 
-### Disjoint Union
+## Disjoint Union
 
 We represent a set S of non-negative integers as the disjoint union of subsets. Equivalently, we represent a partition of S. The
 data structure provides very efficient implementation of the two key operations
@@ -42,7 +42,7 @@ It also provides
 For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL1984]](#references) by Tarjan and
 van Leeuwen.
 
-### Heap
+## Heap
 
 A binary heap with an `update` method, suitable for use as a priority queue. There are several supported operations:
 
@@ -62,7 +62,7 @@ allows the insertion of duplicate items (which is sometimes useful) and slightly
 
 See https://en.wikipedia.org/wiki/Binary_heap and the paper by Edelkamp, Elmasry, and Katajainen [[EEK2017]](#references).
 
-### Priority Search Tree
+## Priority Search Tree
 
 A PST stores a set P of two-dimensional points in a way that allows certain queries about P to be answered efficiently. The data
 structure was introduced by McCreight [[McC1985]](#references). De, Maheshawari, Nandy, and Smid [[DMNS2011]](#references) showed
@@ -92,15 +92,21 @@ These queries appear rather abstract at first but there are interesting applicat
 We also provide a `MinPrioritySearchTree`, which answers analagous queries in the southward-infinite quadrants and 3-sided
 regions.
 
-In [[DMNS2013]](#reference) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
+By default these data structures are immutable: once constructed they cannot be changed. But there is a constructor option that
+makes the instance "dynamic". This allows us to delete the element at the root of the tree - the one with largest (smallest for
+MinPST) y value - with the `delete_top!` method. This operation is important in certain algorithms, such as enumerating all maximal
+empty rectangles (see the second paper by De et al.[[DMNS2013]](#references)) Note that points can still not be added to the PST in
+any case, and choosing the dynamic option makes certain internal bookkeeping operations slower.
+
+In [[DMNS2013]](#references) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
 answer queries in all four quadrants and both "kinds" of 3-sided boxes. Having one of these would save the trouble of constructing
 both a MaxPST and MinPST. But the presentiation is hard to follow in places and the paper's pseudocode is buggy.[^minmaxpst]
 
-### Segment Tree
+## Segment Tree
 
 Segment trees store information related to subintervals of a certain array. For example, they can be used to find the sum of the
 elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) time. Each node in the tree corresponds to a subarray
-of A in such a way that the values we store in the nodes can be combined efficiently to determined the desired result for arbitrary
+of A in such a way that the values we store in the nodes can be combined efficiently to determine the desired result for arbitrary
 subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
