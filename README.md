@@ -37,14 +37,15 @@ data structure provides very efficient implementation of the two key operations
   exactly when `find(e) == find(f)`.
 
 It also provides
-- `make_set(v)`, add a new value `v` to the set S, starting out in a singleton subset.
+- `make_set(v)`, which adds a new value `v` to the set S, starting out in a singleton subset.
 
 For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL1984]](#references) by Tarjan and
 van Leeuwen.
 
 ## Heap
 
-A binary heap with an `update` method, suitable for use as a priority queue. There are several supported operations:
+This is a standard binary heap with an `update` method, suitable for use as a priority queue. There are several supported
+operations:
 
 - `insert(item, priority)`, insert the given item with the stated priority.
   - By default, items must be distinct.
@@ -93,8 +94,8 @@ We also provide a `MinPrioritySearchTree`, which answers analagous queries in th
 regions.
 
 By default these data structures are immutable: once constructed they cannot be changed. But there is a constructor option that
-makes the instance "dynamic". This allows us to delete the element at the root of the tree - the one with largest (smallest for
-MinPST) y value - with the `delete_top!` method. This operation is important in certain algorithms, such as enumerating all maximal
+makes the instance "dynamic". This allows us to delete the element at the root of the tree - the one with largest y value (smallest
+for MinPST) - with the `delete_top!` method. This operation is important in certain algorithms, such as enumerating all maximal
 empty rectangles (see the second paper by De et al.[[DMNS2013]](#references)) Note that points can still not be added to the PST in
 any case, and choosing the dynamic option makes certain internal bookkeeping operations slower.
 
@@ -112,9 +113,9 @@ subarrays.
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
 Generic code is provided in `SegmentTreeTemplate`. Concrete classes are written by providing a handful of simple lambdas and
-constants to the template class's initializer. For now we provide the concrete classes `MaxValSegmentTree` and
-`IndexOfMaxValSegmentTree`. Figuring out the details requires some knowledge of the internal mechanisms of a segment tree, for which
-the link at cp-algorithms.com is very helpful. See the definitions of the concrete classes for examples.
+constants to the template class's initializer. Figuring out the details requires some knowledge of the internal mechanisms of a
+segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions of the concrete classes,
+`MaxValSegmentTree` and `IndexOfMaxValSegmentTree`, for examples.
 
 # References
 - [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
