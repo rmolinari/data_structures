@@ -8,6 +8,7 @@ module DataStructuresRMolinari
 end
 
 # These define classes inside module DataStructuresRMolinari
+require_relative 'data_structures_rmolinari/algorithms'
 require_relative 'data_structures_rmolinari/disjoint_union'
 require_relative 'data_structures_rmolinari/generic_segment_tree'
 require_relative 'data_structures_rmolinari/heap'

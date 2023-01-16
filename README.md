@@ -117,6 +117,16 @@ constants to the template class's initializer. Figuring out the details requires
 segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions of the concrete classes,
 `MaxValSegmentTree` and `IndexOfMaxValSegmentTree`, for examples.
 
+## Algorithms
+
+The Algorithms submodule contains some algorithms using the data structures.
+
+- `maximal_empty_rectangles(points)`
+  - We are given a set P contained in a minimal box B = [x_min, x_max] x [y_min, y_max]. An _empty rectangle_ is a axis-parallel
+    rectangle with positive area contained in B containing no element of P in its interior. A _maximal empty rectangle_ is an empty
+    rectangle not properly contained in any other empty rectangle. This method yields each maximal empty rectangle in the form
+    [left, right, bottom, top].
+
 # References
 - [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
 - [EEK2017] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2.
