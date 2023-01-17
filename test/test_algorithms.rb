@@ -3,10 +3,10 @@ require 'test/unit'
 
 require 'data_structures_rmolinari'
 
-Point = Shared::Point
-Algorithms = DataStructuresRMolinari::Algorithms
-
 class AlgorithmTest < Test::Unit::TestCase
+  Point = Shared::Point
+  Algorithms = DataStructuresRMolinari::Algorithms
+
   ########################################
   # Maximal Empty Rectangle (MER)
 

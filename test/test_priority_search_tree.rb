@@ -12,14 +12,14 @@ require 'ruby-prof'
 
 require 'data_structures_rmolinari'
 
-Point = Shared::Point
-InternalLogicError = Shared::InternalLogicError
-
-MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
-MinPrioritySearchTree = DataStructuresRMolinari::MinPrioritySearchTree
-
 class PrioritySearchTreeTest < Test::Unit::TestCase
-  INFINITY = Float::INFINITY
+  Point = Shared::Point
+  InternalLogicError = Shared::InternalLogicError
+
+  MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
+  MinPrioritySearchTree = DataStructuresRMolinari::MinPrioritySearchTree
+
+  INFINITY = Shared::INFINITY
 
   def setup
     @size = (ENV['test_size'] || 10_000).to_i

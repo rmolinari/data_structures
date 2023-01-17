@@ -69,7 +69,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
     (0...(data.size)).each do |i|
       data[i] = flip data[i]
     end
-    @max_pst = MaxPrioritySearchTree.new(data, dynamic:, verify:)
+    @max_pst = DataStructuresRMolinari::MaxPrioritySearchTree.new(data, dynamic:, verify:)
   end
 
   ########################################
