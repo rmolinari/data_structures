@@ -2,16 +2,21 @@
 module DataStructuresRMolinari::Algorithms
   include Shared
 
-  # We are given a set P of points in the x-y place. A _maximal empty rectangle for P_ is a rectangle (left, right, bottom, top)
+  # We are given a set P of points in the x-y plane. An _empty rectangle for P_ is a rectangle (left, right, bottom, top)
   # satisifying the following
   #   - it has positive area;
   #   - its sides are parallel to the axes;
-  #   - it lies within the bounding box (x_min, x_max, y_min, y_max); and
+  #   - it lies within the smallest bounding box (x_min, x_max, y_min, y_max) containing P; and
   #   - no point of P lies in its interior.
+  #
+  # A _maximal empty rectangle_ (MER) for P is an empty rectangle for P not properly contained in any other.
   #
   # We enumerate all maximal empty rectangles for P, yielding each as (left, right, bottom, top) to a block. The algorithm is due to
   # De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013),
   # pp 310-327.
+  #
+  # It runs in O(m log n) time, where m is the number of MERs enumerated and n is the number of points in P.  (Contructing the
+  # MaxPST below takes O(n log^2 n) time, but m = O(n^2) so we are still O(m log n) overall.)
   #
   # @param points [Array] an array of points in the x-y plane. Each must respond to +x+ and +y+.
   def self.maximal_empty_rectangles(points)

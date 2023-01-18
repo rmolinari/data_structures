@@ -126,12 +126,13 @@ The Algorithms submodule contains some algorithms using the data structures.
     rectangle with positive area contained in B containing no element of P in its interior. A _maximal empty rectangle_ is an empty
     rectangle not properly contained in any other empty rectangle. This method yields each maximal empty rectangle in the form
     [left, right, bottom, top].
+  - The algorithm is due to [[DMNS2013]](#references).
 
 # References
 - [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
 - [EEK2017] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2.
-- [McC1985] McCreight, E.M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
+- [McC1985] McCreight, E. M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
 - [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011.
-- [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.
+- [DMNS2013] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp 310-327.
 
 [^minmaxpst]: See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further details.
