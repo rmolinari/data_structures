@@ -91,3 +91,7 @@ class DataStructuresRMolinari::DisjointUnion
     end
   end
 end
+
+
+# Add C extensions
+require 'data_structures_rmolinari/CDisjointUnion'
