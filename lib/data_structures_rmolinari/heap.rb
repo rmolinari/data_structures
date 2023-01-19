@@ -209,4 +209,4 @@ class DataStructuresRMolinari::Heap
 end
 
 # Add C extensions
-require_relative 'CHeap'
+require 'data_structures_rmolinari/CHeap'

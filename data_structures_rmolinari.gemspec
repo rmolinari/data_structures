@@ -2,7 +2,7 @@ require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'data_structures_rmolinari'
-  s.version     = '0.4.1'
+  s.version     = '0.4.2'
   s.summary     = 'Several miscellaneous data structures I have implemented to learn about them.'
   s.description = <<~DESC
     This small gem contains several data structures that I have implemented in Ruby to learn how they work.
@@ -17,7 +17,8 @@ Gem::Specification.new do |s|
   s.authors     = ['Rory Molinari']
   s.email       = 'rorymolinari@gmail.com'
   s.homepage    = 'https://github.com/rmolinari/data_structures'
-  s.files       = FileList['lib/**/*.rb', 'CHANGELOG.md']
+  s.files       = FileList['lib/**/*.rb', 'ext/**/*.c', 'CHANGELOG.md']
+  s.extensions  = ['ext/data_structures_rmolinari/cheap/extconf.rb']
   s.license     = 'MIT'
   s.required_ruby_version = '~> 3.1.3'
 

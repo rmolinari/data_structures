@@ -1,9 +1,8 @@
 require 'rake/testtask'
 require 'rake/extensiontask'
 
-Rake::ExtensionTask.new('data_structures_rmolinari/heap') do |ext|
+Rake::ExtensionTask.new('data_structures_rmolinari/cheap') do |ext|
   ext.name = 'CHeap'
-  ext.lib_dir = 'lib/data_structures_rmolinari'
 end
 
 Rake::TestTask.new do |t|
