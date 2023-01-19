@@ -10,7 +10,7 @@ end
 # These define classes inside module DataStructuresRMolinari
 require_relative 'data_structures_rmolinari/algorithms'
 require_relative 'data_structures_rmolinari/disjoint_union'
-require_relative 'data_structures_rmolinari/generic_segment_tree'
+require_relative 'data_structures_rmolinari/segment_tree_template'
 require_relative 'data_structures_rmolinari/heap'
 require_relative 'data_structures_rmolinari/max_priority_search_tree'
 require_relative 'data_structures_rmolinari/min_priority_search_tree'
@@ -75,7 +75,7 @@ module DataStructuresRMolinari
     #   - If there is more than one entry with that value, return one the indices. There is no guarantee as to which one.
     #   - Return +nil+ if i > j
     def index_of_max_val_on(i, j)
-      @structure.query_on(i, j)&.first # discard the value part of the pair
+      @structure.query_on(i, j)&.first # discard the value part of the pair, which is a bookkeeping
     end
   end
 end
