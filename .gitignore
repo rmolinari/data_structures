@@ -14,3 +14,5 @@ doc
 TAGS
 README.html
 .byebug_history
+tmp/
+*.bundle
