@@ -207,6 +207,3 @@ class DataStructuresRMolinari::Heap
     end
   end
 end
-
-# Add C extensions
-require 'data_structures_rmolinari/CHeap'

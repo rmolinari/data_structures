@@ -102,17 +102,4 @@ class HeapTest < Test::Unit::TestCase
       heap.update(1, 0)
     end
   end
-
-  # Test methods actually written in C. Experimental
-  def test_c_methods
-    heap = Heap.new
-
-    assert_raise(Shared::DataError) do
-      heap.ctop
-    end
-
-    heap.insert(1, 0)
-
-    assert_equal 1, heap.ctop
-  end
 end
