@@ -8,8 +8,52 @@ CDisjointUnion = DataStructuresRMolinari::CDisjointUnion
 
 class DisjointUnionTest < Test::Unit::TestCase
   def test_basic_operation
-    du = DisjointUnion.new(10)
+    check_basic_operation DisjointUnion.new(10)
+  end
 
+  def test_member_check
+    check_member_check DisjointUnion.new(10)
+  end
+
+  def test_make_set
+    check_make_set DisjointUnion.new
+  end
+
+  def test_basic_operation_in_c
+    check_basic_operation CDisjointUnion.new(10)
+  end
+
+  def test_member_check_in_c
+    check_member_check CDisjointUnion.new(10)
+  end
+
+  def test_make_set_in_c
+    check_make_set CDisjointUnion.new
+  end
+
+  # Not actually a test, but a timing experiment. It belongs somewhere else, but the testing harness makes it easy to run it for now
+  def test_timing_experiment
+    size = Integer(ENV['test_size'] || 1_000_000)
+    # First generate a long list of random numbers. This avoids the work of RNG clogging up timing information
+    randoms = (0..(4 * size)).map { rand(size) }
+
+    du = CDisjointUnion.new(size)
+    (0..(size/2)).each do |idx|
+      # unite two elements
+      e1 = randoms[2 * idx]
+      e2 = randoms[2 * idx + 1]
+      next if e1 == e2
+
+      du.unite(e1, e2)
+    end
+
+    #puts "Final subset count: #{du.subset_count}"
+  end
+
+  ########################################
+  # Helpers
+
+  private def check_basic_operation(du)
     assert_equal 10, du.subset_count # all in separate sets
 
     du.unite(0, 2)
@@ -25,16 +69,15 @@ class DisjointUnionTest < Test::Unit::TestCase
     assert_equal 5, [1, 3, 5, 7, 9].map{ du.find _1 }.uniq.size
   end
 
-  def test_member_check
-    du = DisjointUnion.new(10)
+  private def check_member_check(du)
     assert_raise(Shared::DataError) do
       du.find(10)
     end
   end
 
-  def test_make_set
-    du = DisjointUnion.new # empty
-
+  # Start with empty disjoint union
+  private def check_make_set(du)
+    raise "Expected empty disjoint union" unless du.subset_count.zero?
     assert_raise(Shared::DataError) do
       du.find(0)
     end
@@ -54,28 +97,5 @@ class DisjointUnionTest < Test::Unit::TestCase
     assert_raise(Shared::DataError) do
       du.find(2)
     end
-  end
-
-  # Experimental: Try out the version written in C
-  def test_c_extension
-    empty_one = CDisjointUnion.new
-    assert_equal 0, empty_one.subset_count
-    empty_one.make_set(0)
-    assert_equal 1, empty_one.subset_count
-    assert_equal 0, empty_one.find(0)
-
-    assert_raise(ArgumentError) do
-      empty_one.make_set(0)
-    end
-
-    tenner = CDisjointUnion.new(10)
-    assert_equal 10, tenner.subset_count
-    tenner.make_set(10)
-    assert_equal 11, tenner.subset_count
-    (0..10).each do |elt|
-      assert_equal elt, tenner.find(elt)
-    end
-    tenner.unite(0, 1)
-    assert_equal 10, tenner.subset_count
   end
 end

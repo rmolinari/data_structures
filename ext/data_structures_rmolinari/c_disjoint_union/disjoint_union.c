@@ -21,26 +21,22 @@ typedef struct {
 } Array;
 
 void initArray(Array *a, size_t initial_size, long default_val) {
-  //printf("In initArray with initial_size=%zu\n", initial_size);
   a->array = malloc(initial_size * sizeof(long));
-  //printf("... just allocated array %p\n", (void *) a->array);
   a->size = initial_size;
   a->default_val = default_val;
 
   for (unsigned long i = 0; i < initial_size; i++) {
-    //printf("Setting a->array[%lu] = %li\n", i, DEFAULT_ARRAY_VAL);
     a->array[i] = default_val;
   }
-
-  //printf("...done with initArray. a->size=%zu\n", a->size);
 }
 
 void insertArray(Array *a, unsigned long index, long element) {
-  //printf("In insertArray for index %zu, size=%zu\n", index, a->size );
-  if (a->size < index) {
+  // printf("In insertArray for index %zu, size=%zu\n", index, a->size );
+  if (a->size <= index) {
     size_t new_size = a->size;
-    while (new_size < index) {
-      new_size *= 2;
+    while (new_size <= index) {
+      new_size = 8 * new_size / 5 + 8; // 8/5 gives "Fibonnacci-like" growth; adding 8 to avoid small arrays having to reallocate
+                                       // too often
     }
     long* new_array = realloc(a->array, new_size * sizeof(long));
     if (!new_array) {

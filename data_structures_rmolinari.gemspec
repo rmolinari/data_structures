@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.email       = 'rorymolinari@gmail.com'
   s.homepage    = 'https://github.com/rmolinari/data_structures'
   s.files       = FileList['lib/**/*.rb', 'ext/**/*.c', 'CHANGELOG.md']
-  s.extensions  = ['ext/data_structures_rmolinari/cheap/extconf.rb']
+  s.extensions  = FileList['ext/**/extconf.rb']
   s.license     = 'MIT'
   s.required_ruby_version = '~> 3.1.3'
 
