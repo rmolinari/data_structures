@@ -2,10 +2,14 @@
 
 static VALUE mDataStructuresRMolinari;
 static VALUE cDisjointUnion;
+static VALUE mShared;
+static ID id_DataError;
+
+#define eDataError rb_const_get(mShared, id_DataError)
 
 /**
  * It's been so long since I've written non-trival C that I need to copy examples from online
- * Dynamic array of longs, with initial values of -1.
+ * Dynamic array of longs, with an initial value for otherwise uninitialized elements..
 
  * Based on  https://stackoverflow.com/questions/3536153/c-dynamically-growing-array
  */
@@ -13,23 +17,25 @@ static VALUE cDisjointUnion;
 typedef struct {
   long *array;
   size_t size;
+  long default_val;
 } Array;
 
-void initArray(Array *a, size_t initial_size) {
+void initArray(Array *a, size_t initial_size, long default_val) {
   //printf("In initArray with initial_size=%zu\n", initial_size);
   a->array = malloc(initial_size * sizeof(long));
   //printf("... just allocated array %p\n", (void *) a->array);
   a->size = initial_size;
+  a->default_val = default_val;
 
   for (unsigned long i = 0; i < initial_size; i++) {
     //printf("Setting a->array[%lu] = %li\n", i, DEFAULT_ARRAY_VAL);
-    a->array[i] = DEFAULT_ARRAY_VAL;
+    a->array[i] = default_val;
   }
 
   //printf("...done with initArray. a->size=%zu\n", a->size);
 }
 
-void insertArray(Array *a, long element, unsigned long index) {
+void insertArray(Array *a, unsigned long index, long element) {
   //printf("In insertArray for index %zu, size=%zu\n", index, a->size );
   if (a->size < index) {
     size_t new_size = a->size;
@@ -43,7 +49,7 @@ void insertArray(Array *a, long element, unsigned long index) {
     a->array = new_array;
     for (size_t i = a->size; i < new_size; i++) {
       // printf("Setting a->array[%zu] = %li", i, DEFAULT_ARRAY_VAL);
-      a->array[i] = DEFAULT_ARRAY_VAL;
+      a->array[i] = a->default_val;
     }
 
     a->size = new_size;
@@ -59,7 +65,8 @@ void freeArray(Array *a) {
   a->size = 0;
 }
 
-/** END simple dynamic array */
+/** END simple dynamic array
+ ************************************************************/
 
 /**
  * The Ruby Extension stuff.
@@ -74,7 +81,8 @@ void freeArray(Array *a) {
  * See https://docs.ruby-lang.org/en/master/extension_rdoc.html#label-Example+-+Creating+the+dbm+Extension for some example code.
  */
 typedef struct du_data {
-  Array* data;
+  Array* forest; // the forest that describes the unified subsets
+  Array* rank;
   size_t subset_count;
 } disjoint_union_data;
 
@@ -84,8 +92,9 @@ static void disjoint_union_free(void *ptr) {
   if (ptr) {
     disjoint_union_data *disjoint_union = ptr;
     //printf("   In disjoint_union_free...about to call freeArray\n");
-    freeArray(disjoint_union->data);
-    free(disjoint_union->data);
+    freeArray(disjoint_union->forest);
+    freeArray(disjoint_union->rank);
+    free(disjoint_union->forest);
     free(ptr);
   }
 }
@@ -96,7 +105,7 @@ static size_t disjoint_union_memsize(const void *ptr) {
   //printf("In disjoint_union_memsize\n");
   if (ptr) {
     const disjoint_union_data *disjoint_union = ptr;
-    return (disjoint_union->data->size * sizeof(long));
+    return (2 * disjoint_union->forest->size * sizeof(long));
   } else {
     return 0;
   }
@@ -107,7 +116,7 @@ static size_t disjoint_union_memsize(const void *ptr) {
  *************************************************************
  */
 
-#define GetDisjointUnion(object, disjoin_union) TypedData_Get_Struct((object), disjoint_union_data, &disjoint_union_type, (disjoint_union));
+#define GetDisjointUnion(object, disjoint_union) TypedData_Get_Struct((object), disjoint_union_data, &disjoint_union_type, (disjoint_union));
 
 /*
  * A struct of configuration that tells the Ruby runtime how to deal with a disjoint_union_data object.
@@ -126,6 +135,93 @@ static const rb_data_type_t disjoint_union_type = {
 };
 
 
+
+/************************************************************
+ * C implementation of the Disjoint Union functionality
+ ************************************************************/
+
+// Is the given element already a member of the Disjoint Union's universe?
+static int present_p(disjoint_union_data* disjoint_union, size_t element) {
+  Array* forest = disjoint_union->forest;
+  return (forest->size > element && (forest->array[element] != DEFAULT_ARRAY_VAL));
+}
+
+static void check_membership(disjoint_union_data* disjoint_union, size_t element) {
+  if (!present_p(disjoint_union, element)) {
+    rb_raise(eDataError, "Value %zu is not part of the universe", element);
+  }
+}
+
+// Add a new subset containing just the given element
+static void add_new_element(disjoint_union_data* disjoint_union, size_t element) {
+  if (element < 0) {
+    rb_raise(rb_eArgError, "New element cannot be negative");
+  }
+
+  Array* d = disjoint_union->forest;
+
+  if (present_p(disjoint_union, element)) {
+    rb_raise(rb_eArgError, "Element %zu already present in the universe (array has val %zu)", element, d->array[element]);
+  }
+
+  insertArray(disjoint_union->forest, element, element);
+  insertArray(disjoint_union->rank, element, 0);
+  disjoint_union->subset_count++;
+}
+
+// Find the canonical representative of the given element. Two elements are in the same subset exactly when their canonical
+// representatives are equal.
+static size_t find(disjoint_union_data* disjoint_union, size_t element) {
+  check_membership(disjoint_union, element);
+
+  // We implement find with "halving" to shrink the length of paths to the root. See Tarjan and van Leeuwin p 252.
+  long* d = disjoint_union->forest->array; // the actual forest data
+  size_t x = element;
+  while (d[d[x]] != d[x]) {
+    x = d[x] = d[d[x]];
+  }
+  return d[x];
+}
+
+static void link_roots(disjoint_union_data* disjoint_union, size_t elt1, size_t elt2) {
+  long* rank = disjoint_union->rank->array;
+  long* forest = disjoint_union->forest->array;
+
+  if (rank[elt1] > rank[elt2]) {
+    forest[elt2] = elt1;
+  } else if (rank[elt1] == rank[elt2]) {
+    forest[elt2] = elt1;
+    rank[elt1]++;
+  } else {
+    forest[elt1] = elt2;
+  }
+
+  disjoint_union->subset_count--;
+}
+
+static void unite(disjoint_union_data* disjoint_union, size_t elt1, size_t elt2) {
+  check_membership(disjoint_union, elt1);
+  check_membership(disjoint_union, elt2);
+
+  if (elt1 == elt2) {
+    rb_raise(eDataError, "Uniting an element with itself is meaningless");
+  }
+
+  size_t root1 = find(disjoint_union, elt1);
+  size_t root2 = find(disjoint_union, elt2);
+
+  if (root1 == root2) {
+    return; // already united
+  }
+
+  link_roots(disjoint_union, root1, root2);
+}
+
+
+/************************************************************
+ * VALUE wrapper and unwrappers for the Ruby interface
+ ************************************************************/
+
 // Implement Class#allocate for CDisjointUnion
 static VALUE disjoint_union_alloc(VALUE klass) {
   //printf("In disjoint_union_alloc\n");
@@ -134,17 +230,18 @@ static VALUE disjoint_union_alloc(VALUE klass) {
   //printf("...just mallocked for a disjoint union at %p\n", (void*) disjoint_union);
 
   // Allocate the structures
-  Array* data = malloc(sizeof(Array));
-  initArray(data, (size_t)100);
+  Array* forest = malloc(sizeof(Array));
+  Array* rank = malloc(sizeof(Array));
+  initArray(forest, 100, -1);
+  initArray(rank, 100, 0);
 
-  disjoint_union->data = data;
+  disjoint_union->forest = forest;
+  disjoint_union->rank = rank;
   disjoint_union->subset_count = 0;
 
   // Wrap
   return TypedData_Wrap_Struct(klass, &disjoint_union_type, disjoint_union);
 }
-
-static void add_new_element(disjoint_union_data*, size_t);
 
 // This is CDisjointUnion#initialize
 static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
@@ -172,34 +269,12 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
   return self;
 }
 
-/************************************************************
- * Accessors and mutators
- ************************************************************/
-
-// Internal code that adds a new set containing just the given element
-static void add_new_element(disjoint_union_data* disjoint_union, size_t element) {
-  if (element < 0) {
-    rb_raise(rb_eArgError, "New element cannot be negative");
-  }
-
-  Array* d = disjoint_union->data;
-
-  if (d->size > element && (d->array[element] != DEFAULT_ARRAY_VAL)) {
-    rb_raise(rb_eArgError, "Element %zu already present in the universe (array has val %zu)", element, d->array[element]);
-  }
-
-  insertArray(disjoint_union->data, element, element);
-  disjoint_union->subset_count++;
-}
-
 static VALUE disjoint_union_make_set(VALUE self, VALUE arg) {
   disjoint_union_data* disjoint_union;
   GetDisjointUnion(self, disjoint_union);
   Check_Type(arg, T_FIXNUM);
-  size_t new_element = FIX2LONG(arg);
 
-  add_new_element(disjoint_union, new_element);
-
+  add_new_element(disjoint_union, FIX2LONG(arg));
   return Qnil;
 }
 
@@ -210,12 +285,34 @@ static VALUE disjoint_union_subset_count(VALUE self) {
   return LONG2NUM(disjoint_union->subset_count);
 }
 
+static VALUE disjoint_union_find(VALUE self, VALUE arg) {
+  disjoint_union_data* disjoint_union;
+  GetDisjointUnion(self, disjoint_union);
+  Check_Type(arg, T_FIXNUM);
+
+  return LONG2NUM(find(disjoint_union, FIX2LONG(arg)));
+}
+
+static VALUE disjoint_union_unite(VALUE self, VALUE arg1, VALUE arg2) {
+  disjoint_union_data* disjoint_union;
+  GetDisjointUnion(self, disjoint_union);
+
+  Check_Type(arg1, T_FIXNUM);
+  Check_Type(arg2, T_FIXNUM);
+
+  unite(disjoint_union, FIX2LONG(arg1), FIX2LONG(arg2));
+
+  return Qnil;
+}
 
 /************************************************************
  * Set things up
  ************************************************************/
 void Init_CDisjointUnion() {
   mDataStructuresRMolinari = rb_define_module("DataStructuresRMolinari");
+  mShared = rb_define_module("Shared");
+  id_DataError = rb_intern_const("DataError");
+
   // for now we work on a separate class, CDisjointUnion
   cDisjointUnion = rb_define_class_under(mDataStructuresRMolinari, "CDisjointUnion", rb_cObject);
 
@@ -223,4 +320,6 @@ void Init_CDisjointUnion() {
   rb_define_method(cDisjointUnion, "initialize", disjoint_union_init, -1);
   rb_define_method(cDisjointUnion, "make_set", disjoint_union_make_set, 1);
   rb_define_method(cDisjointUnion, "subset_count", disjoint_union_subset_count, 0);
+  rb_define_method(cDisjointUnion, "find", disjoint_union_find, 1);
+  rb_define_method(cDisjointUnion, "unite", disjoint_union_unite, 2);
 }

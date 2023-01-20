@@ -62,6 +62,7 @@ class DisjointUnionTest < Test::Unit::TestCase
     assert_equal 0, empty_one.subset_count
     empty_one.make_set(0)
     assert_equal 1, empty_one.subset_count
+    assert_equal 0, empty_one.find(0)
 
     assert_raise(ArgumentError) do
       empty_one.make_set(0)
@@ -71,5 +72,10 @@ class DisjointUnionTest < Test::Unit::TestCase
     assert_equal 10, tenner.subset_count
     tenner.make_set(10)
     assert_equal 11, tenner.subset_count
+    (0..10).each do |elt|
+      assert_equal elt, tenner.find(elt)
+    end
+    tenner.unite(0, 1)
+    assert_equal 10, tenner.subset_count
   end
 end
