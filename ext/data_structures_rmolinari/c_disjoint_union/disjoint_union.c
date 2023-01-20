@@ -306,7 +306,10 @@ static VALUE disjoint_union_alloc(VALUE klass) {
 }
 
 /*
- * This is for CDisjointUnion#initialize on the Ruby side
+ * A single parameter is optional. If given it should be a non-negative integer and specifies the initial size, s, of the universe
+ * 0, 1, ..., s-1.
+ *
+ * If no argument is given we act as though a value of 0 were passed.
  */
 static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
   if (argc == 0) {
@@ -334,32 +337,69 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
  *
  * We make them into methods on CDisjointUnion in the Init_CDisjointUnion function, below.
  */
+
+/*
+ * Add a new subset to the universe containing the element +new_v+.
+ *
+ * @param the new element, starting in its own singleton subset
+ *   - it must be a non-negative integer, not already part of the universe of elements.
+ */
 static VALUE disjoint_union_make_set(VALUE self, VALUE arg) {
   add_new_element(unwrapped(self), checked_nonneg_fixnum(arg));
 
   return Qnil;
 }
 
+/*
+ * @return the number of subsets into which the universe is currently partitioned.
+ */
 static VALUE disjoint_union_subset_count(VALUE self) {
   return LONG2NUM(unwrapped(self)->subset_count);
 }
 
+/*
+ * The canonical representative of the subset containing e. Two elements d and e are in the same subset exactly when find(d) ==
+ * find(e).
+ *
+ * The parameter must be in the universe of elements.
+ *
+ * @return (Integer) one of the universe of elements
+ */
 static VALUE disjoint_union_find(VALUE self, VALUE arg) {
   return LONG2NUM(find(unwrapped(self), checked_nonneg_fixnum(arg)));
 }
 
+/*
+ * Declare that the arguments are equivalent, i.e., in the same subset. If they are already in the same subset this is a no-op.
+ *
+ * Each argument must be in the universe of elements
+ */
 static VALUE disjoint_union_unite(VALUE self, VALUE arg1, VALUE arg2) {
   unite(unwrapped(self), checked_nonneg_fixnum(arg1), checked_nonneg_fixnum(arg2));
 
   return Qnil;
 }
 
-/************************************************************
- * Set things up
- ************************************************************/
+/*
+ * A Disjoint Union.
+ *
+ * A "disjoint set union" that represents a set of elements that belonging to _disjoint_ subsets. Alternatively, this expresses a
+ * partion of a fixed set.
+ *
+ * The data structure provides efficient actions to merge two disjoint subsets, i.e., replace them by their union, and determine if
+ * two elements are in the same subset.
+ *
+ * The elements of the set are 0, 1, ..., n-1, where n is the size of the universe. Client code can map its data to these
+ * representatives.
+ *
+ * See https://en.wikipedia.org/wiki/Disjoint-set_data_structure for a good introduction.
+ *
+ * The code uses several ideas from Tarjan and van Leeuwen for efficiency. We use "union by rank" in +unite+ and path-halving in
+ * +find+. Together, these make the amortized cost of each opperation effectively constant.
+ *
+ * - Tarjan, Robert E., van Leeuwen, Jan (1984). _Worst-case analysis of set union algorithms_. Journal of the ACM. 31 (2): 245–281.
+ */
 void Init_CDisjointUnion() {
-  // mShared = rb_define_module("Shared");
-
   VALUE mDataStructuresRMolinari = rb_define_module("DataStructuresRMolinari");
   VALUE cDisjointUnion = rb_define_class_under(mDataStructuresRMolinari, "CDisjointUnion", rb_cObject);
 
