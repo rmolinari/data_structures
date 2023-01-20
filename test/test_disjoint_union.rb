@@ -33,7 +33,9 @@ class DisjointUnionTest < Test::Unit::TestCase
 
   # Not actually a test, but a timing experiment. It belongs somewhere else, but the testing harness makes it easy to run it for now
   def test_timing_experiment
-    size = Integer(ENV['test_size'] || 1_000_000)
+    return # TODO: put this "test" somewhere else
+
+    size = Integer(ENV['test_size'] || 100_000)
     # First generate a long list of random numbers. This avoids the work of RNG clogging up timing information
     randoms = (0..(4 * size)).map { rand(size) }
 
