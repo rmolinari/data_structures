@@ -11,7 +11,7 @@
   - A "dynamic" constructor option now allows deletion of the "top" (root) node. This is useful in certain algorithms.
 
 - DisjointUnion
-  - Added an proof-of-concept implementation in C, which is about twice as fast.
+  - Added a proof-of-concept implementation in C, which is about twice as fast.
 
 - Algorithms
   - Implement the Maximal Empty Rectangle algorithm of De et al. It uses a dynamic MaxPST.

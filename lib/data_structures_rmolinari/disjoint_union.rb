@@ -92,6 +92,29 @@ class DataStructuresRMolinari::DisjointUnion
   end
 end
 
-
 # Add C extensions
-require_relative 'CDisjointUnion'
+#
+# Note: the location of the CDisjointUnion binary is not predictable: https://github.com/rmolinari/data_structures/issues/21.  It
+# could be either lib/CDisjointUnion.bundle or lib/data_structures_rmolinar/CDisjoinUnion.bundle. (On some machines the suffix is
+# .so.)
+#
+# I don't understand why deploying the gem causes the Rakefile's ext.lib_dir setting to be ignored (or overwritten). I asked a
+# question in /r/ruby but unfortunately it didn't get any answers.
+#    https://www.reddit.com/r/ruby/comments/10l2r1b/installing_gem_with_c_extension_rakefiles_extlib/
+#
+# So we try jumping through some hoops
+
+# path_to_c = 'data_structures_rmolinari/CDisjointUnion'
+# attempt_count = 0
+# begin
+#   require path_to_c
+#   path_to_c = nil
+# rescue LoadError
+#   if attempt_count.zero?
+#     attempt_count += 1
+#     path_to_c = 'CDisjointUnion'
+#     retry
+#   end
+
+#   raise
+# end
