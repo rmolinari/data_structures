@@ -94,4 +94,4 @@ end
 
 
 # Add C extensions
-require 'data_structures_rmolinari/CDisjointUnion'
+require_relative 'CDisjointUnion'

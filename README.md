@@ -42,6 +42,9 @@ It also provides
 For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL1984]](#references) by Tarjan and
 van Leeuwen.
 
+There is an experimental implementation as a C extension in c_disjoint_union.c. The Ruby class for this implementation is
+`CDisjointUnion`. Benchmarks indicate that a long sequence of `unite` calls is about twice as fast.
+
 ## Heap
 
 This is a standard binary heap with an `update` method, suitable for use as a priority queue. There are several supported
