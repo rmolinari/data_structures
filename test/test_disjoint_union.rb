@@ -31,27 +31,6 @@ class DisjointUnionTest < Test::Unit::TestCase
     check_make_set CDisjointUnion.new
   end
 
-  # Not actually a test, but a timing experiment. It belongs somewhere else, but the testing harness makes it easy to run it for now
-  def test_timing_experiment
-    return # TODO: put this "test" somewhere else
-
-    size = Integer(ENV['test_size'] || 100_000)
-    # First generate a long list of random numbers. This avoids the work of RNG clogging up timing information
-    randoms = (0..(4 * size)).map { rand(size) }
-
-    du = CDisjointUnion.new(size)
-    (0..(size/2)).each do |idx|
-      # unite two elements
-      e1 = randoms[2 * idx]
-      e2 = randoms[2 * idx + 1]
-      next if e1 == e2
-
-      du.unite(e1, e2)
-    end
-
-    #puts "Final subset count: #{du.subset_count}"
-  end
-
   ########################################
   # Helpers
 

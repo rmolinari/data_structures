@@ -399,7 +399,7 @@ static VALUE disjoint_union_unite(VALUE self, VALUE arg1, VALUE arg2) {
  *
  * - Tarjan, Robert E., van Leeuwen, Jan (1984). _Worst-case analysis of set union algorithms_. Journal of the ACM. 31 (2): 245–281.
  */
-void Init_CDisjointUnion() {
+void Init_c_disjoint_union() {
   VALUE mDataStructuresRMolinari = rb_define_module("DataStructuresRMolinari");
   VALUE cDisjointUnion = rb_define_class_under(mDataStructuresRMolinari, "CDisjointUnion", rb_cObject);
 
