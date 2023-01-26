@@ -104,17 +104,17 @@ end
 #
 # So we try jumping through some hoops
 
-# path_to_c = 'data_structures_rmolinari/CDisjointUnion'
-# attempt_count = 0
-# begin
-#   require path_to_c
-#   path_to_c = nil
-# rescue LoadError
-#   if attempt_count.zero?
-#     attempt_count += 1
-#     path_to_c = 'CDisjointUnion'
-#     retry
-#   end
+path_to_c = 'data_structures_rmolinari/CDisjointUnion'
+attempt_count = 0
+begin
+  require path_to_c
+  path_to_c = nil
+rescue LoadError
+  if attempt_count.zero?
+    attempt_count += 1
+    path_to_c = 'CDisjointUnion'
+    retry
+  end
 
-#   raise
-# end
+  raise
+end

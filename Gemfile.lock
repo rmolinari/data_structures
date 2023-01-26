@@ -5,7 +5,7 @@ GEM
     docile (1.4.0)
     must_be (1.1.0)
     rake (13.0.6)
-    rake-compiler (1.2.1)
+    rake-compiler (1.2.0)
       rake
     ruby-prof (1.4.5)
     simplecov (0.22.0)
@@ -23,7 +23,7 @@ PLATFORMS
 DEPENDENCIES
   byebug
   must_be
-  rake-compiler
+  rake-compiler (= 1.2.0)
   ruby-prof
   simplecov
   stackprof
