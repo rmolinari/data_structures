@@ -16,8 +16,17 @@
  */
 
 #include "ruby.h"
-
 #include "../dynamic_array.h"
+
+// Try the "cheapo generic" approach
+DYNAMIC_ARRAY_OF(long);
+
+// Can we do this automatically?
+typedef DynamicArray_long DynamicArray;
+#define initDynamicArray initDynamicArray_long
+#define assignInDynamicArray assignInDynamicArray_long
+#define freeDynamicArray freeDynamicArray_long
+#define _size_of _size_of_long
 
 // The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro should be fine.
 #define mShared rb_define_module("Shared")
