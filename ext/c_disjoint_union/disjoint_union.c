@@ -20,13 +20,7 @@
 
 // Try the "cheapo generic" approach
 DYNAMIC_ARRAY_OF(long);
-
-// Can we do this automatically?
 typedef DynamicArray_long DynamicArray;
-#define initDynamicArray initDynamicArray_long
-#define assignInDynamicArray assignInDynamicArray_long
-#define freeDynamicArray freeDynamicArray_long
-#define _size_of _size_of_long
 
 // The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro should be fine.
 #define mShared rb_define_module("Shared")
@@ -132,8 +126,8 @@ static void add_new_element(disjoint_union_data *disjoint_union, size_t element)
     rb_raise(eSharedDataError, "Element %zu already present in the universe", element);
   }
 
-  assignInDynamicArray(disjoint_union->forest, element, element);
-  assignInDynamicArray(disjoint_union->rank, element, 0);
+  assignInDynamicArray(disjoint_union->forest, element, (long)element);
+  assignInDynamicArray(disjoint_union->rank, element, 0l);
   disjoint_union->subset_count++;
 }
 

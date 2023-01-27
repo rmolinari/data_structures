@@ -83,4 +83,21 @@ size_t _size_of_##type(DynamicArray_##type *a) {\
   return a->size * sizeof(a->default_val);\
 }
 
+// Some helpers to strip off the _<type> suffixes where possible. This uses the _Generic feature from C11.
+#define initDynamicArray(a, initial_size, default_val)                              \
+  _Generic((a),                                                                     \
+           DynamicArray_long*: initDynamicArray_long)(a, initial_size, default_val)
+
+#define assignInDynamicArray(a, index, value)                              \
+  _Generic((a),                                                            \
+           DynamicArray_long*: assignInDynamicArray_long)(a, index, value)
+
+#define freeDynamicArray(a)                              \
+  _Generic((a),                                          \
+           DynamicArray_long*: freeDynamicArray_long)(a)
+
+#define _size_of(a)                              \
+  _Generic((a),                                  \
+           DynamicArray_long*: _size_of_long)(a)
+
 #endif
