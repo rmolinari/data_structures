@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.4.3] 2023-01-27
+
+- Fix bad directive in Rakefile for DisjointUnion C extension
+
 ## [0.4.2] 2023-01-26
 
 ### Added
