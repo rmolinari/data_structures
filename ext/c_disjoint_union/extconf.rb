@@ -7,6 +7,8 @@ if try_cflags('-O')
   append_cflags('-O')
 end
 
+$objs = %w(disjoint_union.o ../dynamic_array.o)
+
 extension_name = "c_disjoint_union"
 dir_config(extension_name)
 create_makefile("data_structures_rmolinari/c_disjoint_union")
