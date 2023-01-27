@@ -17,10 +17,9 @@
 
 #include "ruby.h"
 
-// The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro is simplest and
-// just fine.
+// The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro should be fine.
 #define mShared rb_define_module("Shared")
-#define eDataError rb_const_get(mShared, rb_intern_const("DataError"))
+#define eSharedDataError rb_const_get(mShared, rb_intern_const("DataError"))
 
 /**
  * It's been so long since I've written non-trival C that I need to copy examples from online.
@@ -34,6 +33,11 @@ typedef struct {
   long default_val;
 } DynamicArray;
 
+/*
+ * Initialize a DynamicArray struct with the given initial size and with all values set to the default value.
+ *
+ * The default value is stored and used to initialize new array sections if and when the array needs to be expanded.
+ */
 void initDynamicArray(DynamicArray *a, size_t initial_size, long default_val) {
   a->array = malloc(initial_size * sizeof(long));
   a->size = initial_size;
@@ -44,15 +48,18 @@ void initDynamicArray(DynamicArray *a, size_t initial_size, long default_val) {
   }
 }
 
-void insertDynamicArray(DynamicArray *a, unsigned long index, long element) {
+/*
+ * Assign +value+ to the the +index+-th element of the array, expanding the available space if necessary.
+ */
+void assignInDynamicArray(DynamicArray *a, unsigned long index, long value) {
   if (a->size <= index) {
     size_t new_size = a->size;
     while (new_size <= index) {
       new_size = 8 * new_size / 5 + 8; // 8/5 gives "Fibonnacci-like" growth; adding 8 to avoid small arrays having to reallocate
-                                       // too often. Who knows if it's worth being "clever"."
+                                       // too often as they grow. Who knows if it's worth being "clever".
     }
 
-    long* new_array = realloc(a->array, new_size * sizeof(long));
+    long *new_array = realloc(a->array, new_size * sizeof(long));
     if (!new_array) {
       rb_raise(rb_eRuntimeError, "Cannot allocate memory to expand DynamicArray!");
     }
@@ -65,13 +72,17 @@ void insertDynamicArray(DynamicArray *a, unsigned long index, long element) {
     a->size = new_size;
   }
 
-  a->array[index] = element;
+  a->array[index] = value;
 }
 
 void freeDynamicArray(DynamicArray *a) {
   free(a->array);
   a->array = NULL;
   a->size = 0;
+}
+
+size_t _size_of(DynamicArray *a) {
+  return a->size * sizeof(a->default_val);
 }
 
 /**
@@ -82,7 +93,7 @@ void freeDynamicArray(DynamicArray *a) {
 
 /*
  * The Disjoint Union struct.
- * - forest: an array of longs giving, for each element, the parent element of its tree.
+ * - forest: an array of longs giving, for each element, the element's parent.
  *   - An element e is the root of its tree just when forest[e] == e.
  *   - Two elements are in the same subset just when they are in the same tree in the forest.
  *     - So the key idea is that we can check this by navigating via parents from each element to their roots. Clever optimizations
@@ -94,24 +105,24 @@ void freeDynamicArray(DynamicArray *a) {
  *   - it isn't needed internally but may be useful to client code.
  */
 typedef struct du_data {
-  DynamicArray* forest; // the forest that describes the unified subsets
-  DynamicArray* rank;   // the "ranks" of the elements, used when uniting subsets
+  DynamicArray *forest; // the forest that describes the unified subsets
+  DynamicArray *rank;   // the "ranks" of the elements, used when uniting subsets
   size_t subset_count;
 } disjoint_union_data;
 
 /*
- * Create one.
+ * Create one (on the heap).
  *
  * The dynamic arrays are initialized with a size of 100 because I didn't have a better idea. This will end up getting called from
  * the Ruby #allocate method, which happens before #initialize. Thus we don't know the calling code's desired initial size.
  */
 #define INITIAL_SIZE 100
-static disjoint_union_data* create_disjoint_union() {
-  disjoint_union_data* disjoint_union = malloc(sizeof(disjoint_union_data));
+static disjoint_union_data *create_disjoint_union() {
+  disjoint_union_data *disjoint_union = (disjoint_union_data *)malloc(sizeof(disjoint_union_data));
 
   // Allocate the structures
-  DynamicArray* forest = malloc(sizeof(DynamicArray));
-  DynamicArray* rank = malloc(sizeof(DynamicArray));
+  DynamicArray *forest = (DynamicArray *)malloc(sizeof(DynamicArray));
+  DynamicArray *rank = (DynamicArray *)malloc(sizeof(DynamicArray));
   initDynamicArray(forest, INITIAL_SIZE, -1);
   initDynamicArray(rank,   INITIAL_SIZE, 0);
 
@@ -123,7 +134,9 @@ static disjoint_union_data* create_disjoint_union() {
 }
 
 /*
- * Free the memory associated with a disjoint union. This will end up getting triggered by the Ruby garbage collector.
+ * Free the memory associated with a disjoint union.
+ *
+ * This will end up getting triggered by the Ruby garbage collector. Ruby learns about it via the disjoint_union_type struct below.
  */
 static void disjoint_union_free(void *ptr) {
   if (ptr) {
@@ -137,7 +150,7 @@ static void disjoint_union_free(void *ptr) {
     free(disjoint_union->rank);
     disjoint_union->rank = NULL;
 
-    free(disjoint_union);
+    xfree(disjoint_union);
   }
 }
 
@@ -148,17 +161,17 @@ static void disjoint_union_free(void *ptr) {
 /*
  * Is the given element already a member of the universe?
  */
-static int present_p(disjoint_union_data* disjoint_union, size_t element) {
-  DynamicArray* forest = disjoint_union->forest;
+static int present_p(disjoint_union_data *disjoint_union, size_t element) {
+  DynamicArray *forest = (DynamicArray *)disjoint_union->forest;
   return (forest->size > element && (forest->array[element] != forest->default_val));
 }
 
 /*
  * Check that the given element is a member of the universe and raise Shared::DataError (ruby-side) if not
  */
-static void assert_membership(disjoint_union_data* disjoint_union, size_t element) {
+static void assert_membership(disjoint_union_data *disjoint_union, size_t element) {
   if (!present_p(disjoint_union, element)) {
-    rb_raise(eDataError, "Value %zu is not part of the universe", element);
+    rb_raise(eSharedDataError, "Value %zu is not part of the universe", element);
   }
 }
 
@@ -167,13 +180,13 @@ static void assert_membership(disjoint_union_data* disjoint_union, size_t elemen
  *
  * Shared::DataError is raised if it is already an element.
  */
-static void add_new_element(disjoint_union_data* disjoint_union, size_t element) {
+static void add_new_element(disjoint_union_data *disjoint_union, size_t element) {
   if (present_p(disjoint_union, element)) {
-    rb_raise(eDataError, "Element %zu already present in the universe", element);
+    rb_raise(eSharedDataError, "Element %zu already present in the universe", element);
   }
 
-  insertDynamicArray(disjoint_union->forest, element, element);
-  insertDynamicArray(disjoint_union->rank, element, 0);
+  assignInDynamicArray(disjoint_union->forest, element, element);
+  assignInDynamicArray(disjoint_union->rank, element, 0);
   disjoint_union->subset_count++;
 }
 
@@ -182,11 +195,11 @@ static void add_new_element(disjoint_union_data* disjoint_union, size_t element)
  *
  * Two elements are in the same subset exactly when their canonical representatives are equal.
  */
-static size_t find(disjoint_union_data* disjoint_union, size_t element) {
+static size_t find(disjoint_union_data *disjoint_union, size_t element) {
   assert_membership(disjoint_union, element);
 
   // We implement find with "halving" to shrink the length of paths to the root. See Tarjan and van Leeuwin p 252.
-  long* d = disjoint_union->forest->array; // the actual forest data
+  long *d = disjoint_union->forest->array; // the actual forest data
   size_t x = element;
   while (d[d[x]] != d[x]) {
     x = d[x] = d[d[x]];
@@ -202,9 +215,9 @@ static size_t find(disjoint_union_data* disjoint_union, size_t element) {
  * Good performace (see Tarjan and van Leeuwin) assumes that elt1 and elt2 area are disinct and already the roots of their trees,
  * though we don't check that here.
  */
-static void link_roots(disjoint_union_data* disjoint_union, size_t elt1, size_t elt2) {
-  long* rank = disjoint_union->rank->array;
-  long* forest = disjoint_union->forest->array;
+static void link_roots(disjoint_union_data *disjoint_union, size_t elt1, size_t elt2) {
+  long *rank = disjoint_union->rank->array;
+  long *forest = disjoint_union->forest->array;
 
   if (rank[elt1] > rank[elt2]) {
     forest[elt2] = elt1;
@@ -221,12 +234,12 @@ static void link_roots(disjoint_union_data* disjoint_union, size_t elt1, size_t 
 /*
  * "Unite" or merge the subsets containing elt1 and elt2.
  */
-static void unite(disjoint_union_data* disjoint_union, size_t elt1, size_t elt2) {
+static void unite(disjoint_union_data *disjoint_union, size_t elt1, size_t elt2) {
   assert_membership(disjoint_union, elt1);
   assert_membership(disjoint_union, elt2);
 
   if (elt1 == elt2) {
-    rb_raise(eDataError, "Uniting an element with itself is meaningless");
+    rb_raise(eSharedDataError, "Uniting an element with itself is meaningless");
   }
 
   size_t root1 = find(disjoint_union, elt1);
@@ -249,8 +262,8 @@ static void unite(disjoint_union_data* disjoint_union, size_t elt1, size_t elt2)
 // deciding how agressive to be during garbage collection and such.
 static size_t disjoint_union_memsize(const void *ptr) {
   if (ptr) {
-    const disjoint_union_data *disjoint_union = ptr;
-    return (2 * disjoint_union->forest->size * sizeof(long)); // disjoint_union->rank is the same size
+    const disjoint_union_data *du = ptr;
+    return sizeof(disjoint_union_data) + _size_of(du->forest) + _size_of(du->rank);
   } else {
     return 0;
   }
@@ -273,16 +286,14 @@ static const rb_data_type_t disjoint_union_type = {
 };
 
 /*
- * Helper: check that a Ruby value is a non-negative Fixnum and convert it to a nice C long
- *
- * TODO: can we return an size_t or unsigned long instead?
+ * Helper: check that a Ruby value is a non-negative Fixnum and convert it to a C unsigned long
  */
-static long checked_nonneg_fixnum(VALUE val) {
+static unsigned long checked_nonneg_fixnum(VALUE val) {
   Check_Type(val, T_FIXNUM);
   long c_val = FIX2LONG(val);
 
   if (c_val < 0) {
-    rb_raise(eDataError, "Value must be non-negative");
+    rb_raise(eSharedDataError, "Value must be non-negative");
   }
 
   return c_val;
@@ -291,8 +302,8 @@ static long checked_nonneg_fixnum(VALUE val) {
 /*
  * Unwrap a Rubyfied disjoint union to get the C struct inside.
  */
-static disjoint_union_data* unwrapped(VALUE self) {
-  disjoint_union_data* disjoint_union;
+static disjoint_union_data *unwrapped(VALUE self) {
+  disjoint_union_data *disjoint_union;
   TypedData_Get_Struct((self), disjoint_union_data, &disjoint_union_type, disjoint_union);
   return disjoint_union;
 }
@@ -301,7 +312,9 @@ static disjoint_union_data* unwrapped(VALUE self) {
  * This is for CDisjointUnion.allocate on the Ruby side
  */
 static VALUE disjoint_union_alloc(VALUE klass) {
-  disjoint_union_data* disjoint_union = create_disjoint_union();
+  // Get one on the heap
+  disjoint_union_data *disjoint_union = create_disjoint_union();
+  // Wrap it up into a Ruby object
   return TypedData_Wrap_Struct(klass, &disjoint_union_type, disjoint_union);
 }
 
@@ -318,7 +331,7 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
     rb_raise(rb_eArgError, "wrong number of arguments");
   } else {
     size_t initial_size = checked_nonneg_fixnum(argv[0]);
-    disjoint_union_data* disjoint_union = unwrapped(self);
+    disjoint_union_data *disjoint_union = unwrapped(self);
 
     for (size_t i = 0; i < initial_size; i++) {
       add_new_element(disjoint_union, i);
@@ -389,8 +402,7 @@ static VALUE disjoint_union_unite(VALUE self, VALUE arg1, VALUE arg2) {
  * The data structure provides efficient actions to merge two disjoint subsets, i.e., replace them by their union, and determine if
  * two elements are in the same subset.
  *
- * The elements of the set are 0, 1, ..., n-1, where n is the size of the universe. Client code can map its data to these
- * representatives.
+ * The elements of the set are non-negative integers. Client code can map its data to these representatives.
  *
  * See https://en.wikipedia.org/wiki/Disjoint-set_data_structure for a good introduction.
  *
