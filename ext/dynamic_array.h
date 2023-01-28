@@ -7,32 +7,6 @@
  * Based on https://stackoverflow.com/questions/3536153/c-dynamically-growing-array (but all the "generic" crap piled on top is
  * mine).
  *
- *
- * There are several parts to the Dynamic Array:
- *
- * The struct, of type name DynamicArray_<type>. It looks like
- *
- * typedef struct {
- *   <type> *array;
- *   size_t size;
- *   <type> default_val;
- * } DynamicArray_<type>;
- *
- *
- * Functions:
- * - initDynamicArray_<type>(DynamicArray_<type> *a, size_t initial_size, <type> defvault_val)
- *   - Initialize a DynamicArray struct with the given initial size and with all values set to the default value. The default value
- *     is stored and used to initialize new array sections if and when the array needs to be expanded.
- *
- * - void assignInDynamicArray_<type>(DynamicArray_<type> *a, unsigned long index, <type> value)
- *   - Assign +value+ to the the +index+-th element of the array, expanding the available space if necessary.
- *
- * - void freeDynamicArray_<type>(DynamicArray_<type> *a)
- *   - Free the heap memory associated with the object.
- *
- * - size_t _size_of_<type>(DynamicArray_<type> *a)
- *   - Return the amount of heap space allocated for the object. This might be useful to the Ruby runtime.
- *
  * NOTE:
  * ----
  *
@@ -54,7 +28,14 @@
 #define __DA_TYPE(type) DynamicArray_##type
 
 /*
- * Code fo a dynamic array storing elements of the given type.
+ * Code for a dynamic array storing elements of the given type.
+ *
+ * Note the interaction between the (long) macro and embedded C comments. The preprocessor elminates comments in phase 3 - replacing
+ * each with a single space - and expands macros in phase 4. Thus each multi-line comment below is the same as a space so far as
+ * this macro is concerned. Having backslashes in the comments themselves causes some sort of other problem. Thus, although it looks
+ * like the macro expansion text ends with the first comment, it doesn't.
+ *
+ * Reference: https://stackoverflow.com/questions/1510869/does-the-c-preprocessor-strip-comments-or-expand-macros-first
  */
 #define DYNAMIC_ARRAY_OF(type)                                                                                                      \
 typedef struct {                                                                                                                    \
@@ -63,8 +44,12 @@ typedef struct {                                                                
   type default_val;                                                                                                                 \
 } __DA_TYPE(type);                                                                                                                  \
                                                                                                                                     \
-void initDynamicArray_##type(__DA_TYPE(type) *a, size_t initial_size, long default_val) {                                           \
-  a->array = malloc(initial_size * sizeof(long));                                                                                   \
+/*
+ * Initialize a DynamicArray struct with the given initial size and with all values set to the default value. The default value is
+ * stored and used to initialize new array sections if and when the array needs to be expanded.
+ */                                                                                                                                 \
+void initDynamicArray_##type(__DA_TYPE(type) *a, size_t initial_size, type default_val) {                                           \
+  a->array = malloc(initial_size * sizeof(type));                                                                                   \
   a->size = initial_size;                                                                                                           \
   a->default_val = default_val;                                                                                                     \
                                                                                                                                     \
@@ -73,15 +58,18 @@ void initDynamicArray_##type(__DA_TYPE(type) *a, size_t initial_size, long defau
   }                                                                                                                                 \
 }                                                                                                                                   \
                                                                                                                                     \
-void assignInDynamicArray_##type(__DA_TYPE(type) *a, unsigned long index, long value) {                                             \
+/*
+ * Assign +value+ to the the +index+-th element of the array, increasing the size of the array if necessary.
+ */                                                                                                                                 \
+void assignInDynamicArray_##type(__DA_TYPE(type) *a, size_t index, type value) {                                                    \
   if (a->size <= index) {                                                                                                           \
     size_t new_size = a->size;                                                                                                      \
     while (new_size <= index) {                                                                                                     \
-      new_size = 8 * new_size / 5 + 8; /* 8/5 gives "Fibonnacci-like" growth; adding 8 to avoid small arrays having to reallocate   \
+      new_size = 8 * new_size / 5 + 8; /* 8/5 gives "Fibonnacci-like" growth; adding 8 to avoid small arrays having to reallocate
                                         * too often as they grow. Who knows if it's worth being "clever".*/                         \
     }                                                                                                                               \
                                                                                                                                     \
-    long *new_array = realloc(a->array, new_size * sizeof(long));                                                                   \
+    type *new_array = realloc(a->array, new_size * sizeof(type));                                                                   \
     if (!new_array) {                                                                                                               \
       rb_raise(rb_eRuntimeError, "Cannot allocate memory to expand DynamicArray_##type!");                                          \
     }                                                                                                                               \
@@ -97,12 +85,18 @@ void assignInDynamicArray_##type(__DA_TYPE(type) *a, unsigned long index, long v
   a->array[index] = value;                                                                                                          \
 }                                                                                                                                   \
                                                                                                                                     \
+/*
+ * Free the heap memory associated with the object.
+ */                                                                                                                                 \
 void freeDynamicArray_##type(__DA_TYPE(type) *a) {                                                                                  \
   free(a->array);                                                                                                                   \
   a->array = NULL;                                                                                                                  \
   a->size = 0;                                                                                                                      \
 }                                                                                                                                   \
                                                                                                                                     \
+/*
+ * Return the amount of heap space allocated for the object. This might be useful to the Ruby runtime.
+ */                                                                                                                                 \
 size_t _size_of_##type(__DA_TYPE(type) *a) {                                                                                        \
   return sizeof(__DA_TYPE(type)) + a->size * sizeof(a->default_val);                                                                \
 }
