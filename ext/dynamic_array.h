@@ -29,10 +29,17 @@
  *
  * See below for the need for different handling for, say, __DA_TYPE(unsigned long).
  */
-#define __DA_TYPE(type) DynamicArray_##type
+#define __DA_TYPE(suffix) DynamicArray_##suffix
 
 /*
- * Code for a dynamic array storing elements of the given type.
+ * As for DEFINE_DYNAMIC_ARRAY_OF2 (below) but using the typename itself as the suffix. This will work only if the type name is
+ * purely alphanumeric + underscores. FOr other types the calling code will need to supply a suffix explicitly and call
+ * DEFINE_DYNAMIC_ARRAY_OF_2.
+ */
+#define DEFINE_DYNAMIC_ARRAY_OF(type) DEFINE_DYNAMIC_ARRAY_OF2(type, type)
+
+/*
+ * Code for a dynamic array storing elements of the given type using the suffix in the typename and function names.
  *
  * Note the interaction between the macro and embedded C comments. The preprocessor elminates comments in phase 3 - replacing each
  * with a single space - and expands macros in phase 4. Thus each multi-line comment below is the same as a space so far as the
@@ -50,19 +57,20 @@
  *       then do
  *
  *         #define DEFINE_DYNAMIC_ARRAY_OF(type) DEFINE_DYNAMIC_ARRAY_OF2(type, TYPE_SUFFIX(type))
+ *     - NO! _Generic(...) is resolved at compile time, not during preprocessing, and so its output can't be used in pasting.
  */
-#define DEFINE_DYNAMIC_ARRAY_OF(type)                                                                                               \
+#define DEFINE_DYNAMIC_ARRAY_OF2(type, suffix)                                                                                      \
 typedef struct {                                                                                                                    \
   type *array;                                                                                                                      \
   size_t size;                                                                                                                      \
   type default_val;                                                                                                                 \
-} __DA_TYPE(type);                                                                                                                  \
+} __DA_TYPE(suffix);                                                                                                                \
                                                                                                                                     \
 /*
  * Initialize an already-allocated DynamicArray struct with the given initial size and with all elements set to the default
  * value. The default value is stored and used to initialize new array sections if and when the array needs to be expanded.
  */                                                                                                                                 \
-void initDynamicArray_##type(__DA_TYPE(type) *a, size_t initial_size, type default_val) {                                           \
+void initDynamicArray_##type(__DA_TYPE(suffix) *a, size_t initial_size, type default_val) {                                         \
   a->array = malloc(initial_size * sizeof(type));                                                                                   \
   a->size = initial_size;                                                                                                           \
   a->default_val = default_val;                                                                                                     \
@@ -77,7 +85,7 @@ void initDynamicArray_##type(__DA_TYPE(type) *a, size_t initial_size, type defau
  *
  * If expansion is required, each new element is first initialized to the default value.
  */                                                                                                                                 \
-void assignInDynamicArray_##type(__DA_TYPE(type) *a, size_t index, type value) {                                                    \
+void assignInDynamicArray_##type(__DA_TYPE(suffix) *a, size_t index, type value) {                                                  \
   if (a->size <= index) {                                                                                                           \
     size_t new_size = a->size;                                                                                                      \
     while (new_size <= index) {                                                                                                     \
@@ -107,7 +115,7 @@ void assignInDynamicArray_##type(__DA_TYPE(type) *a, size_t index, type value) {
 /*
  * Free the heap memory associated with the object.
  */                                                                                                                                 \
-void freeDynamicArray_##type(__DA_TYPE(type) *a) {                                                                                  \
+void freeDynamicArray_##type(__DA_TYPE(suffix) *a) {                                                                                \
   free(a->array);                                                                                                                   \
   a->array = NULL;                                                                                                                  \
   a->size = 0;                                                                                                                      \
@@ -116,7 +124,7 @@ void freeDynamicArray_##type(__DA_TYPE(type) *a) {                              
 /*
  * Return the amount of heap space allocated for the object, including the object itself. This might be useful to the Ruby runtime.
  */                                                                                                                                 \
-size_t _size_of_##type(__DA_TYPE(type) *a) {                                                                                        \
+size_t _size_of_##type(__DA_TYPE(suffix) *a) {                                                                                      \
   return sizeof(a) + a->size * sizeof(type);                                                                                        \
 }
 
