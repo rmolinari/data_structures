@@ -1,6 +1,39 @@
 #ifndef DYNAMIC_ARRAY_H
 #define DYNAMIC_ARRAY_H
 
+#include "cc.h"
+
+// Try it with the amazing CC library.
+#define __VEC_TYPE(type) VecArray_##type
+
+#define DEFINE_VEC_WITH_INIT(type)                                      \
+                                                                        \
+  typedef struct {                                                      \
+    vec(type)* vector;                                                  \
+    type default_val;                                                   \
+  } __VEC_TYPE(type);                                                   \
+                                                                        \
+  void init_vec_##type(__VEC_TYPE(type) *a, size_t initial_size, type default_val) { \
+    init(a->vector);                                                    \
+    a->default_val = default_val;                                       \
+    for (size_t i = 0; i < initial_size; i++) {                         \
+      push(a->vector, initial_size);                                    \
+    }                                                                   \
+  }                                                                     \
+                                                                        \
+                                                                        \
+  void set_elt_##type(__VEC_TYPE(type) *a, size_t index, type val) {    \
+    while (size(a->vector) <= index) {                                  \
+      push(a->vector, a->default_val);                                  \
+    }                                                                   \
+    *get(a->vector, index) = val;                                       \
+  }                                                                     \
+                                                                        \
+  void free_vec_##type(__VEC_TYPE(type) *a) {                           \
+    cleanup(a->vector);                                                 \
+  }                                                                     \
+
+
 /**
  * Dynamic array with an initial value for otherwise uninitialized elements.
  *
@@ -141,5 +174,22 @@ size_t _size_of_##type(__DA_TYPE(suffix) *a) {                                  
 #define _size_of(a)                                                                                                                 \
   _Generic((a),                                                                                                                     \
            __DA_TYPE(long)* : _size_of_long)((a))
+
+
+#define init_vec(a, initial_size, default_val)                                                                              \
+  _Generic((a),                                                                                                                     \
+           __VEC_TYPE(long)* : init_vec_long)((a), (initial_size), (default_val))
+
+#define set_vec_elt(a, index, value)                                                                                       \
+  _Generic((a),                                                                                                                     \
+           __VEC_TYPE(long)* : set_vec_elt_long)((a), (index), (value))
+
+#define free_vec(a)                                                                                                         \
+  _Generic((a),                                                                                                                     \
+           __VEC_TYPE(long)* : free_vec_long)((a))
+
+#define _size_of(a)                                                                                                                 \
+  _Generic((a),                                                                                                                     \
+           __VEC_TYPE(long)* : _size_of_long)((a))
 
 #endif

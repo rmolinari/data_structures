@@ -22,6 +22,8 @@
 DEFINE_DYNAMIC_ARRAY(long);
 typedef DynamicArray_long DynamicArray;
 
+DEFINE_VEC_WITH_INIT(long);
+
 // The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro should be fine.
 #define mShared rb_define_module("Shared")
 #define eSharedDataError rb_const_get(mShared, rb_intern_const("DataError"))
