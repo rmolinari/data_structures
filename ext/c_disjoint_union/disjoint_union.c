@@ -56,9 +56,6 @@ typedef struct du_data {
 
 /*
  * Create one (on the heap).
- *
- * The dynamic arrays are initialized with a size of 100 because I didn't have a better idea. This will end up getting called from
- * the Ruby #allocate method, which happens before #initialize. Thus we don't know the calling code's desired initial size.
  */
 #define INITIAL_SIZE 100
 static disjoint_union_data *create_disjoint_union() {
@@ -67,8 +64,8 @@ static disjoint_union_data *create_disjoint_union() {
   // Allocate the structures
   VecArray *forest = (VecArray *)malloc(sizeof(VecArray));
   VecArray *rank = (VecArray *)malloc(sizeof(VecArray));
-  init_vec(forest, INITIAL_SIZE, -1);
-  init_vec(rank,   INITIAL_SIZE, 0);
+  init_vec(forest, -1);
+  init_vec(rank,   0);
 
   disjoint_union->forest = forest;
   disjoint_union->rank = rank;
@@ -116,7 +113,14 @@ static int present_p(disjoint_union_data *disjoint_union, size_t element) {
  */
 static void assert_membership(disjoint_union_data *disjoint_union, size_t element) {
   if (!present_p(disjoint_union, element)) {
-    rb_raise(eSharedDataError, "Value %zu is not part of the universe", element);
+    // rb_raise(eSharedDataError, "Value %zu is not part of the universe", element);
+    rb_raise(
+             eSharedDataError,
+             "Value %zu is not part of the universe, size = %zu, forest_val = %lu",
+             element,
+             size(disjoint_union->forest->vector),
+             *get(disjoint_union->forest->vector, element)
+             );
   }
 }
 
@@ -148,7 +152,7 @@ static size_t find(disjoint_union_data *disjoint_union, size_t element) {
   size_t x = element;
   while (*get(d, *get(d, x)) != *get(d, x)) {
     long v = *get(d, *get(d, x));
-    *get(d, x) = v;
+    vec_set(d, x, v);
     x = v;
   }
   return *get(d, x);
@@ -167,12 +171,12 @@ static void link_roots(disjoint_union_data *disjoint_union, size_t elt1, size_t 
   vec(long) *forest = disjoint_union->forest->vector;
 
   if (rank[elt1] > rank[elt2]) {
-    *get(forest, elt2) = elt1;
+    vec_set(forest, elt2, elt1);
   } else if (rank[elt1] == rank[elt2]) {
-    *get(forest, elt2) = elt1;
+    vec_set(forest, elt2, elt1);
     (*get(rank, elt1))++;
   } else {
-    *get(forest, elt1) = elt2;
+    vec_set(forest, elt1, elt2);
   }
 
   disjoint_union->subset_count--;
@@ -283,9 +287,16 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
     size_t initial_size = checked_nonneg_fixnum(argv[0]);
     disjoint_union_data *disjoint_union = unwrapped(self);
 
+    vec(long) *forest_vec = disjoint_union->forest->vector;
+    vec(long) *rank_vec = disjoint_union->rank->vector;
+    resize(forest_vec, initial_size);
+    resize(rank_vec, initial_size);
+
     for (size_t i = 0; i < initial_size; i++) {
-      add_new_element(disjoint_union, i);
+      vec_set(forest_vec, i, i);
+      vec_set(rank_vec, i, 0);
     }
+    disjoint_union->subset_count = initial_size;
   }
   return self;
 }

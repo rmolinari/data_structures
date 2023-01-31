@@ -33,7 +33,7 @@ randomizer = Randomizer.new(size)
 
 Benchmark.bm(10) do |x|
   x.report("ruby init") { disjoint_union = DisjointUnion.new(size) }
-  x.report("C intr") { c_disjoint_union = CDisjointUnion.new(size) }
+  x.report("C init") { c_disjoint_union = CDisjointUnion.new(size) }
 end
 
 Benchmark.bm(10) do |x|

@@ -6,6 +6,7 @@
 // Try it with the amazing CC library.
 #define __VEC_TYPE(type) VecArray_##type
 
+#define vec_set(vec, index, val) (*get(vec, index) = val)
 #define DEFINE_VEC_WITH_INIT(type)                                      \
                                                                         \
   typedef struct {                                                      \
@@ -13,21 +14,21 @@
     type default_val;                                                   \
   } __VEC_TYPE(type);                                                   \
                                                                         \
-  void init_vec_##type(__VEC_TYPE(type) *a, size_t initial_size, type default_val) { \
+  void init_vec_##type(__VEC_TYPE(type) *a, type default_val) {         \
     a->vector = malloc(sizeof(vec(type)));                              \
     init(a->vector);                                                    \
     a->default_val = default_val;                                       \
-    for (size_t i = 0; i < initial_size; i++) {                         \
-      push(a->vector, default_val);                                     \
-    }                                                                   \
   }                                                                     \
                                                                         \
-                                                                        \
   void set_vec_elt_##type(__VEC_TYPE(type) *a, size_t index, type val) { \
-    while (size(a->vector) <= index) {                                  \
-      push(a->vector, a->default_val);                                  \
+    size_t sz = size(a->vector);                                        \
+    if (sz <= index) {                                                  \
+      resize(a->vector, index + 1);                                     \
+      for (size_t i = sz + 1; i <= index; i++) {                        \
+        vec_set(a->vector, i, a->default_val);                          \
+      }                                                                 \
     }                                                                   \
-    *get(a->vector, index) = val;                                       \
+    vec_set(a->vector, index, val);                                     \
   }                                                                     \
                                                                         \
   void free_vec_##type(__VEC_TYPE(type) *a) {                           \
@@ -177,9 +178,9 @@ size_t _size_of_##type(__DA_TYPE(suffix) *a) {                                  
 /*            __DA_TYPE(long)* : _size_of_long)((a)) */
 
 
-#define init_vec(a, initial_size, default_val)                                                                              \
+#define init_vec(a, default_val)                                                                              \
   _Generic((a),                                                                                                                     \
-           __VEC_TYPE(long)* : init_vec_long)((a), (initial_size), (default_val))
+           __VEC_TYPE(long)* : init_vec_long)((a), (default_val))
 
 #define set_vec_elt(a, index, value)                                                                                       \
   _Generic((a),                                                                                                                     \
