@@ -14,7 +14,7 @@
  * is best-practice C but I'm interested to see how it works.
  *
  * Findings
- * - there will be a problem with duplicated code if two files each use DYNAMIC_ARRAY_OF(the_same_type). I'm sure the linker will
+ * - there will be a problem with duplicated code if two files each use DYNAMIC_ARRAY(the_same_type). I'm sure the linker will
  *   complain.
  *   - note that we can't use the preprocessor to avoid defining everything multiple times because we can't nest #defines.
  *   - maybe it would be simpler to use a different preprocessor to generate sourcefiles from a template and do things via the
@@ -23,20 +23,11 @@
  */
 
 /*
- * The name of the type being defined.
+ * As for DEFINE_DYNAMIC_ARRAY2 (below) but using the typename itself as the suffix. This will work only if the type name is purely
+ * A-Za-z0-9_. For other types the calling code will need to supply a suffix explicitly and call DEFINE_DYNAMIC_ARRAY2.
  *
- * For example, when defining a dynamic array storing longs, this will be DynamicArray_long.
- *
- * See below for the need for different handling for, say, __DA_TYPE(unsigned long).
  */
-#define __DA_TYPE(suffix) DynamicArray_##suffix
-
-/*
- * As for DEFINE_DYNAMIC_ARRAY_OF2 (below) but using the typename itself as the suffix. This will work only if the type name is
- * purely alphanumeric + underscores. FOr other types the calling code will need to supply a suffix explicitly and call
- * DEFINE_DYNAMIC_ARRAY_OF_2.
- */
-#define DEFINE_DYNAMIC_ARRAY_OF(type) DEFINE_DYNAMIC_ARRAY_OF2(type, type)
+#define DEFINE_DYNAMIC_ARRAY(type) DEFINE_DYNAMIC_ARRAY2(type, type)
 
 /*
  * Code for a dynamic array storing elements of the given type using the suffix in the typename and function names.
@@ -48,18 +39,10 @@
  *
  * Reference: https://stackoverflow.com/questions/1510869/does-the-c-preprocessor-strip-comments-or-expand-macros-first
  *
- * TODO:
- * - handle types with spaces, like "unsigned long", or with non-alphanumerics, like "void *".
- *   - presuambly we need a second argument, suffix, for use in identifiers. Client code can provide, say, "ulong" and "void_ptr"
- *   - for standard types we could use _Generic along the lines of Alex Grey's answer here:
- *     https://stackoverflow.com/questions/9804371/syntax-and-sample-usage-of-generic-in-c11
- *     - Then, if this is DEFINE_DYNAMIC_ARRAY_OF2(type, suffix), we could define a macro TYPE_SUFFIX(type) using _Generic and
- *       then do
- *
- *         #define DEFINE_DYNAMIC_ARRAY_OF(type) DEFINE_DYNAMIC_ARRAY_OF2(type, TYPE_SUFFIX(type))
- *     - NO! _Generic(...) is resolved at compile time, not during preprocessing, and so its output can't be used in pasting.
+ * See the _Generic macros below for what suffixes can be stripped off in client code by the compiler.
  */
-#define DEFINE_DYNAMIC_ARRAY_OF2(type, suffix)                                                                                      \
+#define DEFINE_DYNAMIC_ARRAY2(type, suffix)                                                                                         \
+                                                                                                                                    \
 typedef struct {                                                                                                                    \
   type *array;                                                                                                                      \
   size_t size;                                                                                                                      \
@@ -67,7 +50,7 @@ typedef struct {                                                                
 } __DA_TYPE(suffix);                                                                                                                \
                                                                                                                                     \
 /*
- * Initialize an already-allocated DynamicArray struct with the given initial size and with all elements set to the default
+ * Initialize an already-allocated DynamicArray struct with the given initial size and with all elements set to the given default
  * value. The default value is stored and used to initialize new array sections if and when the array needs to be expanded.
  */                                                                                                                                 \
 void initDynamicArray_##type(__DA_TYPE(suffix) *a, size_t initial_size, type default_val) {                                         \
@@ -83,7 +66,7 @@ void initDynamicArray_##type(__DA_TYPE(suffix) *a, size_t initial_size, type def
 /*
  * Assign +value+ to the the +index+-th element of the array, increasing the size of the array if necessary.
  *
- * If expansion is required, each new element is first initialized to the default value.
+ * If expansion is required, each new element is initialized to the default value before the +index+-th element is set.
  */                                                                                                                                 \
 void assignInDynamicArray_##type(__DA_TYPE(suffix) *a, size_t index, type value) {                                                  \
   if (a->size <= index) {                                                                                                           \
@@ -129,12 +112,19 @@ size_t _size_of_##type(__DA_TYPE(suffix) *a) {                                  
 }
 
 /*
+ * The name of the type being defined for suffix.
+ *
+ * For example, when defining a dynamic array storing longs, this will be DynamicArray_long.
+ */
+#define __DA_TYPE(suffix) DynamicArray_##suffix
+
+/*
  * Some helpers to strip off the _<type> suffixes in client code where possible. This uses the _Generic feature from C11.
  *
  * For example, when a DynamicArray_long is defined, we can drop the "_long" when calling the functions (though not from the struct
  * name).
  *
- * Client code using a type we don't know about will need to #define these itself.
+ * Client code using a type we don't know about will need to #define the aliases itself.
  */
 #define initDynamicArray(a, initial_size, default_val)                                                                              \
   _Generic((a),                                                                                                                     \

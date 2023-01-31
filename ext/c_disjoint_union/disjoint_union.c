@@ -19,7 +19,7 @@
 #include "../dynamic_array.h"
 
 // Try the "cheapo generic" approach
-DEFINE_DYNAMIC_ARRAY_OF(long);
+DEFINE_DYNAMIC_ARRAY(long);
 typedef DynamicArray_long DynamicArray;
 
 // The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro should be fine.
