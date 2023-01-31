@@ -14,15 +14,16 @@
   } __VEC_TYPE(type);                                                   \
                                                                         \
   void init_vec_##type(__VEC_TYPE(type) *a, size_t initial_size, type default_val) { \
+    a->vector = malloc(sizeof(vec(type)));                              \
     init(a->vector);                                                    \
     a->default_val = default_val;                                       \
     for (size_t i = 0; i < initial_size; i++) {                         \
-      push(a->vector, initial_size);                                    \
+      push(a->vector, default_val);                                     \
     }                                                                   \
   }                                                                     \
                                                                         \
                                                                         \
-  void set_elt_##type(__VEC_TYPE(type) *a, size_t index, type val) {    \
+  void set_vec_elt_##type(__VEC_TYPE(type) *a, size_t index, type val) { \
     while (size(a->vector) <= index) {                                  \
       push(a->vector, a->default_val);                                  \
     }                                                                   \
@@ -171,9 +172,9 @@ size_t _size_of_##type(__DA_TYPE(suffix) *a) {                                  
   _Generic((a),                                                                                                                     \
            __DA_TYPE(long)* : freeDynamicArray_long)((a))
 
-#define _size_of(a)                                                                                                                 \
-  _Generic((a),                                                                                                                     \
-           __DA_TYPE(long)* : _size_of_long)((a))
+/* #define _size_of(a)                                                                                                                 \ */
+/*   _Generic((a),                                                                                                                     \ */
+/*            __DA_TYPE(long)* : _size_of_long)((a)) */
 
 
 #define init_vec(a, initial_size, default_val)                                                                              \

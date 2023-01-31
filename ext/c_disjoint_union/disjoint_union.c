@@ -19,10 +19,11 @@
 #include "../dynamic_array.h"
 
 // Try the "cheapo generic" approach
-DEFINE_DYNAMIC_ARRAY(long);
-typedef DynamicArray_long DynamicArray;
+/* DEFINE_DYNAMIC_ARRAY(long); */
+/* typedef DynamicArray_long DynamicArray; */
 
 DEFINE_VEC_WITH_INIT(long);
+typedef VecArray_long VecArray;
 
 // The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro should be fine.
 #define mShared rb_define_module("Shared")
@@ -48,8 +49,8 @@ DEFINE_VEC_WITH_INIT(long);
  *   - it isn't needed internally but may be useful to client code.
  */
 typedef struct du_data {
-  DynamicArray *forest; // the forest that describes the unified subsets
-  DynamicArray *rank;   // the "ranks" of the elements, used when uniting subsets
+  VecArray *forest; // the forest that describes the unified subsets
+  VecArray *rank;   // the "ranks" of the elements, used when uniting subsets
   size_t subset_count;
 } disjoint_union_data;
 
@@ -64,10 +65,10 @@ static disjoint_union_data *create_disjoint_union() {
   disjoint_union_data *disjoint_union = (disjoint_union_data *)malloc(sizeof(disjoint_union_data));
 
   // Allocate the structures
-  DynamicArray *forest = (DynamicArray *)malloc(sizeof(DynamicArray));
-  DynamicArray *rank = (DynamicArray *)malloc(sizeof(DynamicArray));
-  initDynamicArray(forest, INITIAL_SIZE, -1);
-  initDynamicArray(rank,   INITIAL_SIZE, 0);
+  VecArray *forest = (VecArray *)malloc(sizeof(VecArray));
+  VecArray *rank = (VecArray *)malloc(sizeof(VecArray));
+  init_vec(forest, INITIAL_SIZE, -1);
+  init_vec(rank,   INITIAL_SIZE, 0);
 
   disjoint_union->forest = forest;
   disjoint_union->rank = rank;
@@ -84,8 +85,8 @@ static disjoint_union_data *create_disjoint_union() {
 static void disjoint_union_free(void *ptr) {
   if (ptr) {
     disjoint_union_data *disjoint_union = ptr;
-    freeDynamicArray(disjoint_union->forest);
-    freeDynamicArray(disjoint_union->rank);
+    free_vec(disjoint_union->forest);
+    free_vec(disjoint_union->rank);
 
     free(disjoint_union->forest);
     disjoint_union->forest = NULL;
@@ -105,8 +106,9 @@ static void disjoint_union_free(void *ptr) {
  * Is the given element already a member of the universe?
  */
 static int present_p(disjoint_union_data *disjoint_union, size_t element) {
-  DynamicArray *forest = (DynamicArray *)disjoint_union->forest;
-  return (forest->size > element && (forest->array[element] != forest->default_val));
+  VecArray *forest = (VecArray *)disjoint_union->forest;
+  // printf("present_p: forest size = %zu", size(forest->vector));
+  return (size(forest->vector) > element && (*get(forest->vector, element) != forest->default_val));
 }
 
 /*
@@ -128,8 +130,8 @@ static void add_new_element(disjoint_union_data *disjoint_union, size_t element)
     rb_raise(eSharedDataError, "Element %zu already present in the universe", element);
   }
 
-  assignInDynamicArray(disjoint_union->forest, element, (long)element);
-  assignInDynamicArray(disjoint_union->rank, element, 0l);
+  set_vec_elt(disjoint_union->forest, element, (long)element);
+  set_vec_elt(disjoint_union->rank, element, 0l);
   disjoint_union->subset_count++;
 }
 
@@ -142,12 +144,14 @@ static size_t find(disjoint_union_data *disjoint_union, size_t element) {
   assert_membership(disjoint_union, element);
 
   // We implement find with "halving" to shrink the length of paths to the root. See Tarjan and van Leeuwin p 252.
-  long *d = disjoint_union->forest->array; // the actual forest data
+  vec(long) *d = disjoint_union->forest->vector; // the actual forest data
   size_t x = element;
-  while (d[d[x]] != d[x]) {
-    x = d[x] = d[d[x]];
+  while (*get(d, *get(d, x)) != *get(d, x)) {
+    long v = *get(d, *get(d, x));
+    *get(d, x) = v;
+    x = v;
   }
-  return d[x];
+  return *get(d, x);
 }
 
 /*
@@ -159,16 +163,16 @@ static size_t find(disjoint_union_data *disjoint_union, size_t element) {
  * though we don't check that here.
  */
 static void link_roots(disjoint_union_data *disjoint_union, size_t elt1, size_t elt2) {
-  long *rank = disjoint_union->rank->array;
-  long *forest = disjoint_union->forest->array;
+  vec(long) *rank = disjoint_union->rank->vector;
+  vec(long) *forest = disjoint_union->forest->vector;
 
   if (rank[elt1] > rank[elt2]) {
-    forest[elt2] = elt1;
+    *get(forest, elt2) = elt1;
   } else if (rank[elt1] == rank[elt2]) {
-    forest[elt2] = elt1;
-    rank[elt1]++;
+    *get(forest, elt2) = elt1;
+    (*get(rank, elt1))++;
   } else {
-    forest[elt1] = elt2;
+    *get(forest, elt1) = elt2;
   }
 
   disjoint_union->subset_count--;
@@ -203,13 +207,16 @@ static void unite(disjoint_union_data *disjoint_union, size_t elt1, size_t elt2)
 
 // How much memory (roughly) does a disjoint_union_data instance consume? I guess the Ruby runtime can use this information when
 // deciding how agressive to be during garbage collection and such.
+//
+// TODO: work out what to do with the underlying CC vec
 static size_t disjoint_union_memsize(const void *ptr) {
-  if (ptr) {
-    const disjoint_union_data *du = ptr;
-    return sizeof(disjoint_union_data) + _size_of(du->forest) + _size_of(du->rank);
-  } else {
-    return 0;
-  }
+  return 0;
+  /* if (ptr) { */
+  /*   const disjoint_union_data *du = ptr; */
+  /*   return sizeof(disjoint_union_data) + _size_of(du->forest) + _size_of(du->rank); */
+  /* } else { */
+  /*   return 0; */
+  /* } */
 }
 
 /*
