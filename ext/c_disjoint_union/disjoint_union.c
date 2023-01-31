@@ -18,12 +18,37 @@
 #include "ruby.h"
 #include "../dynamic_array.h"
 
-// Try the "cheapo generic" approach
-/* DEFINE_DYNAMIC_ARRAY(long); */
-/* typedef DynamicArray_long DynamicArray; */
+// Try storing the rank and forest information together for data locality.
+typedef struct data_pair {
+  long parent;
+  unsigned long rank;
+} data_pair;
 
+static data_pair make_data_pair(long parent, unsigned long rank) {
+  data_pair pair = { .parent = parent, .rank = rank };
+  return pair;
+}
+
+#define DEFAULT_PARENT -1
+#define DEFAULT_RANK 0
+static data_pair default_pair = {
+  .parent = DEFAULT_PARENT,
+  .rank = DEFAULT_RANK
+};
+
+DEFINE_VEC_WITH_INIT(data_pair);
+typedef VecArray_data_pair VecArray;
+
+#define parent(disjoint_union_ptr, idx) (get(disjoint_union->pairs->vector, idx)->parent)
+#define rank(disjoint_union_ptr, idx) (get(disjoint_union->pairs->vector, idx)->rank)
+
+#define set_parent(disjoint_union_ptr, idx, val) (get(disjoint_union->pairs->vector, idx)->parent = val)
+#define set_rank(disjoint_union_ptr, idx, val) (get(disjoint_union->pairs->vector, idx)->rank = val)
+
+// TODO: eliminate the need for this. Unfortunately the _Generic macros in dynamic_array.h need to see all the types in the _Generic
+// list. Convenient Contains has a way of avoiding this, but not sure if we can use it ourselves.
 DEFINE_VEC_WITH_INIT(long);
-typedef VecArray_long VecArray;
+/* typedef VecArray_long VecArray; */
 
 // The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro should be fine.
 #define mShared rb_define_module("Shared")
@@ -49,8 +74,7 @@ typedef VecArray_long VecArray;
  *   - it isn't needed internally but may be useful to client code.
  */
 typedef struct du_data {
-  VecArray *forest; // the forest that describes the unified subsets
-  VecArray *rank;   // the "ranks" of the elements, used when uniting subsets
+  VecArray *pairs;
   size_t subset_count;
 } disjoint_union_data;
 
@@ -62,13 +86,10 @@ static disjoint_union_data *create_disjoint_union() {
   disjoint_union_data *disjoint_union = (disjoint_union_data *)malloc(sizeof(disjoint_union_data));
 
   // Allocate the structures
-  VecArray *forest = (VecArray *)malloc(sizeof(VecArray));
-  VecArray *rank = (VecArray *)malloc(sizeof(VecArray));
-  init_vec(forest, -1);
-  init_vec(rank,   0);
+  VecArray *pairs = (VecArray *)malloc(sizeof(VecArray));
+  init_vec(pairs, default_pair);
 
-  disjoint_union->forest = forest;
-  disjoint_union->rank = rank;
+  disjoint_union->pairs = pairs;
   disjoint_union->subset_count = 0;
 
   return disjoint_union;
@@ -82,14 +103,10 @@ static disjoint_union_data *create_disjoint_union() {
 static void disjoint_union_free(void *ptr) {
   if (ptr) {
     disjoint_union_data *disjoint_union = ptr;
-    free_vec(disjoint_union->forest);
-    free_vec(disjoint_union->rank);
+    free_vec(disjoint_union->pairs);
 
-    free(disjoint_union->forest);
-    disjoint_union->forest = NULL;
-
-    free(disjoint_union->rank);
-    disjoint_union->rank = NULL;
+    free(disjoint_union->pairs);
+    disjoint_union->pairs = NULL;
 
     xfree(disjoint_union);
   }
@@ -103,9 +120,9 @@ static void disjoint_union_free(void *ptr) {
  * Is the given element already a member of the universe?
  */
 static int present_p(disjoint_union_data *disjoint_union, size_t element) {
-  VecArray *forest = (VecArray *)disjoint_union->forest;
+  // VecArray *forest = (VecArray *)disjoint_union->forest;
   // printf("present_p: forest size = %zu", size(forest->vector));
-  return (size(forest->vector) > element && (*get(forest->vector, element) != forest->default_val));
+  return (size(disjoint_union->pairs->vector) > element && (parent(disjoint_union, element) != DEFAULT_PARENT));
 }
 
 /*
@@ -118,8 +135,8 @@ static void assert_membership(disjoint_union_data *disjoint_union, size_t elemen
              eSharedDataError,
              "Value %zu is not part of the universe, size = %zu, forest_val = %lu",
              element,
-             size(disjoint_union->forest->vector),
-             *get(disjoint_union->forest->vector, element)
+             size(disjoint_union->pairs->vector),
+             get(disjoint_union->pairs->vector, element)->parent
              );
   }
 }
@@ -134,8 +151,7 @@ static void add_new_element(disjoint_union_data *disjoint_union, size_t element)
     rb_raise(eSharedDataError, "Element %zu already present in the universe", element);
   }
 
-  set_vec_elt(disjoint_union->forest, element, (long)element);
-  set_vec_elt(disjoint_union->rank, element, 0l);
+  set_vec_elt(disjoint_union->pairs, element, make_data_pair((long)element, 0l) );
   disjoint_union->subset_count++;
 }
 
@@ -148,14 +164,14 @@ static size_t find(disjoint_union_data *disjoint_union, size_t element) {
   assert_membership(disjoint_union, element);
 
   // We implement find with "halving" to shrink the length of paths to the root. See Tarjan and van Leeuwin p 252.
-  vec(long) *d = disjoint_union->forest->vector; // the actual forest data
+  // vec(long) *d = disjoint_union->forest->vector; // the actual forest data
   size_t x = element;
-  while (*get(d, *get(d, x)) != *get(d, x)) {
-    long v = *get(d, *get(d, x));
-    vec_set(d, x, v);
+  while (parent(disjoint_union, parent(disjoint_union, x)) != parent(disjoint_union, x)) {
+    long v = parent(disjoint_union, parent(disjoint_union, x));
+    set_parent(disjoint_union, x, v);
     x = v;
   }
-  return *get(d, x);
+  return parent(disjoint_union, x);
 }
 
 /*
@@ -167,16 +183,16 @@ static size_t find(disjoint_union_data *disjoint_union, size_t element) {
  * though we don't check that here.
  */
 static void link_roots(disjoint_union_data *disjoint_union, size_t elt1, size_t elt2) {
-  vec(long) *rank = disjoint_union->rank->vector;
-  vec(long) *forest = disjoint_union->forest->vector;
+  /* vec(long) *rank = disjoint_union->rank->vector; */
+  /* vec(long) *forest = disjoint_union->forest->vector; */
 
-  if (rank[elt1] > rank[elt2]) {
-    vec_set(forest, elt2, elt1);
-  } else if (rank[elt1] == rank[elt2]) {
-    vec_set(forest, elt2, elt1);
-    (*get(rank, elt1))++;
+  if (rank(disjoint_union, elt1) > rank(disjoint_union, elt2)) {
+    set_parent(disjoint_union, elt2, elt1);
+  } else if (rank(disjoint_union, elt1) == rank(disjoint_union, elt2)) {
+    set_parent(disjoint_union, elt2, elt1);
+    rank(disjoint_union, elt1)++;
   } else {
-    vec_set(forest, elt1, elt2);
+    set_parent(disjoint_union, elt1, elt2);
   }
 
   disjoint_union->subset_count--;
@@ -287,14 +303,11 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
     size_t initial_size = checked_nonneg_fixnum(argv[0]);
     disjoint_union_data *disjoint_union = unwrapped(self);
 
-    vec(long) *forest_vec = disjoint_union->forest->vector;
-    vec(long) *rank_vec = disjoint_union->rank->vector;
-    resize(forest_vec, initial_size);
-    resize(rank_vec, initial_size);
+    vec(data_pair) *pair_vec = disjoint_union->pairs->vector;
+    resize(pair_vec, initial_size);
 
     for (size_t i = 0; i < initial_size; i++) {
-      vec_set(forest_vec, i, i);
-      vec_set(rank_vec, i, 0);
+      vec_set(pair_vec, i, make_data_pair(i, 0));
     }
     disjoint_union->subset_count = initial_size;
   }

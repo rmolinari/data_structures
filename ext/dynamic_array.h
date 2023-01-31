@@ -1,4 +1,4 @@
-#ifndef DYNAMIC_ARRAY_H
+ #ifndef DYNAMIC_ARRAY_H
 #define DYNAMIC_ARRAY_H
 
 #include "cc.h"
@@ -178,20 +178,24 @@ size_t _size_of_##type(__DA_TYPE(suffix) *a) {                                  
 /*            __DA_TYPE(long)* : _size_of_long)((a)) */
 
 
-#define init_vec(a, default_val)                                                                              \
-  _Generic((a),                                                                                                                     \
-           __VEC_TYPE(long)* : init_vec_long)((a), (default_val))
+#define init_vec(a, default_val)                                        \
+  _Generic((a),                                                         \
+           __VEC_TYPE(long)* : init_vec_long,                           \
+           __VEC_TYPE(data_pair)* : init_vec_data_pair)((a), (default_val))
 
-#define set_vec_elt(a, index, value)                                                                                       \
-  _Generic((a),                                                                                                                     \
-           __VEC_TYPE(long)* : set_vec_elt_long)((a), (index), (value))
+#define set_vec_elt(a, index, value)                                    \
+  _Generic((a),                                                         \
+           __VEC_TYPE(long)* : set_vec_elt_long,                        \
+           __VEC_TYPE(data_pair)* : set_vec_elt_data_pair)((a), (index), (value))
 
-#define free_vec(a)                                                                                                         \
-  _Generic((a),                                                                                                                     \
-           __VEC_TYPE(long)* : free_vec_long)((a))
+#define free_vec(a)                                                     \
+  _Generic((a),                                                         \
+           __VEC_TYPE(long)* : free_vec_long,                           \
+           __VEC_TYPE(data_pair)* : free_vec_data_pair)((a))
 
-#define _size_of(a)                                                                                                                 \
-  _Generic((a),                                                                                                                     \
-           __VEC_TYPE(long)* : _size_of_long)((a))
+#define _size_of(a)                                                     \
+  _Generic((a),                                                         \
+           __VEC_TYPE(long)* : _size_of_long,                           \
+           __VEC_TYPE(data_pair)* : _size_of_data_pair)((a))
 
 #endif
