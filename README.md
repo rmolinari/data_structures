@@ -42,9 +42,6 @@ It also provides
 For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL1984]](#references) by Tarjan and
 van Leeuwen.
 
-There is an experimental implementation as a C extension in c_disjoint_union.c. The Ruby class for this implementation is
-`CDisjointUnion`. Benchmarks indicate that a long sequence of `unite` calls is about twice as fast.
-
 ## Heap
 
 This is a standard binary heap with an `update` method, suitable for use as a priority queue. There are several supported
@@ -84,14 +81,14 @@ pointing north.
 
 There is no `smallest_x_in_3_sided(x0, x1, y0)`. Just use `smallest_x_in_ne(x0, y0)`.
 
+(These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
+[[McC85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.)
+
 The single-point queries run in O(log n) time, where n is the size of P, while `enumerate_3_sided` runs in O(m + log n), where m is
 the number of points actually enumerated.
 
 The implementation is in `MaxPrioritySearchTree` (MaxPST for short), so called because internally the structure is, among other
 things, a max-heap on the y-coordinates.
-
-These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
-[[McC85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.
 
 We also provide a `MinPrioritySearchTree`, which answers analagous queries in the southward-infinite quadrants and 3-sided
 regions.
