@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- Disjoint Union
+  - C extension: use Convenient Containers rather than my janky Dynamic Array attempt.
+
 ## [0.4.3] 2023-01-27
 
 - Fix bad directive in Rakefile for DisjointUnion C extension

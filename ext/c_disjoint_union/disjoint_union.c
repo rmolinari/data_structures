@@ -320,7 +320,7 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
 /*
  * Add a new subset to the universe containing the element +new_v+.
  *
- * @param the new element, starting in its own singleton subset
+ * @param arg the new element, starting in its own singleton subset
  *   - it must be a non-negative integer, not already part of the universe of elements.
  */
 static VALUE disjoint_union_make_set(VALUE self, VALUE arg) {

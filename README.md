@@ -108,17 +108,17 @@ both a MaxPST and MinPST. But the presentiation is hard to follow in places and 
 
 ## Segment Tree
 
-Segment trees store information related to subintervals of a certain array. For example, they can be used to find the sum of the
-elements in an arbitrary subinterval A[i..j] of an array A[0..n] in O(log n) time. Each node in the tree corresponds to a subarray
-of A in such a way that the values we store in the nodes can be combined efficiently to determine the desired result for arbitrary
-subarrays.
+A segment tree stores information related to subintervals of a certain array. For example, a segment tree can be used to find the
+sum of the elements in an arbitrary subinterval A(i..j) of an array A(0..n) in O(log n) time. Each node in the tree corresponds to a
+subarray of A in such a way that the values we store in the nodes can be combined efficiently to determine the desired result for
+arbitrary subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-Generic code is provided in `SegmentTreeTemplate`. Concrete classes are written by providing a handful of simple lambdas and
-constants to the template class's initializer. Figuring out the details requires some knowledge of the internal mechanisms of a
-segment tree, for which the link at cp-algorithms.com is very helpful. See the definitions of the concrete classes,
-`MaxValSegmentTree` and `IndexOfMaxValSegmentTree`, for examples.
+Generic code is provided in `SegmentTreeTemplate`. Concrete classes provide a handful of simple lambdas and constants to the
+template class's initializer. Figuring out the details requires some knowledge of the internal mechanisms of a segment tree, for
+which the link at cp-algorithms.com is very helpful. See the definitions of the concrete classes `MaxValSegmentTree` and
+`IndexOfMaxValSegmentTree` for examples.
 
 ## Algorithms
 
@@ -131,7 +131,16 @@ The Algorithms submodule contains some algorithms using the data structures.
     [left, right, bottom, top].
   - The algorithm is due to [[DMNS2013]](#references).
 
+# C Extensions
+
+As another learning process I have implemented Disjoint Union as a C extension. The relevant class is `CDisjointUnion`, which can be
+required like any of the other classes. The UI is the same as for the pure Ruby `DisjointUnion`. A simple benchmark suggests that a
+long sequence of `unite` operations is about 3 times as fast with the C version.
+
+The implementation uses the remarkable Convenient Containers library from Jackson Allan.[[Allan]](#references).
+
 # References
+- [Allan] Allan, J., _CC: Convenient Containers_, https://github.com/JacksonAllan/CC, retrieved 2023-02-01.
 - [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
 - [EEK2017] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI 10.1007/s00224-017-9760-2.
 - [McC1985] McCreight, E. M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985.
