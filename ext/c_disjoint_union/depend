@@ -1,1 +1,1 @@
-disjoint_union.o: ../dynamic_array.h
+disjoint_union.o: ../cc.h

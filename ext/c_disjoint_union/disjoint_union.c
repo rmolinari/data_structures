@@ -16,80 +16,75 @@
  */
 
 #include "ruby.h"
-#include "../dynamic_array.h"
+#include "../cc.h" // Convenient Containers
 
-// Try storing the rank and forest information together for data locality.
+// The Shared::DataError exception type in the Ruby code.
+#define mShared rb_define_module("Shared")
+#define eSharedDataError rb_const_get(mShared, rb_intern_const("DataError"))
+
+/**
+ * Data type for the (parent, rank) pair, and some accessor helpers for the vec() container we are going to be using.
+ */
+
 typedef struct data_pair {
   long parent;
   unsigned long rank;
 } data_pair;
+
+#define DEFAULT_PARENT -1
+#define DEFAULT_RANK 0
+static data_pair default_pair = { .parent = DEFAULT_PARENT, .rank = DEFAULT_RANK };
 
 static data_pair make_data_pair(long parent, unsigned long rank) {
   data_pair pair = { .parent = parent, .rank = rank };
   return pair;
 }
 
-#define DEFAULT_PARENT -1
-#define DEFAULT_RANK 0
-static data_pair default_pair = {
-  .parent = DEFAULT_PARENT,
-  .rank = DEFAULT_RANK
-};
+/* The vector generic from Convenient Containers */
+typedef vec(data_pair) pair_vector;
 
-DEFINE_VEC_WITH_INIT(data_pair);
-typedef VecArray_data_pair VecArray;
+/* What we might think of as vector[index]. It is assignable. */
+#define lval(vector, index) (*get(vector, index))
 
-#define parent(disjoint_union_ptr, idx) (get(disjoint_union->pairs->vector, idx)->parent)
-#define rank(disjoint_union_ptr, idx) (get(disjoint_union->pairs->vector, idx)->rank)
-
-#define set_parent(disjoint_union_ptr, idx, val) (get(disjoint_union->pairs->vector, idx)->parent = val)
-#define set_rank(disjoint_union_ptr, idx, val) (get(disjoint_union->pairs->vector, idx)->rank = val)
-
-// TODO: eliminate the need for this. Unfortunately the _Generic macros in dynamic_array.h need to see all the types in the _Generic
-// list. Convenient Contains has a way of avoiding this, but not sure if we can use it ourselves.
-DEFINE_VEC_WITH_INIT(long);
-/* typedef VecArray_long VecArray; */
-
-// The Shared::DataError exception type in the Ruby code. We only need it when we detect a runtime error, so a macro should be fine.
-#define mShared rb_define_module("Shared")
-#define eSharedDataError rb_const_get(mShared, rb_intern_const("DataError"))
+#define parent(disjoint_union_ptr, idx) (get(disjoint_union->pairs, idx)->parent)
+#define rank(disjoint_union_ptr, idx) (get(disjoint_union->pairs, idx)->rank)
 
 /**
  * The C implementation of a Disjoint Union
  *
- * See Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
+ * See the paper for optimizations we use to get almost constant time for find() and unite().
+ *
+ * Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp 245–281.
  */
 
 /*
  * The Disjoint Union struct.
- * - forest: an array of longs giving, for each element, the element's parent.
- *   - An element e is the root of its tree just when forest[e] == e.
- *   - Two elements are in the same subset just when they are in the same tree in the forest.
+ * - pairs: a vector (dynamic array) of pairs, the i-th of which contains
+ *   - the "parent" of element i in its membership tree
+ *     - An element e is the root of its tree just when it is its own parent
+ *     - Two elements are in the same subset just when they are in the same tree in the forest.
  *     - So the key idea is that we can check this by navigating via parents from each element to their roots. Clever optimizations
  *       keep the trees flat and so most nodes are close to their roots.
- * - rank: a array of longs giving the "rank" of each element.
- *   - This value is used to guide the "linking" of trees when subsets are being merged to keep the trees flat. See Tarjan & van
- *     Leeuwen
+ *   - the "rank" of element i
+ *     - this value is used to guide the "linking" of trees when subsets are being merged to keep the trees flat.
  * - subset_count: the number of (disjoint) subsets.
  *   - it isn't needed internally but may be useful to client code.
  */
 typedef struct du_data {
-  VecArray *pairs;
+  pair_vector *pairs; // The generic vector container from the amazing Convenient Containers library
   size_t subset_count;
 } disjoint_union_data;
 
 /*
  * Create one (on the heap).
  */
-#define INITIAL_SIZE 100
 static disjoint_union_data *create_disjoint_union() {
   disjoint_union_data *disjoint_union = (disjoint_union_data *)malloc(sizeof(disjoint_union_data));
 
   // Allocate the structures
-  VecArray *pairs = (VecArray *)malloc(sizeof(VecArray));
-  init_vec(pairs, default_pair);
+  disjoint_union->pairs = malloc(sizeof(pair_vector));
+  init(disjoint_union->pairs);
 
-  disjoint_union->pairs = pairs;
   disjoint_union->subset_count = 0;
 
   return disjoint_union;
@@ -103,11 +98,7 @@ static disjoint_union_data *create_disjoint_union() {
 static void disjoint_union_free(void *ptr) {
   if (ptr) {
     disjoint_union_data *disjoint_union = ptr;
-    free_vec(disjoint_union->pairs);
-
-    free(disjoint_union->pairs);
-    disjoint_union->pairs = NULL;
-
+    cleanup(disjoint_union->pairs);
     xfree(disjoint_union);
   }
 }
@@ -120,9 +111,7 @@ static void disjoint_union_free(void *ptr) {
  * Is the given element already a member of the universe?
  */
 static int present_p(disjoint_union_data *disjoint_union, size_t element) {
-  // VecArray *forest = (VecArray *)disjoint_union->forest;
-  // printf("present_p: forest size = %zu", size(forest->vector));
-  return (size(disjoint_union->pairs->vector) > element && (parent(disjoint_union, element) != DEFAULT_PARENT));
+  return (size(disjoint_union->pairs) > element && (parent(disjoint_union, element) != DEFAULT_PARENT));
 }
 
 /*
@@ -130,14 +119,14 @@ static int present_p(disjoint_union_data *disjoint_union, size_t element) {
  */
 static void assert_membership(disjoint_union_data *disjoint_union, size_t element) {
   if (!present_p(disjoint_union, element)) {
-    // rb_raise(eSharedDataError, "Value %zu is not part of the universe", element);
-    rb_raise(
-             eSharedDataError,
-             "Value %zu is not part of the universe, size = %zu, forest_val = %lu",
-             element,
-             size(disjoint_union->pairs->vector),
-             get(disjoint_union->pairs->vector, element)->parent
-             );
+    rb_raise(eSharedDataError, "Value %zu is not part of the universe", element);
+    /* rb_raise( */
+    /*          eSharedDataError, */
+    /*          "Value %zu is not part of the universe, size = %zu, forest_val = %lu", */
+    /*          element, */
+    /*          size(disjoint_union->pairs), */
+    /*          get(disjoint_union->pairs, element)->parent */
+    /*          ); */
   }
 }
 
@@ -151,48 +140,52 @@ static void add_new_element(disjoint_union_data *disjoint_union, size_t element)
     rb_raise(eSharedDataError, "Element %zu already present in the universe", element);
   }
 
-  set_vec_elt(disjoint_union->pairs, element, make_data_pair((long)element, 0l) );
+  // Expand the underlying vector if necessary
+  size_t sz = size(disjoint_union->pairs);
+  if (sz <= element) {
+    resize(disjoint_union->pairs, element + 1);
+    for (size_t i = sz + 1; i <= element; i++) {
+      lval(disjoint_union->pairs, i) = default_pair;
+    }
+  }
+
+  lval(disjoint_union->pairs, element) = make_data_pair(element, 0l);
   disjoint_union->subset_count++;
 }
 
 /*
- * Find the canonical representative of the given element. This is the root of the tree (in forest) containing element.
+ * Find the canonical representative of the given element. This is the root of the tree containing it.
  *
  * Two elements are in the same subset exactly when their canonical representatives are equal.
  */
 static size_t find(disjoint_union_data *disjoint_union, size_t element) {
   assert_membership(disjoint_union, element);
 
-  // We implement find with "halving" to shrink the length of paths to the root. See Tarjan and van Leeuwin p 252.
-  // vec(long) *d = disjoint_union->forest->vector; // the actual forest data
+  // We use "halving" to shrink the length of paths to the root. See Tarjan and van Leeuwin p 252.
   size_t x = element;
-  while (parent(disjoint_union, parent(disjoint_union, x)) != parent(disjoint_union, x)) {
-    long v = parent(disjoint_union, parent(disjoint_union, x));
-    set_parent(disjoint_union, x, v);
-    x = v;
+  long p, gp; // parent and grandparent
+  while (p = parent(disjoint_union, x), gp = parent(disjoint_union, p), p != gp) {
+    parent(disjoint_union, p) = gp;
+    x = gp;
   }
   return parent(disjoint_union, x);
 }
 
 /*
- * "Link"" the two given elements so that they are in the same subset now.
+ * "Link" the two given elements so that they are in the same subset now.
  *
  * In other words, merge the subtrees containing the two elements.
  *
- * Good performace (see Tarjan and van Leeuwin) assumes that elt1 and elt2 area are disinct and already the roots of their trees,
- * though we don't check that here.
+ * elt1 and elt2 area must be disinct and the roots of their trees, though we don't check that here.
  */
 static void link_roots(disjoint_union_data *disjoint_union, size_t elt1, size_t elt2) {
-  /* vec(long) *rank = disjoint_union->rank->vector; */
-  /* vec(long) *forest = disjoint_union->forest->vector; */
-
   if (rank(disjoint_union, elt1) > rank(disjoint_union, elt2)) {
-    set_parent(disjoint_union, elt2, elt1);
+    parent(disjoint_union, elt2) =  elt1;
   } else if (rank(disjoint_union, elt1) == rank(disjoint_union, elt2)) {
-    set_parent(disjoint_union, elt2, elt1);
+    parent(disjoint_union, elt2) = elt1;
     rank(disjoint_union, elt1)++;
   } else {
-    set_parent(disjoint_union, elt1, elt2);
+    parent(disjoint_union, elt1) = elt2;
   }
 
   disjoint_union->subset_count--;
@@ -227,16 +220,15 @@ static void unite(disjoint_union_data *disjoint_union, size_t elt1, size_t elt2)
 
 // How much memory (roughly) does a disjoint_union_data instance consume? I guess the Ruby runtime can use this information when
 // deciding how agressive to be during garbage collection and such.
-//
-// TODO: work out what to do with the underlying CC vec
 static size_t disjoint_union_memsize(const void *ptr) {
-  return 0;
-  /* if (ptr) { */
-  /*   const disjoint_union_data *du = ptr; */
-  /*   return sizeof(disjoint_union_data) + _size_of(du->forest) + _size_of(du->rank); */
-  /* } else { */
-  /*   return 0; */
-  /* } */
+  if (ptr) {
+    const disjoint_union_data *du = ptr;
+
+    // See https://github.com/JacksonAllan/CC/issues/3
+    return sizeof( cc_vec_hdr_ty ) + cap( du->pairs ) * CC_EL_SIZE( *(du->pairs) );
+  } else {
+    return 0;
+  }
 }
 
 /*
@@ -270,7 +262,7 @@ static unsigned long checked_nonneg_fixnum(VALUE val) {
 }
 
 /*
- * Unwrap a Rubyfied disjoint union to get the C struct inside.
+ * Unwrap a Ruby-side disjoint union object to get the C struct inside.
  */
 static disjoint_union_data *unwrapped(VALUE self) {
   disjoint_union_data *disjoint_union;
@@ -303,11 +295,11 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
     size_t initial_size = checked_nonneg_fixnum(argv[0]);
     disjoint_union_data *disjoint_union = unwrapped(self);
 
-    vec(data_pair) *pair_vec = disjoint_union->pairs->vector;
+    pair_vector *pair_vec = disjoint_union->pairs;
     resize(pair_vec, initial_size);
 
     for (size_t i = 0; i < initial_size; i++) {
-      vec_set(pair_vec, i, make_data_pair(i, 0));
+      lval(pair_vec, i) = make_data_pair(i, 0);
     }
     disjoint_union->subset_count = initial_size;
   }
@@ -317,7 +309,7 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
 /**
  * And now the simple wrappers around the Disjoint Union C functionality. In each case we
  *   - unwrap a 'VALUE self',
- *     - i.e., theCDisjointUnion instance that contains a disjoint_union_data struct;
+ *     - i.e., the CDisjointUnion instance on the Ruby side;
  *   - munge any other arguments into longs;
  *   - call the appropriate C function to act on the struct; and
  *   - return an appropriate VALUE for the Ruby runtime can use.

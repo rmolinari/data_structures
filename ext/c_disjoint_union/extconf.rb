@@ -3,8 +3,8 @@ require 'mkmf'
 abort 'missing malloc()' unless have_func "malloc"
 abort 'missing realloc()' unless have_func "realloc"
 
-if try_cflags('-O')
-  append_cflags('-O')
+if try_cflags('-O3')
+  append_cflags('-O3')
 end
 
 extension_name = "c_disjoint_union"
