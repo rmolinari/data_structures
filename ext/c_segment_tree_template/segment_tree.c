@@ -19,11 +19,8 @@
 #define combine(obj)               instance_var(obj, combine)
 #define seg_tree_size(obj)         instance_var(obj, size)
 
-#ifdef DEBUG
-#define debug(...) printf(__VA_ARGS__)
-#else
+//#define debug(...) printf(__VA_ARGS__)
 #define debug(...)
-#endif
 
 /* The vector generic from Convenient Containers */
 typedef vec(VALUE) value_vector;
@@ -56,6 +53,7 @@ typedef struct {
   value_vector *tree; // The 1-based synthetic binary tree in which the data structure lives
   VALUE single_cell_array_val_lambda;
   VALUE combine_lambda;
+  VALUE identity;
   size_t size;
 } segment_tree_data;
 
@@ -85,15 +83,10 @@ static segment_tree_data *create_segment_tree() {
  * This will end up getting triggered by the Ruby garbage collector. Ruby learns about it via the segment_tree_type struct below.
  */
 static void segment_tree_free(void *ptr) {
-  debug("Entering segment_tree_free\n");
   if (ptr) {
     segment_tree_data *segment_tree = ptr;
-    debug("About to free segment tree at %p\n", segment_tree);
-    debug("...about to cleanup vector at %p\n", segment_tree->tree);
     cleanup(segment_tree->tree);
-    debug("...done with cleanup\n");
     xfree(segment_tree);
-    debug("...done with xfree\n");
   }
 }
 
@@ -121,8 +114,6 @@ static size_t segment_tree_memsize(const void *ptr) {
 
 // We need to mark any ruby objects we are holding, to stop the Ruby runtime from garbage collecting them.
 static void segment_tree_mark(void *ptr) {
-  debug("Entering segment_tree_mark\n");
-
   segment_tree_data *st = ptr;
 
   rb_gc_mark(st->combine_lambda);
@@ -176,8 +167,6 @@ static segment_tree_data *unwrapped(VALUE self) {
 
 /*
  * This is for CSegmentTreeTemplate.allocate on the Ruby side.
- *
- * Note that we define the initializer on the Ruby side, at least for now.
  */
 static VALUE segment_tree_alloc(VALUE klass) {
   // Get one on the heap
@@ -186,17 +175,13 @@ static VALUE segment_tree_alloc(VALUE klass) {
   return TypedData_Wrap_Struct(klass, &segment_tree_type, segment_tree);
 }
 
-// The (private) method that builds the internal structure
-// TODO: pass the instance variable lambdas rather than accessing them from self each time.
-void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_l, size_t tree_r) {
-  debug("build(_, %lu, %lu, %lu)\n", tree_idx, tree_l, tree_r);
 
+// Build the internal data structure.
+static void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_l, size_t tree_r) {
   value_vector *tree = segment_tree->tree;
 
   if (tree_l == tree_r) {
-    debug("About call @single_cell_array_val.call(%lu) %lu\n", tree_l, segment_tree->single_cell_array_val_lambda);
     lval(segment_tree->tree, tree_idx) = rb_funcall(segment_tree->single_cell_array_val_lambda, rb_intern("call"), 1, LONG2FIX(tree_l));
-    debug("...done with the call\n");
   } else {
     size_t mid = midpoint(tree_l, tree_r);
     size_t left = left_child(tree_idx);
@@ -205,49 +190,95 @@ void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_l, size
     build(segment_tree, left, tree_l, mid);
     build(segment_tree, right, mid + 1, tree_r);
 
-    debug("About to call @combine(%lu, %lu) @ %lu\n", left, right, segment_tree->combine_lambda);
-    if (NIL_P(segment_tree->combine_lambda)) {
-      //debug("But it is nil!!\n");
-    }
     VALUE comb_val = rb_funcall(
                                   segment_tree->combine_lambda, rb_intern("call"), 2,
                                   *get(tree, left),
                                   *get(tree, right)
                                   );
-    debug("The combined value is %lu of type %d\n", comb_val, TYPE(comb_val));
     lval(segment_tree->tree, tree_idx) = comb_val;
   }
 }
 
+static void setup(segment_tree_data* seg_tree, VALUE combine, VALUE single_cell_array_val, VALUE size, VALUE identity) {
+  VALUE idCall = rb_intern("call");
+
+  if (!rb_obj_respond_to(combine, idCall, TRUE)) {
+    rb_raise(rb_eArgError, "wrong type argument %"PRIsVALUE" (should be callable)", rb_obj_class(combine));
+  }
+
+  if (!rb_obj_respond_to(single_cell_array_val, idCall, TRUE)) {
+    rb_raise(rb_eArgError, "wrong type argument %"PRIsVALUE" (should be callable)", rb_obj_class(single_cell_array_val));
+  }
+
+  seg_tree->combine_lambda = combine;
+  seg_tree->single_cell_array_val_lambda = single_cell_array_val;
+  seg_tree->identity = identity;
+  seg_tree->size = checked_nonneg_fixnum(size);
+
+  if (seg_tree->size == 0) {
+    rb_raise(rb_eArgError, "size must be positive.");
+  }
+
+  size_t vec_size = 1 + 4 * seg_tree->size; // implicit binary tree with n leaves may use indices up to 4n.
+  resize(seg_tree->tree, vec_size);
+  for (size_t i = 1; i < vec_size; i++) {
+    lval(seg_tree->tree, i) = (VALUE)0;
+  }
+
+  build(seg_tree, TREE_ROOT, 0, seg_tree->size - 1);
+}
+
+
+static VALUE determine_val(segment_tree_data* seg_tree, size_t tree_idx, size_t left, size_t right, size_t tree_l, size_t tree_r) {
+  // Does the current tree node exactly serve up the interval we're interested in?
+  if (left == tree_l && right == tree_r) {
+    return lval(seg_tree->tree, tree_idx);
+  }
+
+  // We need to go further down the tree */
+  size_t mid = midpoint(tree_l, tree_r);
+  if (mid >= right) {
+    // Our interval is contained by the left child's interval
+    return determine_val(seg_tree, left_child(tree_idx),  left, right, tree_l,  mid);
+  } else if (mid + 1 <= left) {
+    // Our interval is contained by the right child's interval
+    return determine_val(seg_tree, right_child(tree_idx), left, right, mid + 1, tree_r);
+  } else {
+    // Our interval is split between the two, so we need to combine the results from the children.
+    return rb_funcall(
+                      seg_tree->combine_lambda, rb_intern("call"), 2,
+                      determine_val(seg_tree, left_child(tree_idx),  left,    mid,   tree_l,  mid),
+                      determine_val(seg_tree, right_child(tree_idx), mid + 1, right, mid + 1, tree_r)
+                      );
+  }
+}
 
 /**
- * And now the simple wrappers around the C functionality. In each case we
- *   - unwrap a 'VALUE self',
- *     - i.e., the CSegmentTreeTemplate instance on the Ruby side;
- *   - munge any other arguments as needed
- *   - call the appropriate C function to act on the struct; and
- *   - return an appropriate VALUE for the Ruby runtime can use.
- *
- * We make them into methods on CSegmentTreeTemplate in the Init_c_segment_tree function, below.
+ * And now the wrappers around the C functionality.
  */
 
-VALUE segment_tree_setup(VALUE self) {
-  segment_tree_data *segment_tree = unwrapped(self);
+// #initialize
+static VALUE segment_tree_init(VALUE self, VALUE combine, VALUE single_cell_array_val, VALUE size, VALUE identity) {
+  setup(unwrapped(self), combine, single_cell_array_val, size, identity);
+  return self;
+}
 
-  segment_tree->combine_lambda = combine(self);
-  segment_tree->single_cell_array_val_lambda = single_cell_array_val(self);
-  segment_tree->size = checked_nonneg_fixnum(seg_tree_size(self));
+// #query_on
+static VALUE segment_tree_query_on(VALUE self, VALUE left, VALUE right) {
+  segment_tree_data* seg_tree = unwrapped(self);
+  size_t c_left = checked_nonneg_fixnum(left);
+  size_t c_right = checked_nonneg_fixnum(right);
 
-  debug("Size is %lu\n", segment_tree->size);
+  if (c_right >= seg_tree->size) {
+    rb_raise(eSharedDataError, "Bad query interval %lu..%lu (size = %lu)", c_left, c_right, seg_tree->size);
+  }
 
-  debug("About to resize vector\n");
-  resize(segment_tree->tree, 1 + 4 * segment_tree->size); // implicit binary tree with n leaves may use indices up to 4n.
-  debug("done with resize vector. Size is now %lu\n", size(segment_tree->tree));
+  if (left > right) {
+    // empty interval.
+    return seg_tree->identity;
+  }
 
-  build(segment_tree, TREE_ROOT, 0, segment_tree->size - 1);
-  debug("done with build()\n");
-
-  return Qnil;
+  return determine_val(seg_tree, TREE_ROOT, c_left, c_right, 0, seg_tree->size - 1);
 }
 
 
@@ -261,9 +292,6 @@ void Init_c_segment_tree_template() {
   VALUE cSegmentTreeTemplate = rb_define_class_under(mDataStructuresRMolinari, "CSegmentTreeTemplate", rb_cObject);
 
   rb_define_alloc_func(cSegmentTreeTemplate, segment_tree_alloc);
-  rb_define_private_method(cSegmentTreeTemplate, "setup", segment_tree_setup, 0);
-  /* rb_define_method(cSegmentTreeTemplate, "make_set", segment_tree_make_set, 1); */
-  /* rb_define_method(cSegmentTreeTemplate, "subset_count", segment_tree_subset_count, 0); */
-  /* rb_define_method(cSegmentTreeTemplate, "find", segment_tree_find, 1); */
-  /* rb_define_method(cSegmentTreeTemplate, "unite", segment_tree_unite, 2); */
+  rb_define_method(cSegmentTreeTemplate, "c_initialize", segment_tree_init, 4);
+  rb_define_method(cSegmentTreeTemplate, "query_on", segment_tree_query_on, 2);
 }
