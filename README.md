@@ -4,8 +4,8 @@ This is a small collection of Ruby data structures that I have implemented for m
 structure is almost always more educational than simply reading about it and is usually fun.  I wrote some of them while
 participating in the Advent of Code (https://adventofcode.com/).
 
-These implementations are not particularly clever. They are based on the expository descriptions and pseudo-code I found as I read
-about each structure and so are not as fast as possible.
+The implementations are based on the expository descriptions and pseudo-code I found as I read about each structure and so are not
+as fast as possible.
 
 The code is available as a gem: https://rubygems.org/gems/data_structures_rmolinari.
 
