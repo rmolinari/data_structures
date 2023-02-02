@@ -45,8 +45,18 @@ class SegmentTreeTest < Test::Unit::TestCase
     test_seg_tree_basic(CMaxValSegmentTree, :max_on, DATA) { |i, j| DATA[i..j].max }
   end
 
+  def test_c_max_val_segment_tree_updates
+    mutable_data = DATA.clone
+    test_seg_tree_with_updates(CMaxValSegmentTree, :max_on, mutable_data) { |i, j| mutable_data[i..j].max }
+  end
+
   def test_c_index_of_max_val_segment_tree
     test_seg_tree_basic(CIndexOfMaxValSegmentTree, :index_of_max_val_on, DATA) { |i, j| (i..j).max_by { DATA[_1] } }
+  end
+
+  def test_c_index_of_max_val_segment_tree_updates
+    mutable_data = DATA.clone
+    test_seg_tree_with_updates(CIndexOfMaxValSegmentTree, :index_of_max_val_on, mutable_data) { |i, j| (i..j).max_by { mutable_data[_1] } }
   end
 
   ########################################

@@ -13,10 +13,11 @@
 #include "ruby.h"
 #include "../cc.h" // Convenient Containers
 
-// The Shared::DataError exception type in the Ruby code.
+// Shared::FooError exception types
 // TODO: into shared header
 #define mShared rb_define_module("Shared")
 #define eSharedDataError rb_const_get(mShared, rb_intern_const("DataError"))
+#define eSharedInternalLogicError rb_const_get(mShared, rb_intern_const("InternalLogicError"))
 
 // TODO: into shared header
 //#define debug(...) printf(__VA_ARGS__)
@@ -27,7 +28,8 @@ typedef vec(VALUE) value_vector;
 
 /* What we might think of as vector[index]. It is assignable. TODO: into shared header */
 #define lval(vector, index) (*get(vector, index))
-
+#define single_cell_val_at(seg_tree, idx) rb_funcall(seg_tree->single_cell_array_val_lambda, rb_intern("call"), 1, LONG2FIX(idx))
+#define combined_val(seg_tree, v1, v2) rb_funcall(seg_tree->combine_lambda, rb_intern("call"), 2, (v1), (v2))
 /**
  * The C implementation of a generic Segment Tree
  */
@@ -218,7 +220,7 @@ static void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_
 
   if (tree_l == tree_r) {
     // Base case: the node corresponds to a subarray of length 1.
-    lval(segment_tree->tree, tree_idx) = rb_funcall(segment_tree->single_cell_array_val_lambda, rb_intern("call"), 1, LONG2FIX(tree_l));
+    lval(segment_tree->tree, tree_idx) = single_cell_val_at(segment_tree, tree_l);
   } else {
     // Build to two child nodes, and then combine their values for this node.
     size_t mid = midpoint(tree_l, tree_r);
@@ -228,11 +230,12 @@ static void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_
     build(segment_tree, left, tree_l, mid);
     build(segment_tree, right, mid + 1, tree_r);
 
-    VALUE comb_val = rb_funcall(
-                                segment_tree->combine_lambda, rb_intern("call"), 2,
-                                *get(tree, left), // we just built these two values in the recursive calls.
-                                *get(tree, right)
-                                );
+    /* VALUE comb_val = rb_funcall( */
+    /*                             segment_tree->combine_lambda, rb_intern("call"), 2, */
+    /*                             *get(tree, left), // we just built these two values in the recursive calls. */
+    /*                             *get(tree, right) */
+    /*                             ); */
+    VALUE comb_val = combined_val(segment_tree, *get(tree, left), *get(tree, right));
     lval(segment_tree->tree, tree_idx) = comb_val;
   }
 }
@@ -322,6 +325,39 @@ static VALUE determine_val(segment_tree_data* seg_tree, size_t tree_idx, size_t 
   }
 }
 
+/*
+ * Update the structure to reflect the change in the underlying array at index idx.
+ *
+ * - idx: the index at which the underlying array data has changed.
+ * - tree_id: the index in the internal datastructure of the node we are currently visiting.
+ * - tree_l..tree_r: the range handled by the current node
+ */
+static void update_val_at(segment_tree_data *seg_tree, size_t idx, size_t tree_idx, size_t tree_l, size_t tree_r) {
+  if (tree_l == tree_r) {
+    // We have found the base case of our update
+    if (tree_l != idx) {
+      rb_raise(
+               eSharedInternalLogicError,
+               "tree_l == tree_r == %lu but they do not agree with the idx %lu holding the updated value",
+               tree_r, idx
+               );
+    }
+    lval(seg_tree->tree, tree_idx) = single_cell_val_at(seg_tree, tree_l);
+  } else {
+    // Recursively update the appropriate subtree...
+    size_t mid = midpoint(tree_l, tree_r);
+    size_t left = left_child(tree_idx);
+    size_t right = right_child(tree_idx);
+    if (mid >= idx) {
+      update_val_at(seg_tree, idx, left, tree_l, mid);
+    } else {
+      update_val_at(seg_tree, idx, right, mid + 1, tree_r);
+    }
+    // ...and ourself to incorporate the change
+    lval(seg_tree->tree, tree_idx) = combined_val(seg_tree, *get(seg_tree->tree, left), *get(seg_tree->tree, right));
+  }
+}
+
 /**
  * And now the wrappers around the C functionality.
  */
@@ -354,6 +390,21 @@ static VALUE segment_tree_query_on(VALUE self, VALUE left, VALUE right) {
   return determine_val(seg_tree, TREE_ROOT, c_left, c_right, 0, seg_tree->size - 1);
 }
 
+/*
+ * CSegmentTreeTemplate#update_at
+ */
+static VALUE segment_tree_update_at(VALUE self, VALUE idx) {
+  segment_tree_data *seg_tree = unwrapped(self);
+  size_t c_idx = checked_nonneg_fixnum(idx);
+
+  if (c_idx >= seg_tree->size) {
+    rb_raise(eSharedDataError, "Cannot update value at index %lu, size = %lu", c_idx, seg_tree->size);
+  }
+
+  update_val_at(seg_tree, c_idx, TREE_ROOT, 0, seg_tree->size - 1);
+
+  return Qnil;
+}
 
 /*
  * A generic Segment Tree
@@ -367,4 +418,5 @@ void Init_c_segment_tree_template() {
   rb_define_alloc_func(cSegmentTreeTemplate, segment_tree_alloc);
   rb_define_method(cSegmentTreeTemplate, "c_initialize", segment_tree_init, 4);
   rb_define_method(cSegmentTreeTemplate, "query_on", segment_tree_query_on, 2);
+  rb_define_method(cSegmentTreeTemplate, "update_at", segment_tree_update_at, 1);
 }

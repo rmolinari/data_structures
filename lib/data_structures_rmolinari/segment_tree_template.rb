@@ -107,9 +107,9 @@ class DataStructuresRMolinari::SegmentTreeTemplate
       left = left(tree_idx)
       right = right(tree_idx)
       if mid >= idx
-        update_val_at(idx, left(tree_idx), tree_l, mid)
+        update_val_at(idx, left, tree_l, mid)
       else
-        update_val_at(idx, right(tree_idx), mid + 1, tree_r)
+        update_val_at(idx, right, mid + 1, tree_r)
       end
       @tree[tree_idx] = @combine.call(@tree[left], @tree[right])
     end
