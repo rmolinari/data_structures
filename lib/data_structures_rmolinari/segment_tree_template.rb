@@ -64,7 +64,7 @@ class DataStructuresRMolinari::SegmentTreeTemplate
     determine_val(root, left, right, 0, @size - 1)
   end
 
-  # Update the value in the underlying array at the given idx
+  # Reflect the fact that the underlying array has been updated at the given idx
   #
   # @param idx an index in the underlying data array.
   #
