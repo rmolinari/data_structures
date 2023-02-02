@@ -4,6 +4,8 @@ require 'byebug'
 require 'data_structures_rmolinari'
 
 MaxValSegmentTree = DataStructuresRMolinari::MaxValSegmentTree
+CMaxValSegmentTree = DataStructuresRMolinari::CMaxValSegmentTree
+
 IndexOfMaxValSegmentTree = DataStructuresRMolinari::IndexOfMaxValSegmentTree
 
 class SegmentTreeTest < Test::Unit::TestCase
@@ -28,6 +30,16 @@ class SegmentTreeTest < Test::Unit::TestCase
   def test_index_of_max_val_segment_tree_updates
     mutable_data = DATA.clone
     test_seg_tree_with_updates(IndexOfMaxValSegmentTree, :index_of_max_val_on, mutable_data) { |i, j| (i..j).max_by { mutable_data[_1] } }
+  end
+
+  ########################################
+  # C implementation
+  #
+  # It doesn't do anything interesting
+
+  # Can we call the initializer without problems?
+  def test_c_max_val_segment_tree_init
+    _c_tree = CMaxValSegmentTree.new(DATA)
   end
 
   ########################################
