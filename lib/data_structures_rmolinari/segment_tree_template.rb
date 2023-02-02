@@ -17,6 +17,7 @@ require_relative 'shared'
 #
 # We do O(n) work to build the internal data structure at initialization. Then we answer queries in O(log n) time.
 class DataStructuresRMolinari::SegmentTreeTemplate
+  include Shared
   include Shared::BinaryTreeArithmetic
 
   # Construct a concrete instance of a Segment Tree. See details at the links above for the underlying concepts here.
@@ -56,7 +57,7 @@ class DataStructuresRMolinari::SegmentTreeTemplate
   # The type of the return value depends on the concrete instance of the segment tree. We return the _identity_ element provided at
   # construction time if the interval is empty.
   def query_on(left, right)
-    raise DataError, 'Bad query interval#{left}..#{right}' unless (0...@size).cover?(left..right)
+    raise DataError, "Bad query interval #{left}..#{right} (size = #{@size})" unless (0...@size).cover?(left..right)
 
     return @identity if left > right # empty interval
 
