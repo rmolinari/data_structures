@@ -130,11 +130,24 @@ The Algorithms submodule contains some algorithms using the data structures.
 
 # C Extensions
 
-As another learning process I have implemented Disjoint Union as a C extension. The relevant class is `CDisjointUnion`, which can be
-required like any of the other classes. The UI is the same as for the pure Ruby `DisjointUnion`. A simple benchmark suggests that a
-long sequence of `unite` operations is about 3 times as fast with the C version.
+As another learning process I have implemented several of these data structures as C extensions. The class names have a "C" prefixed
+and they can be required like their pure Ruby versions. They have the same APIs as their Ruby cousins.
+
+## Disjoint Union
+
+A benchmark suggests that a long sequence of `unite` operations is about 3 times as fast with the `CDisjointUnion` as with
+`DisjointUnion`.
 
 The implementation uses the remarkable Convenient Containers library from Jackson Allan.[[Allan]](#references).
+
+## Segment Tree
+
+`CSegmentTreeTemplate` is the C implementation of the generic class. Concrete classes are built on top of this in Ruby, just as with
+the pure Ruby `SegmentTreeTemplate` class.
+
+A benchmark suggests that a long sequence of `max_on` operations against a max-val Segment Tree is about 4 times as fast with the C
+version as with the Ruby version. I'm a bit suprised the improvment isn't larger, but we must remember that the C code must still
+interact with the Ruby objects in the underlying data array, and must "combine" them, etc., by calling Ruby lambdas.
 
 # References
 - [Allan] Allan, J., _CC: Convenient Containers_, https://github.com/JacksonAllan/CC, retrieved 2023-02-01.

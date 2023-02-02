@@ -17,6 +17,7 @@ require_relative 'shared'
 #
 # We do O(n) work to build the internal data structure at initialization. Then we answer queries in O(log n) time.
 class DataStructuresRMolinari::SegmentTreeTemplate
+  include Shared
   include Shared::BinaryTreeArithmetic
 
   # Construct a concrete instance of a Segment Tree. See details at the links above for the underlying concepts here.
@@ -47,27 +48,29 @@ class DataStructuresRMolinari::SegmentTreeTemplate
   end
 
   # The desired value (max, sum, etc.) on the subinterval left..right.
+  #
   # @param left the left end of the subinterval.
   # @param right the right end (inclusive) of the subinterval.
+  #
+  # It must be that left..right is contained in 0...size.
   #
   # The type of the return value depends on the concrete instance of the segment tree. We return the _identity_ element provided at
   # construction time if the interval is empty.
   def query_on(left, right)
-    raise DataError, "Bad query interval #{left}..#{right}" if left.negative? || right >= @size
+    raise DataError, "Bad query interval #{left}..#{right} (size = #{@size})" unless (0...@size).cover?(left..right)
 
     return @identity if left > right # empty interval
 
     determine_val(root, left, right, 0, @size - 1)
   end
 
-  # Update the value in the underlying array at the given idx
+  # Reflect the fact that the underlying array has been updated at the given idx
   #
   # @param idx an index in the underlying data array.
   #
   # Note that we don't need the updated value itself. We get that by calling the lambda +single_cell_array_val+ supplied at
   # construction.
   def update_at(idx)
-    raise DataError, 'Cannot update an index outside the initial range of the underlying data' unless (0...@size).cover?(idx)
 
     update_val_at(idx, root, 0, @size - 1)
   end
@@ -105,9 +108,9 @@ class DataStructuresRMolinari::SegmentTreeTemplate
       left = left(tree_idx)
       right = right(tree_idx)
       if mid >= idx
-        update_val_at(idx, left(tree_idx), tree_l, mid)
+        update_val_at(idx, left, tree_l, mid)
       else
-        update_val_at(idx, right(tree_idx), mid + 1, tree_r)
+        update_val_at(idx, right, mid + 1, tree_r)
       end
       @tree[tree_idx] = @combine.call(@tree[left], @tree[right])
     end

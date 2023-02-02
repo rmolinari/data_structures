@@ -2,10 +2,12 @@ require 'rubygems'
 require 'rake/testtask'
 require 'rake/extensiontask'
 
-Rake::ExtensionTask.new('data_structures_rmolinari/c_disjoint_union') do |ext|
-  ext.name = 'c_disjoint_union'
-  ext.ext_dir = 'ext/c_disjoint_union'
-  ext.lib_dir = 'lib/data_structures_rmolinari/'
+['c_disjoint_union', 'c_segment_tree_template'].each do |extension_name|
+  Rake::ExtensionTask.new("data_structures_rmolinari/#{extension_name}") do |ext|
+    ext.name = extension_name
+    ext.ext_dir = "ext/#{extension_name}"
+    ext.lib_dir = 'lib/data_structures_rmolinari/'
+  end
 end
 
 Rake::TestTask.new do |t|

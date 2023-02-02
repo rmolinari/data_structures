@@ -10,9 +10,13 @@ end
 
 # These define classes inside module DataStructuresRMolinari
 require_relative 'data_structures_rmolinari/algorithms'
+
 require_relative 'data_structures_rmolinari/disjoint_union'
 require_relative 'data_structures_rmolinari/c_disjoint_union' # version as a C extension
+
 require_relative 'data_structures_rmolinari/segment_tree_template'
+require_relative 'data_structures_rmolinari/c_segment_tree_template_impl'
+
 require_relative 'data_structures_rmolinari/heap'
 require_relative 'data_structures_rmolinari/max_priority_search_tree'
 require_relative 'data_structures_rmolinari/min_priority_search_tree'
@@ -34,6 +38,8 @@ module DataStructuresRMolinari
     # @param data an object that contains values at integer indices based at 0, via +data[i]+.
     #   - This will usually be an Array, but it could also be a hash or a proc.
     def initialize(data)
+      data.must_be_a Enumerable
+
       @structure = SegmentTreeTemplate.new(
         combine:               ->(a, b) { [a, b].max },
         single_cell_array_val: ->(i) { data[i] },
@@ -61,6 +67,8 @@ module DataStructuresRMolinari
 
     # @param (see MaxValSegmentTree#initialize)
     def initialize(data)
+      data.must_be_a Enumerable
+
       @structure = SegmentTreeTemplate.new(
         combine:               ->(p1, p2) { p1[1] >= p2[1] ? p1 : p2 },
         single_cell_array_val: ->(i) { [i, data[i]] },
