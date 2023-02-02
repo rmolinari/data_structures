@@ -5,6 +5,9 @@
 - Disjoint Union
   - C extension: use Convenient Containers rather than my janky Dynamic Array attempt.
 
+- Segment Tree
+  - Add a C implementation as CSegmentTreeTemplate.
+
 ## [0.4.3] 2023-01-27
 
 - Fix bad directive in Rakefile for DisjointUnion C extension
