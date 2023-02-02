@@ -20,6 +20,7 @@ require_relative 'c_segment_tree_template'
 #
 # We do O(n) work to build the internal data structure at initialization. Then we answer queries in O(log n) time.
 class DataStructuresRMolinari::CSegmentTreeTemplate
+
   # Construct a concrete instance of a Segment Tree. See details at the links above for the underlying concepts here.
   # @param combine a lambda that takes two values and munges them into a combined value.
   #   - For example, if we are calculating sums over subintervals, combine.call(a, b) = a + b, while if we are doing maxima we will
@@ -47,6 +48,9 @@ end
 # in O(log n) time.
 #
 # C version
+#
+# TODO: share the definition with (non-C) MasValSegmentTree. The only difference is the class of the underlying segment tree
+# template.
 module DataStructuresRMolinari
   class CMaxValSegmentTree
     extend Forwardable
@@ -73,4 +77,36 @@ module DataStructuresRMolinari
       @structure.query_on(i, j)
     end
   end
+
+  # A segment tree that for an array A(0...n) answers questions of the form "what is the index of the maximal value in the
+  # subinterval A(i..j)?" in O(log n) time.
+  #
+  # C version
+  class CIndexOfMaxValSegmentTree
+    extend Forwardable
+
+    # Tell the tree that the value at idx has changed
+    def_delegator :@structure, :update_at
+
+    # @param (see MaxValSegmentTree#initialize)
+    def initialize(data)
+      @structure = CSegmentTreeTemplate.new(
+        combine:               ->(p1, p2) { p1[1] >= p2[1] ? p1 : p2 },
+        single_cell_array_val: ->(i) { [i, data[i]] },
+        size:                  data.size,
+        identity:              nil
+      )
+    end
+
+    # The index of the maximum value in A(i..j)
+    #
+    # The arguments must be integers in 0...(A.size)
+    # @return (Integer, nil) the index of the largest value in A(i..j) or +nil+ if i > j.
+    #   - If there is more than one entry with that value, return one the indices. There is no guarantee as to which one.
+    #   - Return +nil+ if i > j
+    def index_of_max_val_on(i, j)
+      @structure.query_on(i, j)&.first # discard the value part of the pair, which is a bookkeeping
+    end
+  end
+
 end

@@ -3,29 +3,29 @@
  *
  * More specifically, it is the C version of the SegmentTreeTemplate Ruby class, for which see elsewhere in the repo.
  *
- * TODO: documentation
+ * TODO:
+ * - documentation
+ * - reorganize the code
+ * - update() support
+ * - move some things into a shared .h
  */
 
 #include "ruby.h"
 #include "../cc.h" // Convenient Containers
 
 // The Shared::DataError exception type in the Ruby code.
+// TODO: into shared header
 #define mShared rb_define_module("Shared")
 #define eSharedDataError rb_const_get(mShared, rb_intern_const("DataError"))
 
-// The instance variables
-#define instance_var(obj, name)    rb_ivar_get(obj, rb_intern("@" #name))
-#define single_cell_array_val(obj) instance_var(obj, single_cell_array_val)
-#define combine(obj)               instance_var(obj, combine)
-#define seg_tree_size(obj)         instance_var(obj, size)
-
+// TODO: into shared header
 //#define debug(...) printf(__VA_ARGS__)
 #define debug(...)
 
 /* The vector generic from Convenient Containers */
 typedef vec(VALUE) value_vector;
 
-/* What we might think of as vector[index]. It is assignable. */
+/* What we might think of as vector[index]. It is assignable. TODO: into shared header */
 #define lval(vector, index) (*get(vector, index))
 
 /**
@@ -33,7 +33,9 @@ typedef vec(VALUE) value_vector;
  */
 
 /*
- * Binary tree arithmetic
+ * Binary tree arithmetic for an implicit tree in an array, 1-based.
+ *
+ * TODO: into shared header
  */
 #define TREE_ROOT 1
 
@@ -49,13 +51,19 @@ static size_t right_child(size_t i) {
   return 1 + (i << 1);
 }
 
+// TODO: use a VALUE* instead of a vec(VALUE) for tree. We know the size when we allocate it in setup().
 typedef struct {
-  value_vector *tree; // The 1-based synthetic binary tree in which the data structure lives
+  value_vector *tree; // The 1-based implicit binary tree in which the data structure lives
   VALUE single_cell_array_val_lambda;
   VALUE combine_lambda;
   VALUE identity;
   size_t size;
 } segment_tree_data;
+
+/************************************************************
+ * Memory Management
+ *
+ */
 
 /*
  * Create one (on the heap).
@@ -66,9 +74,6 @@ static segment_tree_data *create_segment_tree() {
   // Allocate the structures
   segment_tree->tree = malloc(sizeof(value_vector));
   init(segment_tree->tree);
-
-  // Index 0 of the vector isn't used. Our implied binary tree structure is 1-based. So stick NULL at index 0.
-  push(segment_tree->tree, (VALUE)0);
 
   segment_tree->single_cell_array_val_lambda = 0;
   segment_tree->combine_lambda = 0;
@@ -90,34 +95,34 @@ static void segment_tree_free(void *ptr) {
   }
 }
 
-/************************************************************
- * The Segment Tree operations in C
- ************************************************************/
-
-/**
- * Wrapping and unwrapping things for the Ruby runtime
+/*
+ * How much memory (roughly) does a segment_tree_data instance consume?
  *
+ * I guess the Ruby runtime can use this information when deciding how agressive to be during garbage collection and such.
  */
-
-// How much memory (roughly) does a segment_tree_data instance consume? I guess the Ruby runtime can use this information when
-// deciding how agressive to be during garbage collection and such.
 static size_t segment_tree_memsize(const void *ptr) {
   if (ptr) {
     const segment_tree_data *st = ptr;
 
     // See https://github.com/JacksonAllan/CC/issues/3
-    return sizeof( cc_vec_hdr_ty ) + cap( st->tree ) * CC_EL_SIZE( *(st->tree) );
+    return
+      sizeof( cc_vec_hdr_ty )
+      + cap( st->tree ) * CC_EL_SIZE( *(st->tree) )
+      + sizeof(segment_tree_data);
   } else {
     return 0;
   }
 }
 
-// We need to mark any ruby objects we are holding, to stop the Ruby runtime from garbage collecting them.
+/*
+ * Mark the Ruby objects we hold so that the Ruby garbage collector knows that they are still in use.
+ */
 static void segment_tree_mark(void *ptr) {
   segment_tree_data *st = ptr;
 
   rb_gc_mark(st->combine_lambda);
   rb_gc_mark(st->single_cell_array_val_lambda);
+  rb_gc_mark(st->identity);
 
   for_each( st->tree, value ) {
     if (value) {
@@ -125,6 +130,7 @@ static void segment_tree_mark(void *ptr) {
     }
   }
 }
+
 
 /*
  * A configuration struct that tells the Ruby runtime how to deal with a segment_tree_data object.
@@ -143,7 +149,30 @@ static const rb_data_type_t segment_tree_type = {
 };
 
 /*
- * Helper: check that a Ruby value is a non-negative Fixnum and convert it to a C unsigned long
+ * End memory management functions.
+ ************************************************************/
+
+
+/************************************************************
+ * Wrapping and unwrapping the C struct and other things.
+ *
+ */
+
+/*
+ * Unwrap a Ruby-side disjoint union object to get the C struct inside.
+ *
+ * TODO: consider a macro in a shared header
+ */
+static segment_tree_data *unwrapped(VALUE self) {
+  segment_tree_data *segment_tree;
+  TypedData_Get_Struct((self), segment_tree_data, &segment_tree_type, segment_tree);
+  return segment_tree;
+}
+
+/*
+ * Check that a Ruby value is a non-negative Fixnum and convert it to a C unsigned long
+ *
+ * TODO: into a shared header and .c
  */
 static unsigned long checked_nonneg_fixnum(VALUE val) {
   Check_Type(val, T_FIXNUM);
@@ -157,32 +186,41 @@ static unsigned long checked_nonneg_fixnum(VALUE val) {
 }
 
 /*
- * Unwrap a Ruby-side disjoint union object to get the C struct inside.
- */
-static segment_tree_data *unwrapped(VALUE self) {
-  segment_tree_data *segment_tree;
-  TypedData_Get_Struct((self), segment_tree_data, &segment_tree_type, segment_tree);
-  return segment_tree;
-}
-
-/*
+ * Allocate a segment_tree_data struct and wrap it for the Ruby runtime.
+ *
  * This is for CSegmentTreeTemplate.allocate on the Ruby side.
  */
 static VALUE segment_tree_alloc(VALUE klass) {
   // Get one on the heap
   segment_tree_data *segment_tree = create_segment_tree();
-  // Wrap it up into a Ruby object
+  // ...and wrap it into a Ruby object
   return TypedData_Wrap_Struct(klass, &segment_tree_type, segment_tree);
 }
 
+/*
+ * End wrapping and unwrapping functions.
+ ************************************************************/
 
-// Build the internal data structure.
+/************************************************************
+ * The Segment Tree API on the C side.
+ *
+ * We wrap these in the Ruby-ready functions below
+ */
+
+/*
+ * Recursively build the internal tree data structure.
+ *
+ * - tree_idx: the index into the tree array of the node being calculated
+ * - [tree_l, tree_r]: the sub-interval of the underlying array data corresponding to the tree node being calculated.
+ */
 static void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_l, size_t tree_r) {
   value_vector *tree = segment_tree->tree;
 
   if (tree_l == tree_r) {
+    // Base case: the node corresponds to a subarray of length 1.
     lval(segment_tree->tree, tree_idx) = rb_funcall(segment_tree->single_cell_array_val_lambda, rb_intern("call"), 1, LONG2FIX(tree_l));
   } else {
+    // Build to two child nodes, and then combine their values for this node.
     size_t mid = midpoint(tree_l, tree_r);
     size_t left = left_child(tree_idx);
     size_t right = right_child(tree_idx);
@@ -191,14 +229,23 @@ static void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_
     build(segment_tree, right, mid + 1, tree_r);
 
     VALUE comb_val = rb_funcall(
-                                  segment_tree->combine_lambda, rb_intern("call"), 2,
-                                  *get(tree, left),
-                                  *get(tree, right)
-                                  );
+                                segment_tree->combine_lambda, rb_intern("call"), 2,
+                                *get(tree, left), // we just built these two values in the recursive calls.
+                                *get(tree, right)
+                                );
     lval(segment_tree->tree, tree_idx) = comb_val;
   }
 }
 
+/*
+ * Set up the internals with the arguments we get from #initialize.
+ *
+ * - combine: must be callable
+ * - single_cell_array_val: must be callable
+ * - size: must be a positive integer
+ * - identity: we don't care what it is.
+ *   - maybe we should check at least that it is not 0. But Qnil is fine.
+ */
 static void setup(segment_tree_data* seg_tree, VALUE combine, VALUE single_cell_array_val, VALUE size, VALUE identity) {
   VALUE idCall = rb_intern("call");
 
@@ -219,9 +266,11 @@ static void setup(segment_tree_data* seg_tree, VALUE combine, VALUE single_cell_
     rb_raise(rb_eArgError, "size must be positive.");
   }
 
-  size_t vec_size = 1 + 4 * seg_tree->size; // implicit binary tree with n leaves may use indices up to 4n.
+  // Implicit binary tree with n leaves and straightforward left() and right() may use indices up to 4n.  But see here for a way to
+  // reduce the requirement to 2n: https://cp-algorithms.com/data_structures/segment_tree.html#memory-efficient-implementation
+  size_t vec_size = 1 + 4 * seg_tree->size;
   resize(seg_tree->tree, vec_size);
-  for (size_t i = 1; i < vec_size; i++) {
+  for (size_t i = 0; i < vec_size; i++) {
     lval(seg_tree->tree, i) = (VALUE)0;
   }
 
@@ -229,6 +278,26 @@ static void setup(segment_tree_data* seg_tree, VALUE combine, VALUE single_cell_
 }
 
 
+/*
+ * Determine the value for the subarray A(left, right).
+ *
+ * - tree_idx: the index in the array of the node we are currently visiting
+ * - tree_l..tree_r: the subarray handled by the current node.
+ * - left..right: the subarray whose value we are currently looking for.
+ *
+ * As an invariant we have left..right \subset tree_l..tree_r.
+ *
+ * We start out with
+ * - tree_idx = TREE_ROOT
+ * - tree_l..tree_r = 0..(size - 1), and
+ * - left..right given by the client code's query
+ *
+ * If [tree_l, tree_r] = [left, right] then the current node gives the desired answer. Otherwise we decend the tree with one or two
+ * recursive calls.
+ *
+ * If left..right is contained the the bottom or top half of tree_l..tree_r we decend to the corresponding child with one recursive
+ * call. Otherwise we split left..right at the midpoint of tree_l..tree_r, make two recursive calls, and then combine the results.
+ */
 static VALUE determine_val(segment_tree_data* seg_tree, size_t tree_idx, size_t left, size_t right, size_t tree_l, size_t tree_r) {
   // Does the current tree node exactly serve up the interval we're interested in?
   if (left == tree_l && right == tree_r) {
@@ -257,13 +326,17 @@ static VALUE determine_val(segment_tree_data* seg_tree, size_t tree_idx, size_t 
  * And now the wrappers around the C functionality.
  */
 
-// #initialize
+/*
+ * CSegmentTreeTemplate#c_initialize
+ */
 static VALUE segment_tree_init(VALUE self, VALUE combine, VALUE single_cell_array_val, VALUE size, VALUE identity) {
   setup(unwrapped(self), combine, single_cell_array_val, size, identity);
   return self;
 }
 
-// #query_on
+/*
+ * CSegmentTreeTemplate#query_on.
+ */
 static VALUE segment_tree_query_on(VALUE self, VALUE left, VALUE right) {
   segment_tree_data* seg_tree = unwrapped(self);
   size_t c_left = checked_nonneg_fixnum(left);

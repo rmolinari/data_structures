@@ -7,6 +7,7 @@ MaxValSegmentTree = DataStructuresRMolinari::MaxValSegmentTree
 CMaxValSegmentTree = DataStructuresRMolinari::CMaxValSegmentTree
 
 IndexOfMaxValSegmentTree = DataStructuresRMolinari::IndexOfMaxValSegmentTree
+CIndexOfMaxValSegmentTree = DataStructuresRMolinari::CIndexOfMaxValSegmentTree
 
 class SegmentTreeTest < Test::Unit::TestCase
   DATA = [
@@ -22,7 +23,7 @@ class SegmentTreeTest < Test::Unit::TestCase
     mutable_data = DATA.clone
     test_seg_tree_with_updates(MaxValSegmentTree, :max_on, mutable_data) { |i, j| mutable_data[i..j].max }
   end
-s
+
   def test_index_of_max_val_segment_tree
     test_seg_tree_basic(IndexOfMaxValSegmentTree, :index_of_max_val_on, DATA) { |i, j| (i..j).max_by { DATA[_1] } }
   end
@@ -42,6 +43,10 @@ s
 
   def test_c_max_val_segment_tree
     test_seg_tree_basic(CMaxValSegmentTree, :max_on, DATA) { |i, j| DATA[i..j].max }
+  end
+
+  def test_c_index_of_max_val_segment_tree
+    test_seg_tree_basic(CIndexOfMaxValSegmentTree, :index_of_max_val_on, DATA) { |i, j| (i..j).max_by { DATA[_1] } }
   end
 
   ########################################

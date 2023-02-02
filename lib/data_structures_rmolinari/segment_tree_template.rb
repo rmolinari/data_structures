@@ -47,13 +47,16 @@ class DataStructuresRMolinari::SegmentTreeTemplate
   end
 
   # The desired value (max, sum, etc.) on the subinterval left..right.
+  #
   # @param left the left end of the subinterval.
   # @param right the right end (inclusive) of the subinterval.
+  #
+  # It must be that left..right is contained in 0...size.
   #
   # The type of the return value depends on the concrete instance of the segment tree. We return the _identity_ element provided at
   # construction time if the interval is empty.
   def query_on(left, right)
-    raise DataError, "Bad query interval #{left}..#{right}" if left.negative? || right >= @size
+    raise DataError, 'Bad query interval#{left}..#{right}' unless (0...@size).cover?(left..right)
 
     return @identity if left > right # empty interval
 
@@ -67,7 +70,6 @@ class DataStructuresRMolinari::SegmentTreeTemplate
   # Note that we don't need the updated value itself. We get that by calling the lambda +single_cell_array_val+ supplied at
   # construction.
   def update_at(idx)
-    raise DataError, 'Cannot update an index outside the initial range of the underlying data' unless (0...@size).cover?(idx)
 
     update_val_at(idx, root, 0, @size - 1)
   end
