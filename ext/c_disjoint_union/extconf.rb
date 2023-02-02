@@ -9,4 +9,9 @@ end
 
 extension_name = "c_disjoint_union"
 dir_config(extension_name)
+
+$srcs = ["disjoint_union.c", "../shared.c"]
+$INCFLAGS << " -I$(srcdir)/.."
+$VPATH << "$(srcdir)/.."
+
 create_makefile("data_structures_rmolinari/c_disjoint_union")

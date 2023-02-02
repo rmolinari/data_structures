@@ -16,11 +16,8 @@
  */
 
 #include "ruby.h"
-#include "../cc.h" // Convenient Containers
-
-// The Shared::DataError exception type in the Ruby code.
-#define mShared rb_define_module("Shared")
-#define eSharedDataError rb_const_get(mShared, rb_intern_const("DataError"))
+#include "cc.h" // Convenient Containers
+#include "shared.h"
 
 /**
  * Data type for the (parent, rank) pair, and some accessor helpers for the vec() container we are going to be using.
@@ -42,9 +39,6 @@ static data_pair make_data_pair(long parent, unsigned long rank) {
 
 /* The vector generic from Convenient Containers */
 typedef vec(data_pair) pair_vector;
-
-/* What we might think of as vector[index]. It is assignable. */
-#define lval(vector, index) (*get(vector, index))
 
 #define parent(disjoint_union_ptr, idx) (get(disjoint_union->pairs, idx)->parent)
 #define rank(disjoint_union_ptr, idx) (get(disjoint_union->pairs, idx)->rank)
@@ -248,20 +242,6 @@ static const rb_data_type_t disjoint_union_type = {
 };
 
 /*
- * Helper: check that a Ruby value is a non-negative Fixnum and convert it to a C unsigned long
- */
-static unsigned long checked_nonneg_fixnum(VALUE val) {
-  Check_Type(val, T_FIXNUM);
-  long c_val = FIX2LONG(val);
-
-  if (c_val < 0) {
-    rb_raise(eSharedDataError, "Value must be non-negative");
-  }
-
-  return c_val;
-}
-
-/*
  * Unwrap a Ruby-side disjoint union object to get the C struct inside.
  */
 static disjoint_union_data *unwrapped(VALUE self) {
@@ -378,7 +358,7 @@ static VALUE disjoint_union_unite(VALUE self, VALUE arg1, VALUE arg2) {
  * - Tarjan, Robert E., van Leeuwen, Jan (1984). _Worst-case analysis of set union algorithms_. Journal of the ACM. 31 (2): 245–281.
  */
 void Init_c_disjoint_union() {
-  VALUE mDataStructuresRMolinari = rb_define_module("DataStructuresRMolinari");
+  //VALUE mDataStructuresRMolinari = rb_define_module("DataStructuresRMolinari");
   VALUE cDisjointUnion = rb_define_class_under(mDataStructuresRMolinari, "CDisjointUnion", rb_cObject);
 
   rb_define_alloc_func(cDisjointUnion, disjoint_union_alloc);

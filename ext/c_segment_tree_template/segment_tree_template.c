@@ -4,54 +4,22 @@
  * More specifically, it is the C version of the SegmentTreeTemplate Ruby class, for which see elsewhere in the repo.
  *
  * TODO:
- * - documentation
- * - reorganize the code
- * - update() support
- * - move some things into a shared .h
+ * - use a VALUE* for binary tree storage, instead of a vec(VALUE)
  */
 
 #include "ruby.h"
-#include "../cc.h" // Convenient Containers
-
-// Shared::FooError exception types
-// TODO: into shared header
-#define mShared rb_define_module("Shared")
-#define eSharedDataError rb_const_get(mShared, rb_intern_const("DataError"))
-#define eSharedInternalLogicError rb_const_get(mShared, rb_intern_const("InternalLogicError"))
-
-// TODO: into shared header
-//#define debug(...) printf(__VA_ARGS__)
-#define debug(...)
+#include "cc.h" // Convenient Containers
+#include "shared.h"
 
 /* The vector generic from Convenient Containers */
 typedef vec(VALUE) value_vector;
 
-/* What we might think of as vector[index]. It is assignable. TODO: into shared header */
-#define lval(vector, index) (*get(vector, index))
 #define single_cell_val_at(seg_tree, idx) rb_funcall(seg_tree->single_cell_array_val_lambda, rb_intern("call"), 1, LONG2FIX(idx))
 #define combined_val(seg_tree, v1, v2) rb_funcall(seg_tree->combine_lambda, rb_intern("call"), 2, (v1), (v2))
+
 /**
  * The C implementation of a generic Segment Tree
  */
-
-/*
- * Binary tree arithmetic for an implicit tree in an array, 1-based.
- *
- * TODO: into shared header
- */
-#define TREE_ROOT 1
-
-static size_t midpoint(size_t left, size_t right) {
-  return (left + right) / 2;
-}
-
-static size_t left_child(size_t i) {
-  return i << 1;
-}
-
-static size_t right_child(size_t i) {
-  return 1 + (i << 1);
-}
 
 // TODO: use a VALUE* instead of a vec(VALUE) for tree. We know the size when we allocate it in setup().
 typedef struct {
@@ -169,22 +137,6 @@ static segment_tree_data *unwrapped(VALUE self) {
   segment_tree_data *segment_tree;
   TypedData_Get_Struct((self), segment_tree_data, &segment_tree_type, segment_tree);
   return segment_tree;
-}
-
-/*
- * Check that a Ruby value is a non-negative Fixnum and convert it to a C unsigned long
- *
- * TODO: into a shared header and .c
- */
-static unsigned long checked_nonneg_fixnum(VALUE val) {
-  Check_Type(val, T_FIXNUM);
-  long c_val = FIX2LONG(val);
-
-  if (c_val < 0) {
-    rb_raise(eSharedDataError, "Value must be non-negative");
-  }
-
-  return c_val;
 }
 
 /*
@@ -414,7 +366,6 @@ static VALUE segment_tree_update_at(VALUE self, VALUE idx) {
  * (see SegmentTreeTemplate)
  */
 void Init_c_segment_tree_template() {
-  VALUE mDataStructuresRMolinari = rb_define_module("DataStructuresRMolinari");
   VALUE cSegmentTreeTemplate = rb_define_class_under(mDataStructuresRMolinari, "CSegmentTreeTemplate", rb_cObject);
 
   rb_define_alloc_func(cSegmentTreeTemplate, segment_tree_alloc);
