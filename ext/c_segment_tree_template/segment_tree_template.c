@@ -2,17 +2,10 @@
  * This is a C implementation of a Segment Tree data structure.
  *
  * More specifically, it is the C version of the SegmentTreeTemplate Ruby class, for which see elsewhere in the repo.
- *
- * TODO:
- * - use a VALUE* for binary tree storage, instead of a vec(VALUE)
  */
 
 #include "ruby.h"
-#include "cc.h" // Convenient Containers
 #include "shared.h"
-
-/* The vector generic from Convenient Containers */
-typedef vec(VALUE) value_vector;
 
 #define single_cell_val_at(seg_tree, idx) rb_funcall(seg_tree->single_cell_array_val_lambda, rb_intern("call"), 1, LONG2FIX(idx))
 #define combined_val(seg_tree, v1, v2) rb_funcall(seg_tree->combine_lambda, rb_intern("call"), 2, (v1), (v2))
@@ -21,13 +14,13 @@ typedef vec(VALUE) value_vector;
  * The C implementation of a generic Segment Tree
  */
 
-// TODO: use a VALUE* instead of a vec(VALUE) for tree. We know the size when we allocate it in setup().
 typedef struct {
-  value_vector *tree; // The 1-based implicit binary tree in which the data structure lives
+  VALUE *tree; // The 1-based implicit binary tree in which the data structure lives
   VALUE single_cell_array_val_lambda;
   VALUE combine_lambda;
   VALUE identity;
-  size_t size;
+  size_t size; // the size of the underlying data array
+  size_t tree_alloc_size; // the size of the VALUE* tree array
 } segment_tree_data;
 
 /************************************************************
@@ -42,8 +35,7 @@ static segment_tree_data *create_segment_tree() {
   segment_tree_data *segment_tree = malloc(sizeof(segment_tree_data));
 
   // Allocate the structures
-  segment_tree->tree = malloc(sizeof(value_vector));
-  init(segment_tree->tree);
+  segment_tree->tree = NULL; // we don't yet know how much space we need
 
   segment_tree->single_cell_array_val_lambda = 0;
   segment_tree->combine_lambda = 0;
@@ -60,7 +52,7 @@ static segment_tree_data *create_segment_tree() {
 static void segment_tree_free(void *ptr) {
   if (ptr) {
     segment_tree_data *segment_tree = ptr;
-    cleanup(segment_tree->tree);
+    xfree(segment_tree->tree);
     xfree(segment_tree);
   }
 }
@@ -74,11 +66,8 @@ static size_t segment_tree_memsize(const void *ptr) {
   if (ptr) {
     const segment_tree_data *st = ptr;
 
-    // See https://github.com/JacksonAllan/CC/issues/3
-    return
-      sizeof( cc_vec_hdr_ty )
-      + cap( st->tree ) * CC_EL_SIZE( *(st->tree) )
-      + sizeof(segment_tree_data);
+    // for the tree array plus the size of the segment_tree_data struct itself.
+    return sizeof( VALUE ) * st->tree_alloc_size * 4 + sizeof(segment_tree_data);
   } else {
     return 0;
   }
@@ -94,9 +83,10 @@ static void segment_tree_mark(void *ptr) {
   rb_gc_mark(st->single_cell_array_val_lambda);
   rb_gc_mark(st->identity);
 
-  for_each( st->tree, value ) {
+  for (size_t i = 0; i < st->tree_alloc_size; i++) {
+    VALUE value = st->tree[i];
     if (value) {
-      rb_gc_mark(*value);
+      rb_gc_mark(value);
     }
   }
 }
@@ -168,11 +158,11 @@ static VALUE segment_tree_alloc(VALUE klass) {
  * - [tree_l, tree_r]: the sub-interval of the underlying array data corresponding to the tree node being calculated.
  */
 static void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_l, size_t tree_r) {
-  value_vector *tree = segment_tree->tree;
+  VALUE *tree = segment_tree->tree;
 
   if (tree_l == tree_r) {
     // Base case: the node corresponds to a subarray of length 1.
-    lval(segment_tree->tree, tree_idx) = single_cell_val_at(segment_tree, tree_l);
+    segment_tree->tree[tree_idx] = single_cell_val_at(segment_tree, tree_l);
   } else {
     // Build to two child nodes, and then combine their values for this node.
     size_t mid = midpoint(tree_l, tree_r);
@@ -182,13 +172,8 @@ static void build(segment_tree_data *segment_tree, size_t tree_idx, size_t tree_
     build(segment_tree, left, tree_l, mid);
     build(segment_tree, right, mid + 1, tree_r);
 
-    /* VALUE comb_val = rb_funcall( */
-    /*                             segment_tree->combine_lambda, rb_intern("call"), 2, */
-    /*                             *get(tree, left), // we just built these two values in the recursive calls. */
-    /*                             *get(tree, right) */
-    /*                             ); */
-    VALUE comb_val = combined_val(segment_tree, *get(tree, left), *get(tree, right));
-    lval(segment_tree->tree, tree_idx) = comb_val;
+    VALUE comb_val = combined_val(segment_tree, tree[left], tree[right]);
+    segment_tree->tree[tree_idx] = comb_val;
   }
 }
 
@@ -223,11 +208,9 @@ static void setup(segment_tree_data* seg_tree, VALUE combine, VALUE single_cell_
 
   // Implicit binary tree with n leaves and straightforward left() and right() may use indices up to 4n.  But see here for a way to
   // reduce the requirement to 2n: https://cp-algorithms.com/data_structures/segment_tree.html#memory-efficient-implementation
-  size_t vec_size = 1 + 4 * seg_tree->size;
-  resize(seg_tree->tree, vec_size);
-  for (size_t i = 0; i < vec_size; i++) {
-    lval(seg_tree->tree, i) = (VALUE)0;
-  }
+  size_t tree_size = 1 + 4 * seg_tree->size;
+  seg_tree->tree = calloc(tree_size, sizeof(VALUE));
+  seg_tree->tree_alloc_size = tree_size;
 
   build(seg_tree, TREE_ROOT, 0, seg_tree->size - 1);
 }
@@ -256,7 +239,7 @@ static void setup(segment_tree_data* seg_tree, VALUE combine, VALUE single_cell_
 static VALUE determine_val(segment_tree_data* seg_tree, size_t tree_idx, size_t left, size_t right, size_t tree_l, size_t tree_r) {
   // Does the current tree node exactly serve up the interval we're interested in?
   if (left == tree_l && right == tree_r) {
-    return lval(seg_tree->tree, tree_idx);
+    return seg_tree->tree[tree_idx];
   }
 
   // We need to go further down the tree */
@@ -294,7 +277,7 @@ static void update_val_at(segment_tree_data *seg_tree, size_t idx, size_t tree_i
                tree_r, idx
                );
     }
-    lval(seg_tree->tree, tree_idx) = single_cell_val_at(seg_tree, tree_l);
+    seg_tree->tree[tree_idx] = single_cell_val_at(seg_tree, tree_l);
   } else {
     // Recursively update the appropriate subtree...
     size_t mid = midpoint(tree_l, tree_r);
@@ -306,9 +289,13 @@ static void update_val_at(segment_tree_data *seg_tree, size_t idx, size_t tree_i
       update_val_at(seg_tree, idx, right, mid + 1, tree_r);
     }
     // ...and ourself to incorporate the change
-    lval(seg_tree->tree, tree_idx) = combined_val(seg_tree, *get(seg_tree->tree, left), *get(seg_tree->tree, right));
+    seg_tree->tree[tree_idx] = combined_val(seg_tree, seg_tree->tree[left], seg_tree->tree[right]);
   }
 }
+
+/*
+ * End C implementation of the Segment Tree API
+ ************************************************************/
 
 /**
  * And now the wrappers around the C functionality.
