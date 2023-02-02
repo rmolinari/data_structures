@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.4] 2023-02-02
 
 - Disjoint Union
   - C extension: use Convenient Containers rather than my janky Dynamic Array attempt.
