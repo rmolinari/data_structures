@@ -363,7 +363,9 @@ static void update_val_at(segment_tree_data *seg_tree, size_t idx, size_t tree_i
  */
 
 /*
- * CSegmentTreeTemplate#c_initialize
+ * CSegmentTreeTemplate#c_initialize.
+ *
+ * (see CSegmentTreeTemplate#initialize).
  */
 static VALUE segment_tree_init(VALUE self, VALUE combine, VALUE single_cell_array_val, VALUE size, VALUE identity) {
   setup(unwrapped(self), combine, single_cell_array_val, size, identity);
@@ -371,7 +373,7 @@ static VALUE segment_tree_init(VALUE self, VALUE combine, VALUE single_cell_arra
 }
 
 /*
- * CSegmentTreeTemplate#query_on.
+ * (see SegmentTreeTemplate#query_on)
  */
 static VALUE segment_tree_query_on(VALUE self, VALUE left, VALUE right) {
   segment_tree_data* seg_tree = unwrapped(self);
@@ -391,7 +393,7 @@ static VALUE segment_tree_query_on(VALUE self, VALUE left, VALUE right) {
 }
 
 /*
- * CSegmentTreeTemplate#update_at
+ * (see SegmentTreeTemplate#update_at)
  */
 static VALUE segment_tree_update_at(VALUE self, VALUE idx) {
   segment_tree_data *seg_tree = unwrapped(self);
@@ -407,9 +409,9 @@ static VALUE segment_tree_update_at(VALUE self, VALUE idx) {
 }
 
 /*
- * A generic Segment Tree
+ * A generic Segment Tree template, written in C.
  *
- * TODO: write documentation
+ * (see SegmentTreeTemplate)
  */
 void Init_c_segment_tree_template() {
   VALUE mDataStructuresRMolinari = rb_define_module("DataStructuresRMolinari");
