@@ -9,6 +9,8 @@ as fast as possible.
 
 The code is available as a gem: https://rubygems.org/gems/data_structures_rmolinari.
 
+It is distributed under the MIT license.
+
 ## Usage
 
 The right way to organize the code is not obvious to me. For now the data structures are all defined in the module
