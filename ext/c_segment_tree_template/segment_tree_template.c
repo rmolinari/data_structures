@@ -353,7 +353,8 @@ static VALUE segment_tree_update_at(VALUE self, VALUE idx) {
  * (see SegmentTreeTemplate)
  */
 void Init_c_segment_tree_template() {
-  VALUE cSegmentTreeTemplate = rb_define_class_under(mDataStructuresRMolinari, "CSegmentTreeTemplate", rb_cObject);
+  VALUE mSegmentTree = rb_define_module_under(mDataStructuresRMolinari, "SegmentTree");
+  VALUE cSegmentTreeTemplate = rb_define_class_under(mSegmentTree, "CSegmentTreeTemplate", rb_cObject);
 
   rb_define_alloc_func(cSegmentTreeTemplate, segment_tree_alloc);
   rb_define_method(cSegmentTreeTemplate, "c_initialize", segment_tree_init, 4);

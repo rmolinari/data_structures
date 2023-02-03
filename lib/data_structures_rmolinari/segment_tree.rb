@@ -1,13 +1,11 @@
 require_relative 'shared'
 
-module DataStructuresRMolinari
-  # A namespace to hold the various bits and bobs related to the SegmentTree implementation
-  module SegmentTree
-  end
+# A namespace to hold the various bits and bobs related to the SegmentTree implementation
+module DataStructuresRMolinari::SegmentTree
 end
 
-require_relative 'segment_tree_template'
-require_relative 'c_segment_tree_template_impl'
+require_relative 'segment_tree_template'   # Ruby implementation of the generic API
+require_relative 'c_segment_tree_template' # C implementation of the generic API
 
 # Segment Tree: various concrete implementations
 #
@@ -21,23 +19,22 @@ require_relative 'c_segment_tree_template_impl'
 # Ruby.
 #
 # Here we provide several concrete segment tree implementations built on top of the template (generic) versions. Each instance is
-#backed either by the pure Ruby SegmentTreeTemplate or its C-based sibling CSegmentTreeTemplate
-#
+# backed either by the pure Ruby SegmentTreeTemplate or its C-based sibling CSegmentTreeTemplate
 module DataStructuresRMolinari
   module SegmentTree
     # A convenience method to construct a Segment Tree that, for a given array A(0...size), answers questions of the kind given by
     # operation, using the template written in lang
     #
     # - @param data: the array A.
-    #   - It must respond to +#size# and to +#[]+ with non-negative integer arguments.
+    #   - It must respond to +#size+ and to +#[]+ with non-negative integer arguments.
     # - @param operation: a supported "style" of Segment Tree
     #   - for now, must be one of these (but you can write your own concrete version)
     #     - +:max+: implementing +max_on(i, j)+, returning the maximum value in A(i..j)
-    #     - +:index_of_max+: implementing +index_of_max_val_on(i, j)+, returning an index corresopnding to the maximum value in
+    #     - +:index_of_max+: implementing +index_of_max_val_on(i, j)+, returning an index corresponding to the maximum value in
     #       A(i..j).
     # - @param lang: the language in which the underlying "template" is written
     #   - +:c+ or +:ruby+
-    #   - the C version will run faster but may be buggier
+    #   - the C version will run faster but for now may be buggier and harder to debug
     module_function def construct(data, operation, lang)
       operation.must_be_in [:max, :index_of_max]
       lang.must_be_in [:ruby, :c]
@@ -107,6 +104,22 @@ module DataStructuresRMolinari
       #   - Return +nil+ if i > j
       def index_of_max_val_on(i, j)
         @structure.query_on(i, j)&.first # discard the value part of the pair, which is a bookkeeping
+      end
+    end
+
+    # The underlying functionality of the Segment Tree data type, implemented in C as a Ruby extension.
+    #
+    # See SegmentTreeTemplate for more information.
+    #
+    # Implementation note
+    #
+    # The functionality is entirely written in C. But we write the constructor in Ruby because keyword arguments are difficult to
+    # parse on the C side.
+    class CSegmentTreeTemplate
+      # (see SegmentTreeTemplate::initialize)
+      def initialize(combine:, single_cell_array_val:, size:, identity:)
+        # having sorted out the keyword arguments, pass them more easily to the C layer.
+        c_initialize(combine, single_cell_array_val, size, identity)
       end
     end
   end

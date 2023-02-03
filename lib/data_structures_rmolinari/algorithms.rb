@@ -1,4 +1,4 @@
-# A collection of algorithms that use the module's data structures but don't belong as a method on one of the data structures
+# Algorithms that use the module's data structures but don't belong as a method on one of the data structures
 module DataStructuresRMolinari::Algorithms
   include Shared
 
@@ -11,12 +11,12 @@ module DataStructuresRMolinari::Algorithms
   #
   # A _maximal empty rectangle_ (MER) for P is an empty rectangle for P not properly contained in any other.
   #
-  # We enumerate all maximal empty rectangles for P, yielding each as (left, right, bottom, top) to a block. The algorithm is due to
-  # De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013),
-  # pp 310-327.
+  # We enumerate all maximal empty rectangles for P, yielding each as (left, right, bottom, top). The algorithm is due to De, M.,
+  # Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp
+  # 310-327.
   #
   # It runs in O(m log n) time, where m is the number of MERs enumerated and n is the number of points in P.  (Contructing the
-  # MaxPST below takes O(n log^2 n) time, but m = O(n^2) so we are still O(m log n) overall.)
+  # MaxPST takes O(n log^2 n) time, but m = O(n^2) so we are still O(m log n) overall.)
   #
   # @param points [Array] an array of points in the x-y plane. Each must respond to +x+ and +y+.
   def self.maximal_empty_rectangles(points)

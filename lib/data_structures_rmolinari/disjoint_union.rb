@@ -89,5 +89,7 @@ class DataStructuresRMolinari::DisjointUnion
     else
       @d[e] = f
     end
+
+    nil
   end
 end

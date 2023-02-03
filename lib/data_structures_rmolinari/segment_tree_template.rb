@@ -16,7 +16,7 @@ require_relative 'shared'
 # initializer and the definitions of concrete realisations like MaxValSegmentTree.
 #
 # We do O(n) work to build the internal data structure at initialization. Then we answer queries in O(log n) time.
-class DataStructuresRMolinari::SegmentTreeTemplate
+class DataStructuresRMolinari::SegmentTree::SegmentTreeTemplate
   include Shared
   include Shared::BinaryTreeArithmetic
 

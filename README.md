@@ -15,7 +15,7 @@ The right way to organize the code is not obvious to me. For now the data struct
 `DataStructuresRMolinari` to avoid polluting the global namespace.
 
 Example usage after the gem is installed:
-```
+``` ruby
 require 'data_structures_rmolinari`
 
 # Pull what we need out of the namespace
@@ -41,6 +41,25 @@ It also provides
 
 For more details see https://en.wikipedia.org/wiki/Disjoint-set_data_structure and the paper [[TvL1984]](#references) by Tarjan and
 van Leeuwen.
+
+``` ruby
+require 'data_structures_rmolinari'
+
+DisjointUnion = DataStructuresRMolinari::DisjointUnion
+
+# Create an instance over the "universe" 0, 1, ..., 9.
+du = DisjointUnion.new(10)
+du.subset_count # => 10; each element starts out in its own subset
+
+# Say that 2 and 3 are actually in the same subset
+du.unite(2, 3)
+du.subset_count # => 9
+du.find(2) == du.find(3) # => true
+
+du.unite(4, 5)
+du.unite(3, 4) # now 2, 3, 4, and 5 are all in the same subset
+du.subset_count # => 7
+```
 
 ## Heap
 
@@ -112,10 +131,37 @@ arbitrary subarrays.
 
 An excellent description of the idea is found at https://cp-algorithms.com/data_structures/segment_tree.html.
 
-Generic code is provided in `SegmentTreeTemplate`. Concrete classes provide a handful of simple lambdas and constants to the
-template class's initializer. Figuring out the details requires some knowledge of the internal mechanisms of a segment tree, for
-which the link at cp-algorithms.com is very helpful. See the definitions of the concrete classes `MaxValSegmentTree` and
+Generic code is provided in `SegmentTree::SegmentTreeTemplate` and its equivalent (and faster) C-based sibling,
+`SegmentTree::CSegmentTreeTemplate` (see [below](#c-extensions)).
+
+Writing a concrete segment tree class just means providing some simple lambdas and constants to the template class's
+initializer. Figuring out the details requires some knowledge of the internal mechanisms of a segment tree, for which the link at
+cp-algorithms.com is very helpful. See the implementations of the concrete classes `MaxValSegmentTree` and
 `IndexOfMaxValSegmentTree` for examples.
+
+Since there are several concrete "types" and two underlying generic implementions there is a convenience method on the `SegmentTree`
+module to get instances.
+
+``` ruby
+require 'data_structures_rmolinari'
+
+SegmentTree = DataStructuresRMolinari::SegmentTree # namespace module
+
+data = [1, -3, 2, 1, 5, -9]
+
+# Get a segment tree instance that will answer "max over this subinterval" questions about data.
+# Here we get one using the ruby implementation of the generic functionality.
+#
+# We offer :index_of_max as an alternative to :max. This will construct an instance that answers
+# questions of the form "an index of the maximum value over this subinterval".
+#
+# To use the version written in C, put :c instead of :ruby.
+seg_tree = SegmentTree.construct(data, :max, :ruby)
+
+seg_tree.max_on(0, 2) # => 2
+seg_tree.max_on(1, 4) # => 5
+[..etc..]
+```
 
 ## Algorithms
 
