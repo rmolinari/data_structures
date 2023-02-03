@@ -1,7 +1,7 @@
 require_relative 'shared'
 
-# The template of Segment Tree, which can be used for various interval-related purposes, like efficiently finding the sum (or min or
-# max) on a arbitrary subarray of a given array.
+# A generic implementation of Segment Tree, which can be used for various interval-related purposes, like efficiently finding the
+# sum (or min or max) on a arbitrary subarray of a given array.
 #
 # There is an excellent description of the data structure at https://cp-algorithms.com/data_structures/segment_tree.html. The
 # Wikipedia article (https://en.wikipedia.org/wiki/Segment_tree) appears to describe a different data structure which is sometimes
