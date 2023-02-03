@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.0] 2023-02.03
+
 - SegmentTree
   - Reorganize the code into a SegmentTree submodule.
   - Provide a conveniece method for getting concrete instances.
