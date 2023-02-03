@@ -166,13 +166,13 @@ SegmentTree = DataStructuresRMolinari::SegmentTree # namespace module
 
 data = [1, -3, 2, 1, 5, -9]
 
-# Get a segment tree instance that will answer "max over this subinterval" questions about data.
+# Get a segment tree instance that will answer "max over this subinterval?" questions about data.
 # Here we get one using the ruby implementation of the generic functionality.
 #
-# We offer :index_of_max as an alternative to :max. This will construct an instance that answers
-# questions of the form "an index of the maximum value over this subinterval".
+# Put :index_of_max in place of :map to get an instance that returns "an index of the maximum value
+# over this subinterval".
 #
-# To use the version written in C, put :c instead of :ruby.
+# To use the generic code written in C, put :c instead of :ruby.
 seg_tree = SegmentTree.construct(data, :max, :ruby)
 
 seg_tree.max_on(0, 2) # => 2
