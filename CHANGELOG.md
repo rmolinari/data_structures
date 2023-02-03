@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+- SegmentTree
+  - Reorganize the code into a SegmentTree submodule.
+  - Provide a conveniece method for getting concrete instances.
+
+- README.md
+  - Add some simple example code for the data types.
+
 ## [0.4.4] 2023-02-02
 
 - Disjoint Union

@@ -14,18 +14,6 @@ The code is available as a gem: https://rubygems.org/gems/data_structures_rmolin
 The right way to organize the code is not obvious to me. For now the data structures are all defined in the module
 `DataStructuresRMolinari` to avoid polluting the global namespace.
 
-Example usage after the gem is installed:
-``` ruby
-require 'data_structures_rmolinari`
-
-# Pull what we need out of the namespace
-MaxPrioritySearchTree = DataStructuresRMolinari::MaxPrioritySearchTree
-Point = DataStructuresRMolinari::Point # anything responding to :x and :y is fine
-
-pst = MaxPrioritySearchTree.new([Point.new(1, 1)])
-puts pst.largest_y_in_ne(0, 0) # "Point(1,1)"
-```
-
 # Implementations
 
 ## Disjoint Union
@@ -44,21 +32,19 @@ van Leeuwen.
 
 ``` ruby
 require 'data_structures_rmolinari'
-
 DisjointUnion = DataStructuresRMolinari::DisjointUnion
 
 # Create an instance over the "universe" 0, 1, ..., 9.
 du = DisjointUnion.new(10)
-du.subset_count # => 10; each element starts out in its own subset
+du.subset_count          # => 10; each element starts out in its own subset
 
-# Say that 2 and 3 are actually in the same subset
-du.unite(2, 3)
-du.subset_count # => 9
+du.unite(2, 3)           # say that 2 and 3 are actually in the same subset
+du.subset_count          # => 9
 du.find(2) == du.find(3) # => true
 
 du.unite(4, 5)
-du.unite(3, 4) # now 2, 3, 4, and 5 are all in the same subset
-du.subset_count # => 7
+du.unite(3, 4)           # now 2, 3, 4, and 5 are all in the same subset
+du.subset_count          # => 7
 ```
 
 ## Heap
@@ -81,6 +67,24 @@ Another configuration parameter allows the creation of a "non-addressable" heap.
 allows the insertion of duplicate items (which is sometimes useful) and slightly faster operation overall.
 
 See https://en.wikipedia.org/wiki/Binary_heap and the paper by Edelkamp, Elmasry, and Katajainen [[EEK2017]](#references).
+
+``` ruby
+require 'data_structures_rmolinari'
+Heap = DataStructuresRMolinari::Heap
+
+data = [4, 3, 2, 1]
+
+heap = Heap.new
+
+# Insert the elements of data, each with itself as priority.
+data.each { |v| heap.insert(v, v) }
+
+heap.top           # => 1, since we have a min-heap.
+heap.pop           # => 1
+heap.top           # => 2; with 1 gone, this is the element with least priority
+heap.update(3, -3)
+heap.top           # => 3; now 3 is the element with least priority
+```
 
 ## Priority Search Tree
 
@@ -115,12 +119,26 @@ regions.
 By default these data structures are immutable: once constructed they cannot be changed. But there is a constructor option that
 makes the instance "dynamic". This allows us to delete the element at the root of the tree - the one with largest y value (smallest
 for MinPST) - with the `delete_top!` method. This operation is important in certain algorithms, such as enumerating all maximal
-empty rectangles (see the second paper by De et al.[[DMNS2013]](#references)) Note that points can still not be added to the PST in
+empty rectangles (see the second paper by De et al[[DMNS2013]](#references)). Note that points can still not be added to the PST in
 any case, and choosing the dynamic option makes certain internal bookkeeping operations slower.
 
 In [[DMNS2013]](#references) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
 answer queries in all four quadrants and both "kinds" of 3-sided boxes. Having one of these would save the trouble of constructing
 both a MaxPST and MinPST. But the presentiation is hard to follow in places and the paper's pseudocode is buggy.[^minmaxpst]
+
+``` ruby
+require 'data_structures_rmolinari'
+MaxPST = DataStructuresRMolinari::MaxPrioritySearchTree
+Point = Shared::Point # simple (x, y) struct. Anything responding to #x and #y will work
+
+data = [Point.new(0, 0), Point.new(1, 2), Point.new(2, 1)]
+pst = MaxPST.new(data)
+
+pst.largest_y_in_ne(0, 0)              # => #<struct Shared::Point x=1, y=2>
+pst.largest_y_in_ne(1, 1)              # => #<struct Shared::Point x=1, y=2>
+pst.largest_y_in_ne(1.5, 1)            # => #<struct Shared::Point x=2, y=1>
+pst.largest_y_in_3_sided(-0.5, 0.5, 0) # => #<struct Shared::Point x=0, y=0>
+```
 
 ## Segment Tree
 
@@ -144,7 +162,6 @@ module to get instances.
 
 ``` ruby
 require 'data_structures_rmolinari'
-
 SegmentTree = DataStructuresRMolinari::SegmentTree # namespace module
 
 data = [1, -3, 2, 1, 5, -9]
@@ -160,7 +177,7 @@ seg_tree = SegmentTree.construct(data, :max, :ruby)
 
 seg_tree.max_on(0, 2) # => 2
 seg_tree.max_on(1, 4) # => 5
-[..etc..]
+# ..etc..
 ```
 
 ## Algorithms
@@ -176,13 +193,12 @@ The Algorithms submodule contains some algorithms using the data structures.
 
 # C Extensions
 
-As another learning process I have implemented several of these data structures as C extensions. The class names have a "C" prefixed
-and they can be required like their pure Ruby versions and have the same APIs.
+As another learning process I have implemented several of these data structures as C extensions. The APIs are the same.
 
 ## Disjoint Union
 
-A benchmark suggests that a long sequence of `unite` operations is about 3 times as fast with the `CDisjointUnion` as with
-`DisjointUnion`.
+The C version is called `CDisjointUnion`.  A benchmark suggests that a long sequence of `unite` operations is about 3 times as fast
+with `CDisjointUnion` as with `DisjointUnion`.
 
 The implementation uses the remarkable Convenient Containers library from Jackson Allan.[[Allan]](#references).
 
@@ -191,9 +207,9 @@ The implementation uses the remarkable Convenient Containers library from Jackso
 `CSegmentTreeTemplate` is the C implementation of the generic class. Concrete classes are built on top of this in Ruby, just as with
 the pure Ruby `SegmentTreeTemplate` class.
 
-A benchmark suggests that a long sequence of `max_on` operations against a max-val Segment Tree is about 4 times as fast with the C
-version as with the Ruby version. I'm a bit suprised the improvment isn't larger, but remember that the C code must still interact
-with the Ruby objects in the underlying data array, and must combine them, etc., via Ruby lambdas.
+A benchmark suggests that a long sequence of `max_on` operations against a max-val Segment Tree is about 4 times as fast with C as
+with Ruby. I'm a bit suprised the improvment isn't larger, but remember that the C code must still interact with the Ruby objects in
+the underlying data array, and must combine them, etc., via Ruby lambdas.
 
 # References
 - [Allan] Allan, J., _CC: Convenient Containers_, https://github.com/JacksonAllan/CC, (retrieved 2023-02-01).
