@@ -1,3 +1,4 @@
+#include "ruby.h"
 #include "shared.h"
 
 /*

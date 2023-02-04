@@ -1,1 +1,1 @@
-disjoint_union.o: ../cc.h ../shared.o
+disjoint_union.o: ../cc.h ../shared.h ../shared.o
