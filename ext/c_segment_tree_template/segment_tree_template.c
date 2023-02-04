@@ -215,7 +215,6 @@ static void setup(segment_tree_data* seg_tree, VALUE combine, VALUE single_cell_
   build(seg_tree, TREE_ROOT, 0, seg_tree->size - 1);
 }
 
-
 /*
  * Determine the value for the subarray A(left, right).
  *
@@ -297,8 +296,10 @@ static void update_val_at(segment_tree_data *seg_tree, size_t idx, size_t tree_i
  * End C implementation of the Segment Tree API
  ************************************************************/
 
-/**
- * And now the wrappers around the C functionality.
+/************************************************************
+ * The wrappers around the C functionality.
+ *
+ * These become Ruby methods via rb_define_method() below.
  */
 
 /*

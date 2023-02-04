@@ -69,6 +69,11 @@ typedef struct du_data {
   size_t subset_count;
 } disjoint_union_data;
 
+/************************************************************
+ * Memory Management
+ *
+ */
+
 /*
  * Create one (on the heap).
  */
@@ -98,8 +103,75 @@ static void disjoint_union_free(void *ptr) {
 }
 
 /************************************************************
- * The disjoint union operations
+ * How much memory (roughly) does a disjoint_union_data instance consume?
+ *
+ * I guess the Ruby runtime can use this information when deciding how agressive to be during garbage collection and such.
+ */
+static size_t disjoint_union_memsize(const void *ptr) {
+  if (ptr) {
+    const disjoint_union_data *du = ptr;
+
+    // See https://github.com/JacksonAllan/CC/issues/3
+    return sizeof( cc_vec_hdr_ty ) + cap( du->pairs ) * CC_EL_SIZE( *(du->pairs) );
+  } else {
+    return 0;
+  }
+}
+
+// There is no need for a mark() function as we don't hold any Ruby objects ourselves.
+
+/*
+ * A configuration struct that tells the Ruby runtime how to deal with a disjoint_union_data object.
+ *
+ * https://docs.ruby-lang.org/en/master/extension_rdoc.html#label-Encapsulate+C+data+into+a+Ruby+object
+ */
+static const rb_data_type_t disjoint_union_type = {
+  .wrap_struct_name = "disjoint_union",
+  { // help for the Ruby garbage collector
+    .dmark = NULL, // dmark, for marking other Ruby objects. We don't hold any other objects so this can be NULL
+    .dfree = disjoint_union_free, // how to free the memory associated with an object
+    .dsize = disjoint_union_memsize, // roughly how much space does the object consume?
+  },
+  .data = NULL, // a data field we could use for something here if we wanted. Ruby ignores it
+  .flags = 0  // GC-related flag values.
+};
+
+/*
+ * End memory management functions
  ************************************************************/
+
+/************************************************************
+ * Wrapping and unwrapping things for the Ruby runtime
+ *
+ */
+
+/*
+ * Unwrap a Ruby-side disjoint union object to get the C struct inside.
+ */
+static disjoint_union_data *unwrapped(VALUE self) {
+  disjoint_union_data *disjoint_union;
+  TypedData_Get_Struct((self), disjoint_union_data, &disjoint_union_type, disjoint_union);
+  return disjoint_union;
+}
+
+/*
+ * This is for CDisjointUnion.allocate on the Ruby side
+ */
+static VALUE disjoint_union_alloc(VALUE klass) {
+  // Get one on the heap
+  disjoint_union_data *disjoint_union = create_disjoint_union();
+  // Wrap it up into a Ruby object
+  return TypedData_Wrap_Struct(klass, &disjoint_union_type, disjoint_union);
+}
+
+/*
+ * End wrapping and unwrapping functions.
+ ************************************************************/
+
+/************************************************************
+ * The Disjoint Union API here on the C side
+ *
+ */
 
 /*
  * Is the given element already a member of the universe?
@@ -114,13 +186,6 @@ static int present_p(disjoint_union_data *disjoint_union, size_t element) {
 static void assert_membership(disjoint_union_data *disjoint_union, size_t element) {
   if (!present_p(disjoint_union, element)) {
     rb_raise(eSharedDataError, "Value %zu is not part of the universe", element);
-    /* rb_raise( */
-    /*          eSharedDataError, */
-    /*          "Value %zu is not part of the universe, size = %zu, forest_val = %lu", */
-    /*          element, */
-    /*          size(disjoint_union->pairs), */
-    /*          get(disjoint_union->pairs, element)->parent */
-    /*          ); */
   }
 }
 
@@ -206,59 +271,15 @@ static void unite(disjoint_union_data *disjoint_union, size_t elt1, size_t elt2)
   link_roots(disjoint_union, root1, root2);
 }
 
+/*
+ * End C impelementaion of the Segment Tree API
+ ************************************************************/
 
-/**
- * Wrapping and unwrapping things for the Ruby runtime
+/************************************************************
+ * The wrappers around the C functionality.
  *
+ * These become Ruby methods via rb_define_method() below.
  */
-
-// How much memory (roughly) does a disjoint_union_data instance consume? I guess the Ruby runtime can use this information when
-// deciding how agressive to be during garbage collection and such.
-static size_t disjoint_union_memsize(const void *ptr) {
-  if (ptr) {
-    const disjoint_union_data *du = ptr;
-
-    // See https://github.com/JacksonAllan/CC/issues/3
-    return sizeof( cc_vec_hdr_ty ) + cap( du->pairs ) * CC_EL_SIZE( *(du->pairs) );
-  } else {
-    return 0;
-  }
-}
-
-/*
- * A configuration struct that tells the Ruby runtime how to deal with a disjoint_union_data object.
- *
- * https://docs.ruby-lang.org/en/master/extension_rdoc.html#label-Encapsulate+C+data+into+a+Ruby+object
- */
-static const rb_data_type_t disjoint_union_type = {
-  .wrap_struct_name = "disjoint_union",
-  { // help for the Ruby garbage collector
-    .dmark = NULL, // dmark, for marking other Ruby objects. We don't hold any other objects so this can be NULL
-    .dfree = disjoint_union_free, // how to free the memory associated with an object
-    .dsize = disjoint_union_memsize, // roughly how much space does the object consume?
-  },
-  .data = NULL, // a data field we could use for something here if we wanted. Ruby ignores it
-  .flags = 0  // GC-related flag values.
-};
-
-/*
- * Unwrap a Ruby-side disjoint union object to get the C struct inside.
- */
-static disjoint_union_data *unwrapped(VALUE self) {
-  disjoint_union_data *disjoint_union;
-  TypedData_Get_Struct((self), disjoint_union_data, &disjoint_union_type, disjoint_union);
-  return disjoint_union;
-}
-
-/*
- * This is for CDisjointUnion.allocate on the Ruby side
- */
-static VALUE disjoint_union_alloc(VALUE klass) {
-  // Get one on the heap
-  disjoint_union_data *disjoint_union = create_disjoint_union();
-  // Wrap it up into a Ruby object
-  return TypedData_Wrap_Struct(klass, &disjoint_union_type, disjoint_union);
-}
 
 /*
  * A single parameter is optional. If given it should be a non-negative integer and specifies the initial size, s, of the universe
@@ -285,17 +306,6 @@ static VALUE disjoint_union_init(int argc, VALUE *argv, VALUE self) {
   }
   return self;
 }
-
-/**
- * And now the simple wrappers around the Disjoint Union C functionality. In each case we
- *   - unwrap a 'VALUE self',
- *     - i.e., the CDisjointUnion instance on the Ruby side;
- *   - munge any other arguments into longs;
- *   - call the appropriate C function to act on the struct; and
- *   - return an appropriate VALUE for the Ruby runtime can use.
- *
- * We make them into methods on CDisjointUnion in the Init_CDisjointUnion function, below.
- */
 
 /*
  * Add a new subset to the universe containing the element +new_v+.
