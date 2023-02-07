@@ -5,7 +5,7 @@ require 'byebug'
 
 require 'data_structures_rmolinari'
 
-MaxValSegmentTree = DataStructuresRMolinari::MaxValSegmentTree
+SegmentTree = DataStructuresRMolinari::SegmentTree
 
 class Randomizer
   def initialize(size)
@@ -28,14 +28,7 @@ class Randomizer
   end
 
   def make_seg_tree(lang)
-    case lang
-    when :ruby
-      MaxValSegmentTree.construct(@random_floats)
-    when :c
-      MaxValSegmentTree.construct_c(@random_floats)
-    else
-      raise "No implementation for lang #{lang}"
-    end
+    SegmentTree.construct(@random_floats, :max, lang.must_be_in([:c, :ruby]))
   end
 
   def operate(seg_tree)
@@ -76,7 +69,6 @@ Benchmark.bm(10) do |x|
   x.report("C init") { c_seg_tree = randomizer.make_seg_tree(:c) }
 end
 
-puts "...done"
 puts
 
 puts "And now the same sequence of #{size} #max_on operations on each segment tree..."

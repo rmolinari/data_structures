@@ -669,7 +669,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     raise 'dimension must be given unless we are enumerating' if property != :all && !dimension
     raise 'enumeration via a block only makes sense with a property of :all' if enumerate_via_block && property != :all
 
-    # TODO: allow this when we have a MinPST
     if is_min_pst
       raise 'maximizing in the y-dimension is not supported by a MinPST' if property == :max && dimension == :y
     else

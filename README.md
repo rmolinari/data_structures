@@ -210,8 +210,8 @@ The implementation uses the remarkable Convenient Containers library from Jackso
 the pure Ruby `SegmentTreeTemplate` class.
 
 A benchmark suggests that a long sequence of `max_on` operations against a max-val Segment Tree is about 4 times as fast with C as
-with Ruby. I'm a bit suprised the improvment isn't larger, but remember that the C code must still interact with the Ruby objects in
-the underlying data array, and must combine them, etc., via Ruby lambdas.
+with Ruby. I'm a bit suprised the improvement isn't larger, but remember that the C code must still interact with the Ruby objects
+in the underlying data array, and must access and combine them via Ruby lambdas.
 
 # References
 - [Allan] Allan, J., _CC: Convenient Containers_, https://github.com/JacksonAllan/CC, (retrieved 2023-02-01).
