@@ -25,6 +25,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @size = (ENV['test_size'] || 10_000).to_i
     raw_data = raw_data(@size)
     @point_finder = PointFinder.new(raw_data)
+    @open_point_finder = PointFinder.new(raw_data, open: true)
     @dynamic_point_finder = PointFinder.new(raw_data)
   end
 
@@ -54,20 +55,47 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_quadrant_calc(max_pst, :max, :y, :ne)
   end
 
+  def text_max_pst_largest_y_in_open_ne
+    check_quadrant_calc(max_pst, :max, :y, :ne, open: true)
+  end
+
+  def test_max_pst_largest_y_in_open_ne
+    data = [[0, 2], [1, 1], [2, 0]].map { |x, y| Point.new(x, y) }
+    pst = MaxPrioritySearchTree.new(data)
+
+    assert_equal Point.new(1, 1), pst.largest_y_in_ne(0, 0, open: true)
+  end
+
   def test_max_pst_largest_y_in_nw
     check_quadrant_calc(max_pst, :max, :y, :nw)
+  end
+
+  def test_max_pst_largest_y_in_open_nw
+    check_quadrant_calc(max_pst, :max, :y, :nw, open: true)
   end
 
   def test_max_pst_smallest_x_in_ne
     check_quadrant_calc(max_pst, :min, :x, :ne)
   end
 
+  def test_max_pst_smallest_x_in_open_ne
+    check_quadrant_calc(max_pst, :min, :x, :ne, open: true)
+  end
+
   def test_max_pst_largest_x_in_nw
     check_quadrant_calc(max_pst, :max, :x, :nw)
   end
 
+  def test_max_pst_largest_x_in_open_nw
+    check_quadrant_calc(max_pst, :max, :x, :nw, open: true)
+  end
+
   def test_max_pst_largest_y_in_3_sided
     check_3_sided_calc(max_pst, :max, :y)
+  end
+
+  def test_max_pst_largest_y_in_open_3_sided
+    check_3_sided_calc(max_pst, :max, :y, open: true)
   end
 
   def test_max_pst_enumerate_3_sided
@@ -619,7 +647,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # - criterion: :min or :max
   # - dimension: :x or :y
   # - region: :ne or :nw
-  private def check_quadrant_calc(pst, criterion, dimension, region)
+  # - open: is the region open or closed?
+  private def check_quadrant_calc(pst, criterion, dimension, region, open: false)
     pst.must_be
     criterion.must_be_in [:min, :max]
     dimension.must_be_in [:x, :y]
@@ -628,7 +657,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     100.times do
       x0 = rand(@point_finder.min_x..@point_finder.max_x)
       y0 = rand(@point_finder.min_x..@point_finder.max_x)
-      check_calculation(pst, criterion, dimension, region, x0, y0)
+      check_calculation(pst, criterion, dimension, region, x0, y0, open:)
     end
   end
 
@@ -636,7 +665,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # - criterion: :max or :all
   # - dimension: :y or nil
-  private def check_3_sided_calc(pst, criterion, dimension, enumerate_via_block: false)
+  private def check_3_sided_calc(pst, criterion, dimension, enumerate_via_block: false, open: false)
     criterion.must_be_in [:min, :max, :all]
     dimension.must_be :y if dimension
 
@@ -644,7 +673,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       x0 = rand(@point_finder.min_x..@point_finder.max_x)
       x1 = rand(x0..@point_finder.max_x)
       y0 = rand(@point_finder.min_x..@point_finder.max_x)
-      check_calculation(pst, criterion, dimension, :three_sided, x0, x1, y0, enumerate_via_block:)
+      check_calculation(pst, criterion, dimension, :three_sided, x0, x1, y0, enumerate_via_block:, open:)
     end
   end
 
@@ -658,7 +687,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #       which the called code is expected to yield
   #
   # TODO: have it work out the default_result itself.
-  private def check_calculation(pst, property, dimension, region, *args, enumerate_via_block: false)
+  private def check_calculation(pst, property, dimension, region, *args, enumerate_via_block: false, open: false)
     is_min_pst = pst.is_a? MinPrioritySearchTree
 
     region.must_be_in [:ne, :nw, :se, :sw, :three_sided]
@@ -687,15 +716,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       criterion = "#{property}_#{dimension}".to_sym
     end
 
-    expected = best_in(region, *args, by: criterion, is_min_pst:)
+    expected = best_in(region, *args, by: criterion, is_min_pst:, open:)
     calculated = if enumerate_via_block
                    vals = Set.new
-                   pst.send(method, *args) { vals << _1 }
+                   pst.send(method, *args, open:) { vals << _1 }
                    vals
                  else
-                   pst.send(method, *args)
+                   pst.send(method, *args, open:)
                  end
-    assert_equal expected, calculated
+    assert_equal expected, calculated, "Args: #{args.join(', ')}, open: #{open}"
   end
 
   # The "best" value in a given region by a given criterion, typically provided by @point_finder.
@@ -714,13 +743,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # is_min_pst: are we working for a MinPST. Default is false
   # among: if given, look among these points instead of @point_finder. It can be either another PointFinder or just an enumerable of
   #        points
-  private def best_in(region, *args, by: :all, is_min_pst: false, among: nil)
-    point_finder = @point_finder
+  private def best_in(region, *args, by: :all, is_min_pst: false, among: nil, open: false)
+    point_finder = open ? @open_point_finder : @point_finder
     if among
       point_finder = if among.is_a? PointFinder
                        among
                      else
-                       PointFinder.new(among)
+                       PointFinder.new(among, open:)
                      end
     end
 
@@ -803,11 +832,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     attr_reader :points
     attr_reader :min_x, :max_x
 
-    def initialize(points)
+    # open: whether the region is open or closed
+    def initialize(points, open: false)
       @points = points.clone
       @points_by_x = points.sort_by(&:x)
       @min_x, @max_x = @points_by_x.map(&:x).minmax
       @deletions = []
+      @open = open
     end
 
     # Declare the given point deleted. We don't actually check it is in the set of points we are monitoring
@@ -821,27 +852,51 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     def ne_quadrant(x0, y0)
-      rightward_points(x0).select { |pair| pair.y >= y0 }
+      if @open
+        rightward_points(x0).select { |pair| pair.x != x0 && pair.y > y0 }
+      else
+        rightward_points(x0).select { |pair| pair.y >= y0 }
+      end
     end
 
     def nw_quadrant(x0, y0)
-      leftward_points(x0).select { |pair| pair.y >= y0 }
+      if @open
+        leftward_points(x0).select { |pair| pair.x != x0 && pair.y > y0 }
+      else
+        leftward_points(x0).select { |pair| pair.y >= y0 }
+      end
     end
 
     def se_quadrant(x0, y0)
-      rightward_points(x0).select { |pair| pair.y <= y0 }
+      if @open
+        rightward_points(x0).select { |pair| pair.x != x0 && pair.y < y0 }
+      else
+        rightward_points(x0).select { |pair| pair.y <= y0 }
+      end
     end
 
     def sw_quadrant(x0, y0)
-      leftward_points(x0).select { |pair| pair.y <= y0 }
+      if @open
+        leftward_points(x0).select { |pair| pair.x != x0 && pair.y < y0 }
+      else
+        leftward_points(x0).select { |pair| pair.y <= y0 }
+      end
     end
 
     def three_sided_up(x0, x1, y0)
-      ne_quadrant(x0, y0).reject { |pt| pt.x > x1 }
+      if @open
+        ne_quadrant(x0, y0).reject { |pt| pt.x >= x1 }
+      else
+        ne_quadrant(x0, y0).reject { |pt| pt.x > x1 }
+      end
     end
 
     def three_sided_down(x0, x1, y0)
-      se_quadrant(x0, y0).reject { |pt| pt.x > x1 }
+      if @open
+        se_quadrant(x0, y0).reject { |pt| pt.x => x1 }
+      else
+        se_quadrant(x0, y0).reject { |pt| pt.x > x1 }
+      end
     end
 
     # Points (x,y) in @data with x >= x0

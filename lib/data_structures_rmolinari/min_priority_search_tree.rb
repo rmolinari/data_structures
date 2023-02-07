@@ -84,7 +84,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # - the lowest (min-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def smallest_y_in_se(x0, y0)
+  def smallest_y_in_se(x0, y0, open: false)
     flip @max_pst.largest_y_in_ne(x0, -y0)
   end
 
@@ -97,7 +97,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # - the lowest (min-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def smallest_y_in_sw(x0, y0)
+  def smallest_y_in_sw(x0, y0, open: false)
     flip @max_pst.largest_y_in_nw(x0, -y0)
   end
 
@@ -113,7 +113,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # - the leftmost (min-x) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def smallest_x_in_se(x0, y0)
+  def smallest_x_in_se(x0, y0, open: false)
     flip @max_pst.smallest_x_in_ne(x0, -y0)
   end
 
@@ -126,7 +126,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # - the leftmost (min-x) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def largest_x_in_sw(x0, y0)
+  def largest_x_in_sw(x0, y0, open: false)
     flip @max_pst.largest_x_in_nw(x0, -y0)
   end
 
@@ -142,7 +142,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller x values.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def smallest_y_in_3_sided(x0, x1, y0)
+  def smallest_y_in_3_sided(x0, x1, y0, open: false)
     flip @max_pst.largest_y_in_3_sided(x0, x1, -y0)
   end
 
@@ -158,7 +158,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # the intersection.
   #
   # This method runs in O(m + log n) time and O(1) extra space, where m is the number of points found.
-  def enumerate_3_sided(x0, x1, y0)
+  def enumerate_3_sided(x0, x1, y0, open: false)
     if block_given?
       @max_pst.enumerate_3_sided(x0, x1, -y0) { |point| yield(flip point) }
     else
