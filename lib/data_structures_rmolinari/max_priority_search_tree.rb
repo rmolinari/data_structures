@@ -90,8 +90,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def largest_y_in_ne(x0, y0)
-    largest_y_in_quadrant(x0, y0, :ne)
+  def largest_y_in_ne(x0, y0, open: false)
+    largest_y_in_quadrant(x0, y0, :ne, open:)
   end
 
   # Return the highest point in P to the "northwest" of (x0, y0).
@@ -103,8 +103,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def largest_y_in_nw(x0, y0)
-    largest_y_in_quadrant(x0, y0, :nw)
+  def largest_y_in_nw(x0, y0, open: false)
+    largest_y_in_quadrant(x0, y0, :nw, open:)
   end
 
   # The basic algorithm is from De et al. section 3.1. We have generalaized it slightly to allow it to calculate both largest_y_in_ne and
@@ -121,7 +121,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #     - If Q intersect P is empty then p* = best
   #
   # Here, P is the set of points in our data structure and T_p is the subtree rooted at p
-  private def largest_y_in_quadrant(x0, y0, quadrant)
+  private def largest_y_in_quadrant(x0, y0, quadrant, open: false)
     quadrant.must_be_in [:ne, :nw]
 
     p = root
@@ -129,19 +129,19 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       best = Point.new(INFINITY, -INFINITY)
       preferred_child = ->(n) { right(n) }
       nonpreferred_child = ->(n) { left(n) }
-      sufficient_x = ->(x) { x >= x0 }
+      sufficient_x = open ? ->(x) { x > x0 } : ->(x) { x >= x0 }
     else
       best = Point.new(-INFINITY, -INFINITY)
       preferred_child = ->(n) { left(n) }
       nonpreferred_child = ->(n) { right(n) }
-      sufficient_x = ->(x) { x <= x0 }
+      sufficient_x = open ? ->(x) { x < x0 } : ->(x) { x <= x0 }
     end
 
     # x == x0 or is not sufficient. This test sometimes excludes the other child of a node from consideration.
     exclusionary_x = ->(x) { x == x0 || !sufficient_x.call(x) }
 
     in_q = lambda do |pair|
-      sufficient_x.call(pair.x) && pair.y >= y0
+      sufficient_x.call(pair.x) && (pair.y > y0 || (!open && pair.y == y0))
     end
 
     # From the paper:
@@ -207,8 +207,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the leftmost (min-x) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def smallest_x_in_ne(x0, y0)
-    extremal_in_x_dimension(x0, y0, :ne)
+  def smallest_x_in_ne(x0, y0, open: false)
+    extremal_in_x_dimension(x0, y0, :ne, open:)
   end
 
   # Return the rightmost (max-x) point in P to the northwest of (x0, y0).
@@ -220,8 +220,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the leftmost (min-x) point in Q \intersect P otherwise.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def largest_x_in_nw(x0, y0)
-    extremal_in_x_dimension(x0, y0, :nw)
+  def largest_x_in_nw(x0, y0, open: false)
+    extremal_in_x_dimension(x0, y0, :nw, open:)
   end
 
   # A genericized version of the paper's smallest_x_in_ne that can calculate either smallest_x_in_ne or largest_x_in_nw as specifies via a
@@ -236,7 +236,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #     - if Q \intersect P is empty then p* = best
   #     - if Q \intersect P is nonempty then  p* \in {best} \union T(p) \union T(q)
   #     - p and q are at the same level of T and x(p) <= x(q)
-  private def extremal_in_x_dimension(x0, y0, quadrant)
+  private def extremal_in_x_dimension(x0, y0, quadrant, open: false)
     quadrant.must_be_in [:ne, :nw]
 
     if quadrant == :ne
@@ -251,9 +251,21 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     p = q = root
 
-    in_q = lambda do |pair|
-      sign * pair.x >= sign * x0 && pair.y >= y0
-    end
+    sufficient_y = if open
+                     ->(y) { y > y0 }
+                   else
+                     ->(y) { y >= y0 }
+                   end
+
+    in_q = if open
+             lambda do |pair|
+               sign * pair.x > sign * x0 && sufficient_y.call(pair.y)
+             end
+           else
+             lambda do |pair|
+               sign * pair.x >= sign * x0 && sufficient_y.call(pair.y)
+             end
+           end
 
     # From the paper:
     #
@@ -294,7 +306,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
       if sign * @data[c.first].x > sign * x0
         # All subtrees have x-values good enough for Q. We look at y-values to work out which subtree to focus on
-        leftmost = c.find { |node| @data[node].y >= y0 } # might be nil
+        leftmost = c.find { |node| sufficient_y.call(@data[node].y) } # might be nil
 
         # Otherwise, explore the "leftmost" subtree with large enough y values. Its root is in Q and can't be beaten as "leftmost"
         # by anything to its "right". If it's nil the calling code can bail
@@ -312,7 +324,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       i = (0...4).find { |j| sign * values[j].x <= sign * x0 && sign * x0 < sign * values[j + 1].x }
 
       # These nodes all have large-enough x values so looking at y finds the ones in Q
-      new_q = c[(i + 1)..].find { |node| @data[node].y >= y0 } # could be nil
+      new_q = c[(i + 1)..].find { |node| sufficient_y.call(@data[node].y) } # could be nil
       new_p = c[i] if values[i].y >= y0 # The leftmost subtree is worth exploring if the y-value is big enough but not otherwise
       new_p ||= new_q # if nodes[i] is no good, send p along with q
       new_q ||= new_p # but if there is no worthwhile value for q we should send it along with p
@@ -376,7 +388,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller x values.
   #
   # This method returns p* in O(log n) time and O(1) extra space.
-  def largest_y_in_3_sided(x0, x1, y0)
+  def largest_y_in_3_sided(x0, x1, y0, open: false)
     # From the paper:
     #
     #    The three real numbers x0, x1, and y0 define the three-sided range Q = [x0,x1] X [y0,∞). If Q \intersect P̸ is not \empty,
@@ -407,9 +419,15 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     x_range = (x0..x1)
 
-    in_q = lambda do |pair|
-      x_range.cover?(pair.x) && pair.y >= y0
-    end
+    in_q = if open
+             lambda do |pair|
+               x0 < pair.x && pair.x < x1 && pair.y > y0
+             end
+           else
+             lambda do |pair|
+               x_range.cover?(pair.x) && pair.y >= y0
+             end
+           end
 
     # From the paper:
     #
@@ -579,7 +597,9 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # the intersection.
   #
   # This method runs in O(m + log n) time and O(1) extra space, where m is the number of points found.
-  def enumerate_3_sided(x0, x1, y0)
+  def enumerate_3_sided(x0, x1, y0, open: false)
+    raise 'Open region not supported yet.' if open
+
     # From the paper
     #
     #     Given three real numbers x0, x1, and y0 define the three sided range Q = [x0, x1] X [y0, infty). Algorithm
