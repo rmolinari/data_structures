@@ -7,14 +7,11 @@ participating in the Advent of Code (https://adventofcode.com/).
 The implementations are based on the expository descriptions and pseudo-code I found as I read about each structure and so are not
 as fast as possible.
 
-The code is available as a gem: https://rubygems.org/gems/data_structures_rmolinari.
+The code lives in the `DataStructuresRMolinari` module to avoid polluting the global namespace.
 
 It is distributed under the MIT license.
 
-## Usage
-
-The right way to organize the code is not obvious to me. For now the data structures are all defined in the module
-`DataStructuresRMolinari` to avoid polluting the global namespace.
+It is available as a gem: https://rubygems.org/gems/data_structures_rmolinari.
 
 # Implementations
 
