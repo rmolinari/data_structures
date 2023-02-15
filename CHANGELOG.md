@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.5.1] - [0.5.3]
+
+- Releases to fix some bad gemspec data.
+
 ## [0.5.0] 2023-02.03
 
 - SegmentTree
