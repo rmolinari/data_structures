@@ -190,11 +190,11 @@ static void setup(segment_tree_data* seg_tree, VALUE combine, VALUE single_cell_
   VALUE idCall = rb_intern("call");
 
   if (!rb_obj_respond_to(combine, idCall, TRUE)) {
-    rb_raise(rb_eArgError, "wrong type argument %"PRIsVALUE" (should be callable)", rb_obj_class(combine));
+    rb_raise(rb_eArgError, "wrong type argument %" PRIsVALUE " (should be callable)", rb_obj_class(combine));
   }
 
   if (!rb_obj_respond_to(single_cell_array_val, idCall, TRUE)) {
-    rb_raise(rb_eArgError, "wrong type argument %"PRIsVALUE" (should be callable)", rb_obj_class(single_cell_array_val));
+    rb_raise(rb_eArgError, "wrong type argument %" PRIsVALUE " (should be callable)", rb_obj_class(single_cell_array_val));
   }
 
   seg_tree->combine_lambda = combine;
