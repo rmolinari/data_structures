@@ -85,7 +85,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   #
   # This method returns p* in O(log n) time and O(1) extra space.
   def smallest_y_in_se(x0, y0, open: false)
-    flip @max_pst.largest_y_in_ne(x0, -y0)
+    flip @max_pst.largest_y_in_ne(x0, -y0, open:)
   end
 
   # Return the "lowest" point in P to the "southwest" of (x0, y0).
@@ -98,7 +98,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   #
   # This method returns p* in O(log n) time and O(1) extra space.
   def smallest_y_in_sw(x0, y0, open: false)
-    flip @max_pst.largest_y_in_nw(x0, -y0)
+    flip @max_pst.largest_y_in_nw(x0, -y0, open:)
   end
 
   ########################################
@@ -114,7 +114,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   #
   # This method returns p* in O(log n) time and O(1) extra space.
   def smallest_x_in_se(x0, y0, open: false)
-    flip @max_pst.smallest_x_in_ne(x0, -y0)
+    flip @max_pst.smallest_x_in_ne(x0, -y0, open:)
   end
 
   # Return the rightmost (max-x) point in P to the southwest of (x0, y0).
@@ -127,7 +127,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   #
   # This method returns p* in O(log n) time and O(1) extra space.
   def largest_x_in_sw(x0, y0, open: false)
-    flip @max_pst.largest_x_in_nw(x0, -y0)
+    flip @max_pst.largest_x_in_nw(x0, -y0, open:)
   end
 
   ########################################
@@ -143,7 +143,7 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   #
   # This method returns p* in O(log n) time and O(1) extra space.
   def smallest_y_in_3_sided(x0, x1, y0, open: false)
-    flip @max_pst.largest_y_in_3_sided(x0, x1, -y0)
+    flip @max_pst.largest_y_in_3_sided(x0, x1, -y0, open:)
   end
 
   ########################################
@@ -160,9 +160,9 @@ class DataStructuresRMolinari::MinPrioritySearchTree
   # This method runs in O(m + log n) time and O(1) extra space, where m is the number of points found.
   def enumerate_3_sided(x0, x1, y0, open: false)
     if block_given?
-      @max_pst.enumerate_3_sided(x0, x1, -y0) { |point| yield(flip point) }
+      @max_pst.enumerate_3_sided(x0, x1, -y0, open:) { |point| yield(flip point) }
     else
-      Set.new( @max_pst.enumerate_3_sided(x0, x1, -y0).map { |pt| flip pt })
+      Set.new( @max_pst.enumerate_3_sided(x0, x1, -y0, open:).map { |pt| flip pt })
     end
   end
 

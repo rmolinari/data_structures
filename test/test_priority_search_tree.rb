@@ -166,25 +166,50 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_quadrant_calc(min_pst, :min, :y, :se)
   end
 
+  def test_min_pst_smallest_y_in_open_se
+    check_quadrant_calc(min_pst, :min, :y, :se, open: true)
+  end
+
   def test_min_pst_smallest_y_in_sw
     check_quadrant_calc(min_pst, :min, :y, :sw)
+  end
+
+  def test_min_pst_smallest_y_in_open_sw
+    check_quadrant_calc(min_pst, :min, :y, :sw, open: true)
   end
 
   def test_min_pst_smallest_x_in_se
     check_quadrant_calc(min_pst, :min, :x, :se)
   end
 
+  def test_min_pst_smallest_x_in_open_se
+    check_quadrant_calc(min_pst, :min, :x, :se, open: true)
+  end
+
   def test_min_pst_largest_x_in_sw
     check_quadrant_calc(min_pst, :max, :x, :sw)
+  end
+
+  def test_min_pst_largest_x_in_open_sw
+    check_quadrant_calc(min_pst, :max, :x, :sw, open: true)
   end
 
   def test_min_pst_smallest_y_in_3_sided
     check_3_sided_calc(min_pst, :min, :y)
   end
 
+  def test_min_pst_smallest_y_in_open_3_sided
+    check_3_sided_calc(min_pst, :min, :y, open: true)
+  end
+
   def test_min_pst_enumerate_3_sided
     check_3_sided_calc(min_pst, :all, nil)
     check_3_sided_calc(min_pst, :all, nil, enumerate_via_block: true)
+  end
+
+  def test_min_pst_enumerate_open_3_sided
+    check_3_sided_calc(min_pst, :all, nil, open: true)
+    check_3_sided_calc(min_pst, :all, nil, enumerate_via_block: true, open: true)
   end
 
   ########################################
@@ -898,7 +923,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
     def three_sided_down(x0, x1, y0)
       if @open
-        se_quadrant(x0, y0).reject { |pt| pt.x => x1 }
+        se_quadrant(x0, y0).reject { |pt| pt.x >= x1 }
       else
         se_quadrant(x0, y0).reject { |pt| pt.x > x1 }
       end
