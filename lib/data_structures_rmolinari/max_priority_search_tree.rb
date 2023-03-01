@@ -30,6 +30,10 @@ require_relative 'shared'
 #
 # The final operation (enumerate) takes O(m + log n) time, where m is the number of points that are enumerated.
 #
+# Each of these methods has a named parameter +open:+ that makes the search region an open set. For example, if we call
+# +smallest_x_in_ne+ with +open: true+ then we consider points satisifying x > x0 and y > y0. The default value for this parameter
+# is always +false+.
+#
 # If the MaxPST is constructed to be "dynamic" we also have an operation that deletes the top element.
 #
 # - +delete_top!+: remove the top (max-y) element of the tree and return it.
@@ -39,13 +43,12 @@ require_relative 'shared'
 # In the current implementation no two points can share an x-value. This restriction can be relaxed with some more complicated code,
 # but it hasn't been written yet. See issue #9.
 #
-# There is a related data structure called the Min-max priority search tree so we have called this a "Max priority search tree", or
+# There is a related data structure called a Min-max priority search tree so we have called this a "Max priority search tree", or
 # MaxPST.
 #
 # References:
 # * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
-# * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational
-#   Geometry, 2011
+# * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
 class DataStructuresRMolinari::MaxPrioritySearchTree
   include Shared
   include BinaryTreeArithmetic
@@ -83,8 +86,13 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
   # Return the highest point in P to the "northeast" of (x0, y0).
   #
-  # Let Q = [x0, infty) X [y0, infty) be the northeast quadrant defined by the point (x0, y0) and let P be the points in this data
-  # structure. Define p* as
+  # Let Q = be the northeast quadrant defined by the point (x0, y0):
+  # - \[x0, infty) X [y0, infty) if +open+ is false and
+  # - (x0, infty) X (y0, infty) if +open+ is true.
+  #
+  # Let P be the points in this data structure.
+  #
+  # Define p* as
   #
   # - (infty, -infty) if Q \intersect P is empty and
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
@@ -100,8 +108,13 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
   # Return the highest point in P to the "northwest" of (x0, y0).
   #
-  # Let Q = (-infty, x0] X [y0, infty) be the northwest quadrant defined by the point (x0, y0) and let P be the points in this data
-  # structure. Define p* as
+  # Let Q = be the northwest quadrant defined by the point (x0, y0):
+  # - (infty, x0] X [y0, infty) if +open+ is false and
+  # - (infity, x0) X (y0, infty) if +open+ is true.
+  #
+  # Let P be the points in this data structure.
+  #
+  # Define p* as
   #
   # - (-infty, -infty) if Q \intersect P is empty and
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
@@ -209,8 +222,13 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
   # Return the leftmost (min-x) point in P to the northeast of (x0, y0).
   #
-  # Let Q = [x0, infty) X [y0, infty) be the northeast quadrant defined by the point (x0, y0) and let P be the points in this data
-  # structure. Define p* as
+  # Let Q = be the northeast quadrant defined by the point (x0, y0):
+  # - [x0, infty) X [y0, infty) if +open+ is false and
+  # - (x0, infty) X (y0, infty) if +open+ is true.
+  #
+  # Let P be the points in this data structure.
+  #
+  # Define p* as
   #
   # - (infty, infty) if Q \intersect P is empty and
   # - the leftmost (min-x) point in Q \intersect P otherwise.
@@ -226,8 +244,13 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
   # Return the rightmost (max-x) point in P to the northwest of (x0, y0).
   #
-  # Let Q = (-infty, x0] X [y0, infty) be the northwest quadrant defined by the point (x0, y0) and let P be the points in this data
-  # structure. Define p* as
+  # Let Q = be the northwest quadrant defined by the point (x0, y0):
+  # - (infty, x0] X [y0, infty) if +open+ is false and
+  # - (infty, x0) X (y0, infty) if +open+ is true.
+  #
+  # Let P be the points in this data structure.
+  #
+  # Define p* as
   #
   # - (-infty, infty) if Q \intersect P is empty and
   # - the leftmost (min-x) point in Q \intersect P otherwise.
@@ -386,8 +409,15 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
   # Return the highest point of P in the box bounded by x0, x1, and y0.
   #
-  # Let Q = [x0, x1] X [y0, infty) be the "three-sided" box bounded by x0, x1, and y0, and let P be the set of points in the
-  # MaxPST. (Note that Q is empty if x1 < x0.) Define p* as
+  # Let Q be the "three-sided" box bounded by x0, x1, and y0:
+  # - \[x0, x1] X [y0, infty) if +open+ is false and
+  # - (x0, x1) X (y0, infty) if +open+ is true.
+  #
+  # Note that Q is empty if x1 < x0 or if +open+ is true and x1 <= x0.
+  #
+  # Let P be the set of points in the MaxPST.
+  #
+  # Define p* as
   #
   # - (infty, -infty) if Q \intersect P is empty and
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller x values.
@@ -594,8 +624,15 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
   # Enumerate the points of P in the box bounded by x0, x1, and y0.
   #
-  # Let Q = [x0, x1] X [y0, infty) be the "three-sided" box bounded by x0, x1, and y0, and let P be the set of points in the
-  # MaxPST. (Note that Q is empty if x1 < x0.) We find an enumerate all the points in Q \intersect P.
+  # Let Q be the "three-sided" box bounded by x0, x1, and y0:
+  # - \[x0, x1] X [y0, infty) if +open+ is false and
+  # - (x0, x1) X (y0, infty) if +open+ is true.
+  #
+  # Note that Q is empty if x1 < x0 or if +open+ is true and x1 <= x0.
+  #
+  # Let P be the set of points in the MaxPST.
+  #
+  # We find and enumerate all the points in Q \intersect P.
   #
   # If the calling code provides a block then we +yield+ each point to it. Otherwise we return a set containing all the points in
   # the intersection.

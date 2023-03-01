@@ -22,8 +22,7 @@ require_relative 'shared'
 #   et al. But we don't do that, as we create a separate array of Points.
 # - Whereas the implementation of MaxPST means that client code gets the same (x, y) objects back in results as it passed into the
 #   contructor, that's not the case here.
-#   - we map each point in the input - which is an object responding to +#x+ and +#y+ - to an instance of +Point+, and will return
-#    (different) instances of +Point+ in response to queries.
+#   - we map each point in the input - which is an object responding to +#x+ and +#y+ - to an instance of +Point+, and will return (different) instances of +Point+ in response to queries.
 #   - client code is unlikely to care, but be aware of this, just in case.
 #
 # Given a set of n points, we can answer the following questions quickly:
@@ -36,6 +35,10 @@ require_relative 'shared'
 # - +enumerate_3_sided+: for x0, x1, and y0, enumerate all points in P satisfying x >= x0, x <= x1 and y <= y0.
 #
 # (Here, "leftmost/rightmost" means "minimal/maximal x", and "lowest" means "minimal y".)
+#
+# Each of these methods has a named parameter +open:+ that makes the search region an open set. For example, if we call
+# +smallest_x_in_ne+ with +open: true+ then we consider points satisifying x > x0 and y < y0. The default value for this parameter
+# is always +false+.
 #
 # The first 5 operations take O(log n) time and O(1) extra space.
 #
@@ -77,8 +80,13 @@ class DataStructuresRMolinari::MinPrioritySearchTree
 
   # Return the "lowest" point in P to the "southeast" of (x0, y0).
   #
-  # Let Q = [x0, infty) X (infty, y0] be the southeast quadrant defined by the point (x0, y0) and let P be the points in this data
-  # structure. Define p* as
+  # Let Q = be the southeast quadrant defined by the point (x0, y0):
+  # - \[x0, infty) X (infty, y0] if +open+ is false and
+  # - (x0, infty) X (infty, y0) if +open+ is true.
+  #
+  # Let P be the points in this data structure.
+  #
+  # Define p* as
   #
   # - (infty, infty) if Q \intersect P is empty and
   # - the lowest (min-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
@@ -90,8 +98,13 @@ class DataStructuresRMolinari::MinPrioritySearchTree
 
   # Return the "lowest" point in P to the "southwest" of (x0, y0).
   #
-  # Let Q = (-infty, x0] X (-infty, y0] be the southwest quadrant defined by the point (x0, y0) and let P be the points in this data
-  # structure. Define p* as
+  # Let Q = be the southwest quadrant defined by the point (x0, y0):
+  # - (infty, x0] X (infty, y0] if +open+ is false and
+  # - (infty, x0) X (infty, y0) if +open+ is true.
+  #
+  # Let P be the points in this data structure.
+  #
+  # Define p* as
   #
   # - (-infty, infty) if Q \intersect P is empty and
   # - the lowest (min-y) point in Q \intersect P otherwise, breaking ties by preferring smaller values of x
@@ -106,8 +119,13 @@ class DataStructuresRMolinari::MinPrioritySearchTree
 
   # Return the leftmost (min-x) point in P to the southeast of (x0, y0).
   #
-  # Let Q = [x0, infty) X (infty, y0] be the southeast quadrant defined by the point (x0, y0) and let P be the points in this data
-  # structure. Define p* as
+  # Let Q = be the southeast quadrant defined by the point (x0, y0):
+  # - \[x0, infty) X (infty, y0] if +open+ is false and
+  # - (x0, infty) X (infty, y0) if +open+ is true.
+  #
+  # Let P be the points in this data structure.
+  #
+  # Define p* as
   #
   # - (infty, -infty) if Q \intersect P is empty and
   # - the leftmost (min-x) point in Q \intersect P otherwise.
@@ -119,8 +137,13 @@ class DataStructuresRMolinari::MinPrioritySearchTree
 
   # Return the rightmost (max-x) point in P to the southwest of (x0, y0).
   #
-  # Let Q = (-infty, x0] X (infty, y0] be the southwest quadrant defined by the point (x0, y0) and let P be the points in this data
-  # structure. Define p* as
+  # Let Q = be the southwest quadrant defined by the point (x0, y0):
+  # - (infty, x0] X (infty, y0] if +open+ is false and
+  # - (infty, x0) X (infty, y0) if +open+ is true.
+  #
+  # Let P be the points in this data structure.
+  #
+  # Define p* as
   #
   # - (-infty, -infty) if Q \intersect P is empty and
   # - the leftmost (min-x) point in Q \intersect P otherwise.
@@ -135,8 +158,15 @@ class DataStructuresRMolinari::MinPrioritySearchTree
 
   # Return the lowest point of P in the box bounded by x0, x1, and y0.
   #
-  # Let Q = [x0, x1] X (infty, y0] be the "three-sided" box bounded by x0, x1, and y0, and let P be the set of points in the
-  # MaxPST. (Note that Q is empty if x1 < x0.) Define p* as
+  # Let Q be the "three-sided" box bounded by x0, x1, and y0:
+  # - \[x0, x1] X (infty, y0] if +open+ is false and
+  # - (x0, x1) X (infty, y0) if +open+ is true.
+  #
+  # Note that Q is empty if x1 < x0 or if +open+ is true and x1 <= x0.
+  #
+  # Let P be the set of points in the MaxPST.
+  #
+  # Define p* as
   #
   # - (infty, infty) if Q \intersect P is empty and
   # - the highest (max-y) point in Q \intersect P otherwise, breaking ties by preferring smaller x values.
@@ -151,8 +181,15 @@ class DataStructuresRMolinari::MinPrioritySearchTree
 
   # Enumerate the points of P in the box bounded by x0, x1, and y0.
   #
-  # Let Q = [x0, x1] X [y0, infty) be the "three-sided" box bounded by x0, x1, and y0, and let P be the set of points in the
-  # MaxPST. (Note that Q is empty if x1 < x0.) We find an enumerate all the points in Q \intersect P.
+  # Let Q be the "three-sided" box bounded by x0, x1, and y0:
+  # - \[x0, x1] X (infty, y0] if +open+ is false and
+  # - (x0, x1) X (infty, y0) if +open+ is true.
+  #
+  # Note that Q is empty if x1 < x0 or if +open+ is true and x1 <= x0.
+  #
+  # Let P be the set of points in the MaxPST.
+  #
+  # We find and enumerate all the points in Q \intersect P.
   #
   # If the calling code provides a block then we +yield+ each point to it. Otherwise we return a set containing all the points in
   # the intersection.

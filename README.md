@@ -106,6 +106,9 @@ There is no `smallest_x_in_3_sided(x0, x1, y0)`. Just use `smallest_x_in_ne(x0, 
 (These queries appear rather abstract at first but there are interesting applications. See, for example, section 4 of
 [[McC85]](#references), keeping in mind that the data structure in that paper is actually a _MinPST_.)
 
+Each method also has a named parameter `open:` that makes the search region an open set. For example, if we call `smallest_x_in_ne`
+with `open: true` then we consider points satisifying x > x0 and y > y0. The default value for this parameter is always `false`.
+
 The single-point queries run in O(log n) time, where n is the size of P, while `enumerate_3_sided` runs in O(m + log n), where m is
 the number of points actually enumerated.
 
