@@ -103,6 +103,11 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_3_sided_calc(max_pst, :all, nil, enumerate_via_block: true)
   end
 
+  def test_max_pst_enumerate_open_3_sided
+    check_3_sided_calc(max_pst, :all, nil, open: true)
+    check_3_sided_calc(max_pst, :all, nil, enumerate_via_block: true, open: true)
+  end
+
   ##############################
   # ...and for the "dynamic" version
 
@@ -138,8 +143,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_dynamic_max_pst_enumerate_3_sided
     before_and_after_deletion do |pst|
-      check_3_sided_calc(dynamic_max_pst, :all, nil)
-      check_3_sided_calc(dynamic_max_pst, :all, nil, enumerate_via_block: true)
+      check_3_sided_calc(pst, :all, nil)
+      check_3_sided_calc(pst, :all, nil, enumerate_via_block: true)
     end
   end
 
