@@ -50,6 +50,69 @@ require_relative 'shared'
 # * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
 # * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
 class DataStructuresRMolinari::MaxPrioritySearchTree
+  # IMPLEMENTATION NOTES
+  #
+  # Open regions
+  #
+  # The search methods each have an argument open: that changes the search region from closed (x >= x0) to open (x > x0). I had
+  # initially intended to implement this by varying the internals of the search code. But this turned out to be error prone because
+  # the code is written for closed regions. When deciding which children to take in the next level of the tree, say, we assume the
+  # search space is closed, sometimes in a way that means we won't find the optimal point when the search region is open. Changing
+  # the logic turned out to be finicky and would inevitably lead to bugs.
+  #
+  # It is much easier and safer to replace a search request on, say (x0, y0, open) with (x0 + e, y0 + e, closed) where e[psilon] is
+  # small enough that we don't exclude any points other than those on the boundary of the closed region given by x0 and y0. Then we
+  # can just call the existing search code without having to change this. Indeed, this is what the code currently does. We calculate
+  # e as the smallest difference between any two distinct x-values or distinct y-values.
+  #
+  # But this approach is not robust in the general sense. Assume for the moment that all x- and y-values are floating-point. We can
+  # easily determine the value e. But the scaling of floating-point numbers makes this error-prone. Consider the (constructed) case
+  # in which we have consecutive x-values
+  #
+  #    0, 5e-324, 1, and 2.
+  #
+  # (5e-324 is the smallest positve float value in Ruby). Our value for e is thus 5e-324 and, because of the way floating point
+  # values are represented, 1 + e = 1.0. Any query on open region with x0 = 1 will be run on a closed region with x0 = 1 + e = 1.0,
+  # and we wlil get the wrong result.
+  #
+  # I see the following possible approaches.
+  #
+  # 1. Rewrite the code to do open regions "properly"
+  #    Pro:
+  #      - we don't need to worry about numerical issues.
+  #    Con:
+  #      - too complicated and error-prone.
+  #
+  # 2. Instead of calculating e like this, replace each bounding value x with x.next_float or x.prev_float as required.
+  #    Note that #next_float gives the next-largest value representable as a floating point value.
+  #    Pro:
+  #      - we don't need to worry about the scaling issues in type Float
+  #      - simple and supported by the Ruby libraries (and by the C library if we decide to implement as a C extension)
+  #    Con:
+  #      - [minor] will fail with Float::INFINITY.
+  #        - this is an unlikely edge case that could be handled directly or simply documented away.
+  #      - won't work if the x0 value is a Numeric outside of Float range, roughly [-1.798e308, 1.798e308]
+  #        - For example, (10**400).to_f.next_float == Infinity
+  #        - We could warn about this case in documentation
+  #        - For numeric values x in the Float range we would need to check that x.to_f.next_float > x, but I suspect that this is
+  #          guaranteed.
+  #      - won't work with non-numeric values than are never-the-less comparable, like arrays, or some sort of user-defined type
+  #        - We would simply have to document that this case is not supported
+  #
+  #
+  # 3. Handle numeric values on a case-by-case values. So for numeric values x in the float range we use x.to_f.next_float while for
+  #    other values - like BigDecimal - do something different that depends on the next value in the data set with an x-value
+  #    greater than x.
+  #    Pro:
+  #      - more cases are handled
+  #    Con:
+  #      - complicated and perhaps non-performant in the general case
+  #      - doesn't handle non-numeric cases (just like idea 2)
+  #      - possibly error-prone in corner cases.
+  #
+  # For now approach 2 looks best. It doesn't cover all cases, but covers cases most likely in practice - the Float range is large -
+  # and other cases can be documented away in a clean way.
+
   include Shared
   include BinaryTreeArithmetic
 
@@ -1303,10 +1366,6 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
       @epsilon = diff if diff < @epsilon
     end
-    @epsilon /= @epsilon
-
-    # This is unlikely, but two values might be so close together that there isn't a float between them.
-    raise 'Calculated epsilon is zero: we cannot handle open search regions.' if @epsilon.zero?
 
     @epsilon
   end
