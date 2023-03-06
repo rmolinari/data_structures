@@ -32,15 +32,9 @@ module DataStructuresRMolinari::Algorithms
     x_max = sorted_points.last.x
     y_min, y_max = sorted_points.map(&:y).minmax
 
-    # Half of the smallest non-zero gap between x values. This is needed below
-    epsilon = INFINITY
-
     # Enumerate type 1
     sorted_points.each_cons(2) do |pt1, pt2|
       next if pt1.x == pt2.x
-
-      d = (pt2.x.to_f - pt1.x) / 2
-      epsilon = d if d < epsilon
 
       yield [pt1.x, pt2.x, y_min, y_max]
     end
@@ -54,9 +48,9 @@ module DataStructuresRMolinari::Algorithms
       next if pt.y == y_max # 0 area
       next if pt.y == y_min # type 1
 
-      # Epsilon means we don't just get pt back again. The De et al. paper is rather vague.
-      left_bound  = max_pst.largest_x_in_nw( pt.x - epsilon, pt.y)
-      right_bound = max_pst.smallest_x_in_ne(pt.x + epsilon, pt.y)
+      # Open region means we don't just get pt back again. The De et al. paper is rather vague.
+      left_bound  = max_pst.largest_x_in_nw(pt.x, pt.y, open: true)
+      right_bound = max_pst.smallest_x_in_ne(pt.x, pt.y, open: true)
 
       left = left_bound.x.infinite? ? x_min : left_bound.x
       right = right_bound.x.infinite? ? x_max : right_bound.x
@@ -74,7 +68,7 @@ module DataStructuresRMolinari::Algorithms
     #
     #      largest_y_in_3_sided(l, r, y_min)
     #
-    # That call considers the points in the closed region l <= x <= r and y >= y_min, so we use l + epsilon and r - epsilon.
+    # That call considers the points in the closed region l <= x <= r and y >= y_min, so we use an open search region instead.
     until max_pst.empty?
       top_pt = max_pst.delete_top!
       top = top_pt.y
@@ -85,7 +79,7 @@ module DataStructuresRMolinari::Algorithms
       r = x_max
 
       loop do
-        next_pt = max_pst.largest_y_in_3_sided(l + epsilon, r - epsilon, y_min)
+        next_pt = max_pst.largest_y_in_3_sided(l, r, y_min, open: true)
 
         bottom = next_pt.y.infinite? ? y_min : next_pt.y
         yield [l, r, bottom, top]

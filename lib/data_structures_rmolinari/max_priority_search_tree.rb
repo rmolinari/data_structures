@@ -54,26 +54,26 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #
   # Open regions
   #
-  # The search methods each have an argument open: that changes the search region from closed (x >= x0) to open (x > x0). I had
-  # initially intended to implement this by varying the internals of the search code. But this turned out to be error prone because
+  # The search methods each have an argument +open:+ that changes the search region from closed (x >= x0) to open (x > x0). I had
+  # initially intended to implement this by varying the internals of the search code. But this turned out to be error-prone because
   # the code is written for closed regions. When deciding which children to take in the next level of the tree, say, we assume the
   # search space is closed, sometimes in a way that means we won't find the optimal point when the search region is open. Changing
-  # the logic turned out to be finicky and would inevitably lead to bugs.
+  # the logic turned out to be finicky and buggy.
   #
   # It is much easier and safer to replace a search request on, say (x0, y0, open) with (x0 + e, y0 + e, closed) where e[psilon] is
-  # small enough that we don't exclude any points other than those on the boundary of the closed region given by x0 and y0. Then we
-  # can just call the existing search code without having to change this. Indeed, this is what the code currently does. We calculate
-  # e as the smallest difference between any two distinct x-values or distinct y-values.
+  # small enough that we don't exclude any points other than those on the boundary of the closed region. Then we can just call the
+  # existing search code as-is. Indeed, this is what the code currently does. We calculate e as the smallest difference between any
+  # two distinct x-values or distinct y-values.
   #
-  # But this approach is not robust in the general sense. Assume for the moment that all x- and y-values are floating-point. We can
-  # easily determine the value e. But the scaling of floating-point numbers makes this error-prone. Consider the (constructed) case
-  # in which we have consecutive x-values
+  # But this approach is not robust. Assume for the moment that all x- and y-values are floating-point. We can easily determine the
+  # value e. But the scaling of floating-point numbers makes this error-prone. Consider the case in which we have
+  # consecutive x-values
   #
   #    0, 5e-324, 1, and 2.
   #
-  # (5e-324 is the smallest positve float value in Ruby). Our value for e is thus 5e-324 and, because of the way floating point
+  # (5e-324 is the smallest positive Float value in Ruby). Our value for e is thus 5e-324 and, because of the way floating point
   # values are represented, 1 + e = 1.0. Any query on open region with x0 = 1 will be run on a closed region with x0 = 1 + e = 1.0,
-  # and we wlil get the wrong result.
+  # and we may get the wrong result.
   #
   # I see the following possible approaches.
   #
@@ -87,7 +87,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #    Note that #next_float gives the next-largest value representable as a floating point value.
   #    Pro:
   #      - we don't need to worry about the scaling issues in type Float
-  #      - simple and supported by the Ruby libraries (and by the C library if we decide to implement as a C extension)
+  #      - simple and supported by the Ruby libraries (and by the C standard library if we decide to implement as a C extension)
   #    Con:
   #      - [minor] will fail with Float::INFINITY.
   #        - this is an unlikely edge case that could be handled directly or simply documented away.
@@ -96,9 +96,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #        - We could warn about this case in documentation
   #        - For numeric values x in the Float range we would need to check that x.to_f.next_float > x, but I suspect that this is
   #          guaranteed.
-  #      - won't work with non-numeric values than are never-the-less comparable, like arrays, or some sort of user-defined type
-  #        - We would simply have to document that this case is not supported
-  #
+  #      - won't work with comparable but non-numeric values, like arrays, or some sort of user-defined type
+  #        - We would simply have to document that this case is not supported (or just throw an exception on +#to_f+)
   #
   # 3. Handle numeric values on a case-by-case values. So for numeric values x in the float range we use x.to_f.next_float while for
   #    other values - like BigDecimal - do something different that depends on the next value in the data set with an x-value
