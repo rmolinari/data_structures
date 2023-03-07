@@ -32,7 +32,7 @@ require_relative 'shared'
 #
 # Each of these methods has a named parameter +open:+ that makes the search region an open set. For example, if we call
 # +smallest_x_in_ne+ with +open: true+ then we consider points satisifying x > x0 and y > y0. The default value for this parameter
-# is always +false+.
+# is always +false+. See below for limitations in this functionality.
 #
 # If the MaxPST is constructed to be "dynamic" we also have an operation that deletes the top element.
 #
@@ -45,6 +45,52 @@ require_relative 'shared'
 #
 # There is a related data structure called a Min-max priority search tree so we have called this a "Max priority search tree", or
 # MaxPST.
+#
+# ## Open regions: limitations
+#
+# Calls involving open regions - using the +open:+ argument - are implemented internally using closed regions in which the
+# boundaries have been "nudged" by a tiny amount so as to exclude points on the boundary. Since there are only finitely many points
+# in the PST there are no limit points, and the open region given by x > x0 and y > y0 contains the same PST members as a closed
+# region x >= x0 + e and y >= y0 + e for small enough values of e.
+#
+# But it is hard to determine e robustly. Indeed, assume for the moment that all x- and y-values are floating-point, i.e., IEEE754
+# double-precision. We can easily determine a value for e: the smallest difference between any two distinct x-values or any two
+# distinct y-values. But the scaling of floating-point numbers makes this buggy. Consider the case in which we have consecutive
+# x-values
+#
+#    0, 5e-324, 1, and 2.
+#
+# (5e-324 is the smallest positive Float value in Ruby). Our value for e is thus 5e-324 and, because of the way floating point
+# values are represented, 1 + e = 1.0. Any query on open region with x0 = 1 will be run on a closed region with x0 = 1 + e = 1.0,
+# and we may get the wrong result.
+#
+# The solution here is to replace (x0, y0) with (x0.next_float, y0.next_float) rather than (x0 + e, y0 + e). +Float::next_float+ is
+# an implementation of the IEEE754 operation +nextafter+ which gives, for a floating point value z, the smallest floating point
+# value larger than z. If our PST contains only points with finite, floating point coordinates, then this approach implements open
+# search regions correctly. This is what the implementation currently does.
+#
+# However, when coordinates are not all Floats there are cases when this approach will fail. Consider the case in which we have the
+# following consecutive x-values:
+#
+#   0, 1e-324, 2e-324, 1.
+#
+# (Here 1e-324 and 2e-324 are the Ruby values +Rational(1, 10**324)+ and +Rational(2, 10**324)+.) Then, given an argument x0 =
+# 1e-324, +x0.to_f == 0.0+ and so +x0.to_f.next_float == 5e-324+ and the region we use internally for our query incorrectly excludes
+# the point with x value 2e-324. This is a bug in the code.
+#
+# There are also issues with numeric values (Integer or Rational) that are larger than the maximum floating point value,
+# approximately 1.8e308. For such values z, +z.to_f == Float::INFINITY+, and we will incorrectly exclude any larger-but-finite
+# coordinates from the search region.
+#
+# Yet more issues arise when the coordinates of points in the PST aren't numeric at all, but are some other sort of comparable
+# objects, such as arrays.
+#
+# So, we may say that queries on open regions will work as expected if either
+# - all coordinates of the points in the PST are finite Ruby Floats, or
+# - all coordinates of the points are finite Numeric values and for no such pair of x-values s, t (or pair of y-values) is it such
+#   that +s.to_f.next_float > t+.
+#
+# Otherwise, use this functionality at your own risk, and not at all with coordinates that do not respond reasonable to +to_f+.
 #
 # References:
 # * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
@@ -62,12 +108,11 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #
   # It is much easier and safer to replace a search request on, say (x0, y0, open) with (x0 + e, y0 + e, closed) where e[psilon] is
   # small enough that we don't exclude any points other than those on the boundary of the closed region. Then we can just call the
-  # existing search code as-is. Indeed, this is what the code currently does. We calculate e as the smallest difference between any
-  # two distinct x-values or distinct y-values.
+  # existing search code as-is. This is what the code did at first. We calculated e as the smallest difference between any two
+  # distinct x-values or distinct y-values.
   #
   # But this approach is not robust. Assume for the moment that all x- and y-values are floating-point. We can easily determine the
-  # value e. But the scaling of floating-point numbers makes this error-prone. Consider the case in which we have
-  # consecutive x-values
+  # value e. But the scaling of floating-point numbers makes this buggy. Consider the case in which we have consecutive x-values
   #
   #    0, 5e-324, 1, and 2.
   #
@@ -162,7 +207,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # This method returns p* in O(log n) time and O(1) extra space.
   def largest_y_in_ne(x0, y0, open: false)
     if open
-      largest_y_in_quadrant(x0 + epsilon, y0 + epsilon, :ne)
+      largest_y_in_quadrant(slightly_bigger(x0), slightly_bigger(y0), :ne)
     else
       largest_y_in_quadrant(x0, y0, :ne)
     end
@@ -184,7 +229,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # This method returns p* in O(log n) time and O(1) extra space.
   def largest_y_in_nw(x0, y0, open: false)
     if open
-      largest_y_in_quadrant(x0 - epsilon, y0 + epsilon, :nw)
+      largest_y_in_quadrant(slightly_smaller(x0), slightly_bigger(y0), :nw)
     else
       largest_y_in_quadrant(x0, y0, :nw)
     end
@@ -298,7 +343,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # This method returns p* in O(log n) time and O(1) extra space.
   def smallest_x_in_ne(x0, y0, open: false)
     if open
-      extremal_in_x_dimension(x0 + epsilon, y0 + epsilon, :ne)
+      extremal_in_x_dimension(slightly_bigger(x0), slightly_bigger(y0), :ne)
     else
       extremal_in_x_dimension(x0, y0, :ne)
     end
@@ -320,7 +365,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # This method returns p* in O(log n) time and O(1) extra space.
   def largest_x_in_nw(x0, y0, open: false)
     if open
-      extremal_in_x_dimension(x0 - epsilon, y0 + epsilon, :nw)
+      extremal_in_x_dimension(slightly_smaller(x0), slightly_bigger(y0), :nw)
     else
       extremal_in_x_dimension(x0, y0, :nw)
     end
@@ -487,9 +532,9 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # This method returns p* in O(log n) time and O(1) extra space.
   def largest_y_in_3_sided(x0, x1, y0, open: false)
     if open
-      x0 += epsilon
-      x1 -= epsilon
-      y0 += epsilon
+      x0 = slightly_bigger(x0)
+      x1 = slightly_smaller(x1)
+      y0 = slightly_bigger(y0)
     end
     # From the paper:
     #
@@ -702,9 +747,9 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # This method runs in O(m + log n) time and O(1) extra space, where m is the number of points found.
   def enumerate_3_sided(x0, x1, y0, open: false)
     if open
-      x0 += epsilon
-      x1 -= epsilon
-      y0 += epsilon
+      x0 = slightly_bigger(x0)
+      x1 = slightly_smaller(x1)
+      y0 = slightly_bigger(y0)
     end
 
     # From the paper
@@ -1270,7 +1315,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     # We follow the algorithm in the paper by De, Maheshwari et al, which takes O(n log^2 n) time. Their follow-up paper that
     # defines the Min-max PST, describes how to do the construction in O(n log n) time, but it is more complex and probably not
-    # worth the trouble of both a bespoke heapsort the special sorting algorithm of Katajainen and Pasanen.
+    # worth the trouble of both a bespoke heapsort and the special sorting algorithm of Katajainen and Pasanen.
 
     # Since we are building an implicit binary tree, things are simpler if the array is 1-based. This requires a malloc (perhaps)
     # and memcpy (for sure), which isn't great, but it's in the C layer so cheap compared to the O(n log^2 n) work we need to do for
@@ -1280,16 +1325,6 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     h = Math.log2(@size).floor
     a = @size - (2**h - 1) # the paper calls it A
     sort_subarray(1, @size)
-
-    # The smallest difference between distinct x values. We just sorted by x so this is cheap. Unfortunately we never see the y
-    # values sorted by default, so we need to do that explicitly to calculate the overall epsilon. Let's do that only if we need to.
-    @x_epsilon = INFINITY
-    (2..@size).each do |i|
-      diff = @data[i].x - @data[i-1].x
-      next if diff.zero?
-
-      @x_epsilon = diff if diff < @x_epsilon
-    end
 
     @last_non_leaf = @size / 2
     if @size.even?
@@ -1353,20 +1388,20 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     @data[l..r] = @data[l..r].sort_by(&:x)
   end
 
-  # Half the smallest difference between any two distinct x values or distinct y values.
-  private def epsilon
-    return @epsilon if @epsilon
+  # The smallest floating point number larger than x
+  private def slightly_bigger(x)
+    x_f = x.to_f
+    raise "#{x} out of Float range" if x_f.infinite?
 
-    @epsilon = @x_epsilon # calculated in consturct_pst
-    sorted_y = (1..@size).map { |i| @data[i].y }.sort
-    (1...@size).each do |i|
-      diff = sorted_y[i] - sorted_y[i-1]
-      next if diff.zero?
+    x_f.next_float
+  end
 
-      @epsilon = diff if diff < @epsilon
-    end
+  # The largest floating point number smaller than x
+  private def slightly_smaller(x)
+    x_f = x.to_f
+    raise "#{x} out of Float range" if x_f.infinite?
 
-    @epsilon
+    x_f.prev_float
   end
 
   ########################################

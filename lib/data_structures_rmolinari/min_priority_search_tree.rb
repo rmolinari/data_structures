@@ -38,7 +38,7 @@ require_relative 'shared'
 #
 # Each of these methods has a named parameter +open:+ that makes the search region an open set. For example, if we call
 # +smallest_x_in_ne+ with +open: true+ then we consider points satisifying x > x0 and y < y0. The default value for this parameter
-# is always +false+.
+# is always +false+. See the documentation of MaxPrioritySearchTree for limitiations of this support.
 #
 # The first 5 operations take O(log n) time and O(1) extra space.
 #
