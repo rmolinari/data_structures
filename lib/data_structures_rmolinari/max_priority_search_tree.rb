@@ -90,7 +90,7 @@ require_relative 'shared'
 # - all coordinates of the points are finite Numeric values and for no such pair of x-values s, t (or pair of y-values) is it such
 #   that +s.to_f.next_float > t+.
 #
-# Otherwise, use this functionality at your own risk, and not at all with coordinates that do not respond reasonable to +to_f+.
+# Otherwise, use this functionality at your own risk, and not at all with coordinates that do not respond reasonably to +to_f+.
 #
 # References:
 # * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
@@ -153,6 +153,9 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   #      - complicated and perhaps non-performant in the general case
   #      - doesn't handle non-numeric cases (just like idea 2)
   #      - possibly error-prone in corner cases.
+  #
+  #    Idea: maintain @x_chain and @y_chain hashes mapping each distinct x/y values to the next largest and smallest such
+  #    value. Then just use that. Lookup is fast. Downside: O(n) extra memory.
   #
   # For now approach 2 looks best. It doesn't cover all cases, but covers cases most likely in practice - the Float range is large -
   # and other cases can be documented away in a clean way.
