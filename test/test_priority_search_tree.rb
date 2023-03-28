@@ -45,9 +45,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_duplicate_coordinate_checks
-    # duplicate x values
+    # duplicate pairs
     assert_raise(Shared::DataError) do
-      MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(0, 1)])
+      MaxPrioritySearchTree.new([Point.new(0, 0), Point.new(0, 0)])
     end
   end
 
@@ -294,12 +294,16 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_bad_inputs_for_largest_y_in_nw
-    check_one = lambda do |data, *method_params, actual_leftmost|
-      check_one_case(MaxPrioritySearchTree, :largest_y_in_nw, data, *method_params, actual_leftmost)
+    check_one = lambda do |data, *method_params, expected|
+      expected = Point.new(*expected) unless expected.is_a?(Point)
+      check_one_case(MaxPrioritySearchTree, :largest_y_in_nw, data, *method_params, expected)
     end
 
     # Now we are allowing duplicated y values
     check_one.call([[3,3], [2, 2], [1,2]], 2, 1, Point.new(1, 2))
+
+    # ...and now duplicated x values
+    check_one.call([[3,3], [1,1], [2,4], [3,2]], 1, 1, [1, 1])
   end
 
   def test_bad_inputs_for_largest_y_in_ne
@@ -316,6 +320,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       9, 1,
       [[10, 10], [5, 8], [1, 7], [6, 7], [7, 5], [8, 5], [4, 4], [9, 3], [2, 2], [3, 1]],
       [-INFINITY, INFINITY]
+    )
+  end
+
+  def test_bad_inputs_for_dynamic_largest_y_in_nw
+    # This one was caused by bad checks for empty tree
+    check_one_dynamic_case(
+      MaxPrioritySearchTree, :largest_y_in_nw,
+      [[1,1]], 1, 1, [[1,1]], [-INFINITY, -INFINITY]
     )
   end
 
@@ -845,10 +857,20 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # By default we take x values 1, 2, ..., size and choose random integer y values in 1..size.
   #
   # If the environment variable 'floats' is set, instead choose random values in 0..1 for both coordinates.
-  private def raw_data(size)
+  private def raw_data(size, allow_duplicate_x: true)
     if ENV['floats']
       (1..size).map { Point.new(rand, rand) }
+    elsif allow_duplicate_x
+      x_vals = (1..size).map { rand(1..size) }
+      y_vals = (1..size).map { rand(1..size) }
+      pairs = Set.new(x_vals.zip(y_vals).map { Point.new(*_1) })
+
+      # We might have lost some because they were duplicates, so fill them in
+      pairs << Point.new(rand(1..size), rand(1..size)) until pairs.size == size
+
+      pairs.sort_by{ |pt| [pt.x, pt.y] } # debugging will be easier if they are sorted by x and then by y.
     else
+      # historically default case
       list = (1..size).to_a
       y_vals = (1..size).map { rand(1..size) }
       list.zip(y_vals).map { Point.new(*_1) }
@@ -871,7 +893,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       @open = open
     end
 
-    # Declare the given point deleted. We don't actually check it is in the set of points we are monitoring
+    # Declare the given point deleted. We don't actually check that it's in the set of points we are monitoring
     def delete!(point)
       @deletions << point
     end
@@ -953,12 +975,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
                elsif x0 < @min_x
                  []
                else
-                 first_idx = @points_by_x.bsearch_index { |v| v.x >= x0 }
-                 if @points_by_x[first_idx].x == x0
-                   @points_by_x[..first_idx]
-                 else
-                   @points_by_x[...first_idx]
-                 end
+                 first_idx = @points_by_x.bsearch_index { |v| v.x > x0 }
+                 @points_by_x[...first_idx]
                end
       points - @deletions
     end

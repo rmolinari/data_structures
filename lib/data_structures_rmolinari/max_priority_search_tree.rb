@@ -269,8 +269,11 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       sufficient_x = ->(x) { x <= x0 }
     end
 
-    # x == x0 or is not sufficient. This test sometimes excludes the other child of a node from consideration.
-    exclusionary_x = ->(x) { x == x0 || !sufficient_x.call(x) }
+    return best if empty?
+
+    # x is not big (or small) enough for a point to be in Q. This test sometimes excludes the other child of a node from
+    # consideration.
+    exclusionary_x = ->(x) { !sufficient_x.call(x) }
 
     in_q = lambda do |pair|
       sufficient_x.call(pair.x) && pair.y >= y0
@@ -290,6 +293,9 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     # We could make this code more efficient. But since we only have O(log n) steps we won't actually gain much so let's keep it
     # readable and close to the paper's pseudocode for now.
+    #
+    # In comments, the terms "right" and "left" apply to the nodes relevant to a NE quadrant search. The roles tend to swap for the
+    # NW quadrant.
     until leaf?(p)
       p_val = @data[p]
       if in_q.call(p_val)
@@ -303,7 +309,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
         # With just one child we need to check it
         p = child
       elsif exclusionary_x.call(@data[preferred_child.call(p)].x)
-        # right(p) might be in Q, but nothing in the left subtree can be, by the PST property on x.
+        # right(p) (or something under it) might be in Q, but nothing in the left subtree can be, by the PST property on x.
         p = preferred_child.call(p)
       elsif sufficient_x.call(@data[nonpreferred_child.call(p)].x)
         # Both children have sufficient x, so try the y-higher of them. Note that nothing else in either subtree will beat this one,
@@ -1314,7 +1320,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # Build the initial stucture
 
   private def construct_pst
-    raise DataError, 'Duplicate x values are not supported' if contains_duplicates?(@data, by: :x)
+    raise DataError, 'Duplicate pairs are not supported' if contains_duplicates?(@data)
 
     # We follow the algorithm in the paper by De, Maheshwari et al, which takes O(n log^2 n) time. Their follow-up paper that
     # defines the Min-max PST, describes how to do the construction in O(n log n) time, but it is more complex and probably not
@@ -1388,7 +1394,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     return if l == r # 1-array already sorted!
 
     # This slice-replacement is much faster than a Ruby-layer heapsort because it is mostly happening in C.
-    @data[l..r] = @data[l..r].sort_by(&:x)
+    @data[l..r] = @data[l..r].sort_by{ |pt| [pt.x, pt.y] }
   end
 
   # The smallest floating point number larger than x
