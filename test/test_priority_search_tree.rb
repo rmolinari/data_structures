@@ -216,14 +216,21 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # Some regression tests on inputs found to be bad during testing
 
   def test_bad_inputs_for_max_smallest_x_in_ne
-    check_one = lambda do |data, *method_params, actual_highest|
-      check_one_case(MaxPrioritySearchTree, :smallest_x_in_ne, data, *method_params, actual_highest)
+    check_one = lambda do |data, *method_params, expected|
+      check_one_case(MaxPrioritySearchTree, :smallest_x_in_ne, data, *method_params, expected)
     end
 
     check_one.call(
       [[6,19], [9,18], [15,17], [2,16], [11,13], [16,12], [19,10], [4,6], [8,15], [10,7], [12,11], [13,9], [14,4], [17,2], [18,3], [1,5], [3,1], [5,8], [7,14]],
       4, 15,
       Point.new(6, 19)
+    )
+
+    # Duplicate x values now...
+    check_one.call(
+      [[3,1], [3,3], [1,6], [3,5], [1,5], [5,6]],
+      3, 3,
+      Point.new(3, 3)
     )
   end
 
@@ -291,11 +298,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     check_one.call([[3,6], [2,5], [6,3], [1,1], [4,4], [5,2]], 5, 2, Point.new(5, 2))
+
+    # Duplicate x values...
+    check_one.call([[4,3], [2,6], [4,1], [5,4], [4,6], [3,6]], 4, 1, [4, 1])
+    check_one.call([[4,5], [5,5], [6,1], [1,3], [6,4], [1,5]], 1, 1, [1, 3])
+    check_one.call([[5,6], [6,5], [2,4], [4,5], [6,4], [6,6]], 6, 4, [6, 4])
+
+    $do_it = true
+    check_one.call([[7,2], [1,6], [1,3], [6,4], [2,2], [2,3], [4,3], [5,8]], 2, 2, [2, 2])
   end
 
   def test_bad_inputs_for_largest_y_in_nw
     check_one = lambda do |data, *method_params, expected|
-      expected = Point.new(*expected) unless expected.is_a?(Point)
       check_one_case(MaxPrioritySearchTree, :largest_y_in_nw, data, *method_params, expected)
     end
 
@@ -349,8 +363,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   private def check_one_case(klass, method, data, *method_params, expected_val)
+    expected_val = Point.new(*expected_val) unless expected_val.is_a?(Point)
     calculated_val = Timeout::timeout(timeout_time_s) do
       pst = klass.new(data.map { |x, y| Point.new(x, y) })
+      # byebug if $do_it
       calculated_val = pst.send(method, *method_params)
     end
     assert_equal expected_val, calculated_val
@@ -817,13 +833,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
     value = case by.to_sym
             when :min_x
-              data.min_by(&:x)
+              data.min_by { |p| [p.x, p.y] } # tie broken in favor of smallest y
             when :max_x
-              data.max_by(&:x)
-            when :max_y
-              data.max_by { |p| [p.y, -p.x] } # tie broken in favor of smallest x
+              data.max_by { |p| [p.x, -p.y] } # tie broken in favor of smallest y
             when :min_y
               data.min_by { |p| [p.y, p.x] } # tie broken in favor of smallest x
+            when :max_y
+              data.max_by { |p| [p.y, -p.x] } # tie broken in favor of smallest x
             when :all
               Set.new data
             else

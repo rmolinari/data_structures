@@ -336,7 +336,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   ########################################
   # Leftmost NE and Rightmost NW
 
-  # Return the leftmost (min-x) point in P to the northeast of (x0, y0).
+  # Return the leftmost (min-x) point in P to the northeast of (x0, y0), breaking ties with the smaller y-value
   #
   # Let Q = be the northeast quadrant defined by the point (x0, y0):
   # - [x0, infty) X [y0, infty) if +open+ is false and
@@ -358,7 +358,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     end
   end
 
-  # Return the rightmost (max-x) point in P to the northwest of (x0, y0).
+  # Return the rightmost (max-x) point in P to the northwest of (x0, y0), breaking ties with the smallerer y-value.
   #
   # Let Q = be the northwest quadrant defined by the point (x0, y0):
   # - (infty, x0] X [y0, infty) if +open+ is false and
@@ -415,11 +415,15 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     #
     #   takes as input a point t and does the following: if t \in Q and x(t) < x(best) then it assignes best = t
     #
+    # We break ties by preferring smaller y values.
+    #
     # Note that the paper identifies a node in the tree with its value. We need to grab the correct node.
     update_best = lambda do |node|
       t = @data[node]
-      if in_q.call(t) && sign * t.x < sign * best.x
-        best = t
+      if in_q.call(t)
+        if (sign * t.x < sign * best.x) || (t.x == best.x && t.y < best.y)
+          best = t
+        end
       end
     end
 
@@ -428,15 +432,28 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     # In the paper c = [c1, c2, ..., ck] is an array of four nodes, [left(p), right(p), left(q), right(q)], but we also use this
     # logic when q has only a left child.
     #
-    # Idea: x(c1) < x(c2) < ..., so the key thing to know for the next step is where x0 fits in.
+    # Idea: x(c1) <= x(c2) <= ..., so the key thing to know for the next step is where x0 fits in.
+    #
+    # (Note that the paper describes the approach for distinct x-values. With the possibility of repeated x-values things are
+    # slightly more fiddly. Among other things, we need to break ties with a preference for smaller y-values.)
     #
     # - If x0 <= x(c1) then all subtrees have large enough x values and we look for the leftmost node in c with a large enough y
-    #   value. Both p and q are sent into that subtree.
-    # - If x0 >= x(ck) the the rightmost subtree is our only hope
-    # - Otherwise, x(c1) < x0 < x(ck) and we let i be least so that x(ci) <= x0 < x(c(i+1)). Then q becomes the lefmost cj in c not
+    #   value. Both p and q are sent into that subtree. (See the REFINEMENT note, below, for a wrinkle.)
+    # - If x0 > x(ck) the the rightmost subtree is our only hope
+    # - Otherwise, x(c1) < x0 <= x(ck) and we let i be least so that x(ci) < x0 <= x(c(i+1)). Then q becomes the lefmost cj in c not
     #   to the left of ci such that y(cj) >= y0, if any. p becomes ci if y(ci) >= y0 and q otherwise. If there is no such j, we put
     #   q = p. This may leave both of p, q undefined which means there is no useful way forward and we return nils to signal this to
     #   calling code.
+    #
+    #   REFINEMENT:
+    #     Because we may have duplicate x-values, when choosing q we must check if there are multiple nodes with the best
+    #     ("leftmost") x-value and sufficient y-values. If so, we must choose the one with the smallest y-values. In the "natural"
+    #     case - in which we are looking for the smallest x-value in the NE quadrant - this is actually the leftmost node as
+    #     described because we set up our data structure by sorting values on x with y-values as a tiebreaker. But when we are
+    #     looking for the largest x-value in the NW quadrant we have to see if this "sufficient" value for x is repeated and, if so,
+    #     find the node with the smallest sufficient value of y.
+    #
+    #     We don't have to play a similar game when picking p because of how we choose ci: the next x-value is strictly larger.
     #
     # The same logic applies to largest_x_in_nw, though everything is "backwards"
     # - membership of Q depends on having a small-enough value of x, rather than a large-enough one
@@ -445,30 +462,80 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     #
     # Idea: handle the first issue by negating all x-values being compared and handle the second by reversing the array c before
     # doing anything and swapping the values for p and q that we work out.
+
+    #**************************************************
+    #**************************************************
+    # ABANDONMENT NOTE!!
+
+    #
+    # I spent a while converting this code to handle the case in which x-values can be repeated. I had assumed that I just had to
+    # find the right tweaks to comparisons (< vs <=, etc) and the right refinements (like the one described above) and the framework
+    # of the algorithm described in the paper would handle things. BUT THIS IS NOT TRUE. There are cases in which the paper's
+    # approach - sending two pointers p and q down the tree - does not suffice.
+    #
+    # Consider the following case, in which we are searching for the rightmost point in the quadrant to the NW of (2, 2). The points
+    # in our dataset are (1, 3), (1, 6), (2, 2), (2, 2.1), (2, 2.2), (2, 2.3), (2, 2.4), (2, 3), (4, 3), (5, 8), (6, 4), and (7,
+    # 2). The points are arranged in our MaxPST data structure as follows:
+    #
+    #                      -------- (5, 8) --------
+    #                     /                        \
+    #            -- (1, 6) ---                     (6, 4)
+    #           /             \                   /   \
+    #      (1, 3)             (2, 3)         (4, 3)   (7, 2)
+    #     /      \          /        \          |
+    #  (2, 2) (2, 2.1)  (2, 2.2)  (2, 2.3)   (2, 2.4)
+    #
+    # Consider the situation as we decide which two nodes to visit in the third level. We need to consider the leftmost node (1, 3)
+    # because although it doesn't lie in the quadrant, it might have children that do. But so might *ANY* of the other nodes in the
+    # layer. In this example two of them do, but we can imagine yet more points (2, 2 + e) that mean all three of the other nodes
+    # contain plausible nodes that must be checked.
+    #
+    # So I don't see a way forward with just two nodes going down the tree. Indeed, I don't see a way to do it with k nodes, as we
+    # can have arbitrarily many nodes like this with children that have equal x-values and need to be tie-broken on their y-values.
+    #
+    # So I am abandoning my attempts to offer duplicate x-values in the data structure.
+
+    # Do what is described in the REFINEMENT note.
+    #
+    # Given a value r in c, find the one in the c with the same x-value as r and minimal "sufficient" y-value
+    refine = lambda do |c, r|
+      c.select { |s| @data[s].x == @data[r].x && @data[s].y >= y0 }.min_by{ |s| @data[s].y }
+    end
+
     determine_next_nodes = lambda do |*c|
       c.reverse! if quadrant == :nw
 
-      if sign * @data[c.first].x > sign * x0
+      if sign * @data[c.first].x >= sign * x0
         # All subtrees have x-values good enough for Q. We look at y-values to work out which subtree to focus on
         leftmost = c.find { |node| @data[node].y >= y0 } # might be nil
+
+        if leftmost && quadrant == :nw
+          leftmost = refine.call(c, leftmost)
+        end
 
         # Otherwise, explore the "leftmost" subtree with large enough y values. Its root is in Q and can't be beaten as "leftmost"
         # by anything to its "right". If it's nil the calling code can bail
         return [leftmost, leftmost]
       end
 
-      if sign * @data[c.last].x <= sign * x0
+      if sign * @data[c.last].x < sign * x0
         # only the "rightmost" subtree can possibly have anything in Q, assuming distinct x-values
         return [c.last, c.last]
       end
 
       values = c.map { |node| @data[node] }
 
-      # Note that x(c1) <= x0 < x(c4) so i is well-defined
-      i = (0...4).find { |j| sign * values[j].x <= sign * x0 && sign * x0 < sign * values[j + 1].x }
+      # Note that x(c1) < x0 <= x(c4) so i is well-defined
+      i = (0...4).find { |j| sign * values[j].x < sign * x0 && sign * x0 <= sign * values[j + 1].x }
 
       # These nodes all have large-enough x values so looking at y finds the ones in Q
       new_q = c[(i + 1)..].find { |node| @data[node].y >= y0 } # could be nil
+
+      # See the REFINEMENT note, above
+      if new_q && quadrant == :nw
+        new_q = refine.call(c, new_q)
+      end
+
       new_p = c[i] if values[i].y >= y0 # The leftmost subtree is worth exploring if the y-value is big enough but not otherwise
       new_p ||= new_q # if nodes[i] is no good, send p along with q
       new_q ||= new_p # but if there is no worthwhile value for q we should send it along with p
@@ -480,6 +547,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
 
     # Now that we have the possibility of dynamic PSTs we need to worry about more cases. For example, p might be a leaf even though
     # q is not
+    byebug if $do_it
     until leaf?(p) && leaf?(q)
       update_best.call(p)
       update_best.call(q)
