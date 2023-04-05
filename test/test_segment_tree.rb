@@ -59,6 +59,17 @@ class SegmentTreeTest < Test::Unit::TestCase
     test_seg_tree_with_updates(seg_tree, :index_of_max_val_on, mutable_data) { |i, j| (i..j).max_by { mutable_data[_1] } }
   end
 
+  def test_sum_segment_tree_with_c
+    seg_tree = make_one(:sum, :c, DATA)
+    test_seg_tree_basic(seg_tree, :sum_on, DATA.size) { |i, j| DATA[i..j].sum }
+  end
+
+  def test_sum_segment_tree_updates_with_c
+    mutable_data = DATA.clone
+    seg_tree = make_one(:sum, :c, mutable_data)
+    test_seg_tree_with_updates(seg_tree, :sum_on, mutable_data) { |i, j| mutable_data[i..j].sum }
+  end
+
   ########################################
   # Helpers
 

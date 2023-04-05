@@ -36,10 +36,15 @@ module DataStructuresRMolinari
     #   - +:c+ or +:ruby+
     #   - the C version will run faster but for now may be buggier and harder to debug
     module_function def construct(data, operation, lang)
-      operation.must_be_in [:max, :index_of_max]
+      operation.must_be_in [:max, :index_of_max, :sum]
       lang.must_be_in [:ruby, :c]
 
-      klass = operation == :max ? MaxValSegmentTree : IndexOfMaxValSegmentTree
+      klass = case operation
+              when :max then MaxValSegmentTree
+              when :index_of_max then IndexOfMaxValSegmentTree
+              when :sum then SumSegmentTree
+              else raise ArgumentError, "Unknown operation #{operation}"
+              end
       template = lang == :ruby ? SegmentTreeTemplate : CSegmentTreeTemplate
 
       klass.new(template, data)
@@ -104,6 +109,33 @@ module DataStructuresRMolinari
       #   - Return +nil+ if i > j
       def index_of_max_val_on(i, j)
         @structure.query_on(i, j)&.first # discard the value part of the pair, which is a bookkeeping
+      end
+    end
+
+    class SumSegmentTree
+      extend Forwardable
+
+      # Tell the tree that the value at idx has changed
+      def_delegator :@structure, :update_at
+
+      # @param (see MaxValSegmentTree#initialize)
+      def initialize(template_klass, data)
+        data.must_be_a Enumerable
+
+        @structure = template_klass.new(
+          combine:               ->(a, b) { a + b },
+          single_cell_array_val: ->(i) { data[i] },
+          size:                  data.size,
+          identity:              0
+        )
+      end
+
+      # The sum of the values in A(i..j)
+      #
+      # The arguments must be integers in 0...(A.size)
+      # @return the sum of the values in A(i..j) or 0 if i > j.
+      def sum_on(i, j)
+        @structure.query_on(i, j)
       end
     end
 
