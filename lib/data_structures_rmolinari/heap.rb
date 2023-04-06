@@ -78,8 +78,9 @@ class DataStructuresRMolinari::Heap
   # Insert a new element into the heap with the given priority.
   # @param value the item to be inserted.
   #   - If the heap is addressible (the default) it is an error to insert an item that is already present in the heap.
-  # @param priority the priority to use for new item. The values used as priorities must be totally ordered via +<=>+.
-  def insert(value, priority)
+  # @param (optional) priority the priority to use for new item. The values used as priorities must be totally ordered via +<=>+.
+  #        If omitted we use the inserted value as its own priority.
+  def insert(value, priority = value)
     raise DataError, "Heap already contains #{value}" if @addressable && contains?(value)
 
     @size += 1

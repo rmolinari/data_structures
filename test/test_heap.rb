@@ -102,4 +102,15 @@ class HeapTest < Test::Unit::TestCase
       heap.update(1, 0)
     end
   end
+
+  def test_heap_with_no_priorities
+    heap = Heap.new
+
+    heap.insert(3)
+    heap.insert(2)
+    heap.insert(1)
+    assert_equal 1, heap.pop
+    assert_equal 2, heap.pop
+    assert_equal 3, heap.pop
+  end
 end
