@@ -71,6 +71,7 @@ class DataStructuresRMolinari::SegmentTree::SegmentTreeTemplate
   # Note that we don't need the updated value itself. We get that by calling the lambda +single_cell_array_val+ supplied at
   # construction.
   def update_at(idx)
+    raise DataError, "Bad update index #{idx} (size = #{@size})" unless (0...@size).cover?(idx)
 
     update_val_at(idx, root, 0, @size - 1)
   end

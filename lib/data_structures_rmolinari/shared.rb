@@ -69,12 +69,9 @@ module Shared
   #        duplication. When nil we don't call anything and just use the elements themselves.
   def contains_duplicates?(enum, by: nil)
     seen = Set.new
-    enum.each do |v|
+    enum.any? do |v|
       v = v.send(by) if by
-      return true if seen.include? v
-
-      seen << v
+      !seen.add?(v)
     end
-    false
   end
 end

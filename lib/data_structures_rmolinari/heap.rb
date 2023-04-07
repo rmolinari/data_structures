@@ -104,7 +104,7 @@ class DataStructuresRMolinari::Heap
   # Return the top of the heap and remove it, updating the structure to maintain the necessary properties.
   # @return (see #top)
   def pop
-    result = top
+    result = top # raises if empty
     assign(@data[@size], root)
 
     @data[@size] = nil
