@@ -25,9 +25,26 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @size = (ENV['test_size'] || 10_000).to_i
     raw_data = raw_data(@size)
     @point_finder = PointFinder.new(raw_data)
-    @open_point_finder = PointFinder.new(raw_data, open: true)
     @dynamic_point_finder = PointFinder.new(raw_data)
-    @dynamic_open_point_finder = PointFinder.new(raw_data, open: true)
+  end
+
+  # I've had some bugs in the testing code where the PST and the point finder(s) have gotten out of sync. This has caused false
+  # negatives in test cases.
+  Context = Struct.new(:pst, :point_finder)
+
+  # A simple value class to hold a description of a test framework and call we are gonig to make on a PST
+  class TestDefn
+    attr_reader :context, :property, :dimension, :region, :args, :enumerate_via_block, :open
+
+    def initialize(context, property, dimension, region, args, enumerate_via_block: false, open: false)
+      @context = context
+      @property = property
+      @dimension = dimension
+      @region = region
+      @args = args
+      @enumerate_via_block = enumerate_via_block
+      @open = open
+    end
   end
 
   ########################################
@@ -163,7 +180,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
       deleted_pt = pst.delete_top!
       @dynamic_point_finder.delete!(deleted_pt)
-      @dynamic_open_point_finder.delete!(deleted_pt)
       yield pst
     end
   end
@@ -792,30 +808,30 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # among: if given, look among these points instead of @point_finder. It can be either another PointFinder or just an enumerable of
   #        points
   private def best_in(region, *args, by: :all, is_min_pst: false, among: nil, open: false)
-    point_finder = open ? @open_point_finder : @point_finder
+    point_finder = @point_finder
     if among
       point_finder = if among.is_a? PointFinder
                        among
                      else
-                       PointFinder.new(among, open:)
+                       PointFinder.new(among)
                      end
     end
 
     data = case region.to_sym
            when :ne
-             point_finder.ne_quadrant(*args)
+             point_finder.ne_quadrant(*args, open:)
            when :nw
-             point_finder.nw_quadrant(*args)
+             point_finder.nw_quadrant(*args, open:)
            when :se
-             point_finder.se_quadrant(*args)
+             point_finder.se_quadrant(*args, open:)
            when :sw
-             point_finder.sw_quadrant(*args)
+             point_finder.sw_quadrant(*args, open:)
            when :three_sided
              x0, x1, y0 = args
              if is_min_pst
-               point_finder.three_sided_down(x0, x1, y0)
+               point_finder.three_sided_down(x0, x1, y0, open:)
              else
-               point_finder.three_sided_up(x0, x1, y0)
+               point_finder.three_sided_up(x0, x1, y0, open:)
              end
            else
              raise "can't handle region #{region}"
@@ -873,20 +889,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
-  # A little class to filter points that are in a particular region. This does much of the work of a PST in a very slow way and is
-  # used when testing results returned by a PST
+  # A little class to filter points that are in a particular region. This does the work of a PST in a very slow way and is used when
+  # testing results returned by a PST
   class PointFinder
     # Doesn't respect delete!
     attr_reader :points
     attr_reader :min_x, :max_x
 
-    # open: whether the region is open or closed
-    def initialize(points, open: false)
+    def initialize(points)
       @points = points.clone
       @points_by_x = points.sort_by(&:x)
       @min_x, @max_x = @points_by_x.map(&:x).minmax
       @deletions = []
-      @open = open
     end
 
     # Declare the given point deleted. We don't actually check it is in the set of points we are monitoring
@@ -899,51 +913,51 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       @deletions = []
     end
 
-    def ne_quadrant(x0, y0)
-      if @open
+    def ne_quadrant(x0, y0, open: false)
+      if open
         rightward_points(x0).select { |pair| pair.x != x0 && pair.y > y0 }
       else
         rightward_points(x0).select { |pair| pair.y >= y0 }
       end
     end
 
-    def nw_quadrant(x0, y0)
-      if @open
+    def nw_quadrant(x0, y0, open: false)
+      if open
         leftward_points(x0).select { |pair| pair.x != x0 && pair.y > y0 }
       else
         leftward_points(x0).select { |pair| pair.y >= y0 }
       end
     end
 
-    def se_quadrant(x0, y0)
-      if @open
+    def se_quadrant(x0, y0, open: false)
+      if open
         rightward_points(x0).select { |pair| pair.x != x0 && pair.y < y0 }
       else
         rightward_points(x0).select { |pair| pair.y <= y0 }
       end
     end
 
-    def sw_quadrant(x0, y0)
-      if @open
+    def sw_quadrant(x0, y0, open: false)
+      if open
         leftward_points(x0).select { |pair| pair.x != x0 && pair.y < y0 }
       else
         leftward_points(x0).select { |pair| pair.y <= y0 }
       end
     end
 
-    def three_sided_up(x0, x1, y0)
-      if @open
-        ne_quadrant(x0, y0).reject { |pt| pt.x >= x1 }
+    def three_sided_up(x0, x1, y0, open: false)
+      if open
+        ne_quadrant(x0, y0, open:).reject { |pt| pt.x >= x1 }
       else
-        ne_quadrant(x0, y0).reject { |pt| pt.x > x1 }
+        ne_quadrant(x0, y0, open:).reject { |pt| pt.x > x1 }
       end
     end
 
-    def three_sided_down(x0, x1, y0)
-      if @open
-        se_quadrant(x0, y0).reject { |pt| pt.x >= x1 }
+    def three_sided_down(x0, x1, y0, open: false)
+      if open
+        se_quadrant(x0, y0, open:).reject { |pt| pt.x >= x1 }
       else
-        se_quadrant(x0, y0).reject { |pt| pt.x > x1 }
+        se_quadrant(x0, y0, open:).reject { |pt| pt.x > x1 }
       end
     end
 
@@ -985,14 +999,11 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # Yield to the block while in "dynamic" context. We check correct return values against the @dynamic_point_finder
   private def dynamic_context
     old_point_finder = @point_finder
-    old_open_point_finder = @open_point_finder
 
     @point_finder = @dynamic_point_finder
-    @open_point_finder = @dynamic_open_point_finder
 
     yield
 
     @point_finder = old_point_finder
-    @open_point_finder = old_open_point_finder
   end
 end
