@@ -246,7 +246,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     check_one.call(
-      [[6,19], [9,18], [15,17], [2,16], [11,13], [16,12], [19,10], [4,6], [8,15], [10,7], [12,11], [13,9], [14,4], [17,2], [18,3], [1,5], [3,1], [5,8], [7,14]],
+      [[6, 19], [9, 18], [15, 17], [2, 16], [11, 13], [16, 12], [19, 10], [4, 6], [8, 15], [10, 7],
+       [12, 11], [13, 9], [14, 4], [17, 2], [18, 3], [1, 5], [3, 1], [5, 8], [7, 14]],
       4, 15,
       Point.new(6, 19)
     )
@@ -261,19 +262,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_one.call([[1, 1]], 0, 1, 0, Point.new(1, 1))
 
     check_one.call(
-      [[4,5], [1,4], [5,2], [2,1], [3,3]],
+      [[4, 5], [1, 4], [5, 2], [2, 1], [3, 3]],
       2, 3, 2,
       Point.new(3, 3)
     )
 
     check_one.call(
-      [[8,8], [1,7], [6,5], [2,6], [4,3], [5,1], [7,2], [3,4]],
+      [[8, 8], [1, 7], [6, 5], [2, 6], [4, 3], [5, 1], [7, 2], [3, 4]],
       3, 5, 0,
       Point.new(3, 4)
     )
 
     check_one.call(
-      [[7,8], [1,5], [5,7], [2,3], [4,1], [6,6], [8,4], [3,2]],
+      [[7, 8], [1, 5], [5, 7], [2, 3], [4, 1], [6, 6], [8, 4], [3, 2]],
       3, 4, 1,
       Point.new(3, 2)
     )
@@ -286,31 +287,31 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     # LogicErrors
-    check_one.call([[1,3], [2,1], [3,2]],               2, 3, 0, [[2, 1], [3, 2]])
-    check_one.call([[2,5], [4,3], [5,4], [1,2], [3,1]], 4, 5, 4, [[5, 4]])
+    check_one.call([[1, 3], [2, 1], [3, 2]], 2, 3, 0, [[2, 1], [3, 2]])
+    check_one.call([[2, 5], [4, 3], [5, 4], [1, 2], [3, 1]], 4, 5, 4, [[5, 4]])
 
     # These had timeouts in early code
-    check_one.call([[1,1]],                                    0, 1, 0, [[1, 1]])
-    check_one.call([[2,2], [1,1]],                             0, 1, 1, [[1, 1]])
-    check_one.call([[2,6], [3,5], [5,3], [1,4], [4,2], [6,1]], 3, 5, 5, [[3, 5]])
-    check_one.call([[5,10], [7,8], [10,9], [2,7], [6,4], [8,6], [9,5], [1,1], [3,2], [4,3]], 5, 6, 0, [[6, 4], [5, 10]])
+    check_one.call([[1, 1]], 0, 1, 0, [[1, 1]])
+    check_one.call([[2, 2], [1, 1]], 0, 1, 1, [[1, 1]])
+    check_one.call([[2, 6], [3, 5], [5, 3], [1, 4], [4, 2], [6, 1]], 3, 5, 5, [[3, 5]])
+    check_one.call([[5, 10], [7, 8], [10, 9], [2, 7], [6, 4], [8, 6], [9, 5], [1, 1], [3, 2], [4, 3]], 5, 6, 0, [[6, 4], [5, 10]])
 
     # These ones didn't time out, but returned bad values
-    check_one.call([[2,3], [1,1], [3,2]],                             0, 1, 0, [[1, 1]])
-    check_one.call([[7,7], [1,5], [4,6], [2,2], [3,1], [5,4], [6,3]], 5, 6, 3, [[5,4], [6, 3]])
+    check_one.call([[2, 3], [1, 1], [3, 2]], 0, 1, 0, [[1, 1]])
+    check_one.call([[7, 7], [1, 5], [4, 6], [2, 2], [3, 1], [5, 4], [6, 3]], 5, 6, 3, [[5, 4], [6, 3]])
     check_one.call(
-      [[8,12], [6,11], [10,10], [2,7], [7,8], [11,9], [12,1], [1,5], [3,6], [4,2], [5,3], [9,4]],
+      [[8, 12], [6, 11], [10, 10], [2, 7], [7, 8], [11, 9], [12, 1], [1, 5], [3, 6], [4, 2], [5, 3], [9, 4]],
       3, 10, 0,
       [[8, 12], [10, 10], [6, 11], [9, 4], [5, 3], [3, 6], [4, 2], [7, 8]]
     )
     check_one.call(
-      [[4,14], [5,13], [13,12], [2,11], [8,9], [10,10], [14,8], [1,4], [3,3], [6,7], [7,1], [9,5], [11,6], [12,2]],
+      [[4, 14], [5, 13], [13, 12], [2, 11], [8, 9], [10, 10], [14, 8], [1, 4], [3, 3], [6, 7], [7, 1], [9, 5], [11, 6], [12, 2]],
       6, 13, 0,
       [[6, 7], [11, 6], [10, 10], [8, 9], [12, 2], [9, 5], [7, 1], [13, 12]]
     )
 
     # Open region
-    check_one.call([[4,2], [3,2], [1,3], [2,3]], 1, 2, 3, [], open: true)
+    check_one.call([[4, 2], [3, 2], [1, 3], [2, 3]], 1, 2, 3, [], open: true)
   end
 
   def test_bad_inputs_for_largest_x_in_nw
@@ -318,7 +319,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       check_one_case(MaxPrioritySearchTree, :largest_x_in_nw, data, *method_params, actual_leftmost)
     end
 
-    check_one.call([[3,6], [2,5], [6,3], [1,1], [4,4], [5,2]], 5, 2, Point.new(5, 2))
+    check_one.call([[3, 6], [2, 5], [6, 3], [1, 1], [4, 4], [5, 2]], 5, 2, Point.new(5, 2))
   end
 
   def test_bad_inputs_for_largest_y_in_nw
@@ -327,20 +328,20 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     # Now we are allowing duplicated y values
-    check_one.call([[3,3], [2, 2], [1,2]], 2, 1, Point.new(1, 2))
+    check_one.call([[3, 3], [2, 2], [1, 2]], 2, 1, Point.new(1, 2))
   end
 
   def test_bad_inputs_for_largest_y_in_ne
     check_one = lambda do |data, *method_params, actual_leftmost|
       check_one_case(MaxPrioritySearchTree, :largest_y_in_ne, data, *method_params, actual_leftmost)
     end
-    check_one.call([[1,3], [2,2], [3,1]], 2, 1, Point.new(2, 2))
+    check_one.call([[1, 3], [2, 2], [3, 1]], 2, 1, Point.new(2, 2))
   end
 
   def test_bad_inputs_for_dynamic_largest_x_in_nw
     check_one_dynamic_case(
       MaxPrioritySearchTree, :largest_x_in_nw,
-      [[7,5], [9,3], [5,8], [2,2], [8,5], [6,7], [1,7], [10,10], [4,4], [3,1]],
+      [[7, 5], [9, 3], [5, 8], [2, 2], [8, 5], [6, 7], [1, 7], [10, 10], [4, 4], [3, 1]],
       9, 1,
       [[10, 10], [5, 8], [1, 7], [6, 7], [7, 5], [8, 5], [4, 4], [9, 3], [2, 2], [3, 1]],
       [-INFINITY, INFINITY]
@@ -359,9 +360,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       assert_equal expected_result, dynamic_pst.enumerate_3_sided(*method_params)
     end
 
-    check_one.call([[2,2], [1,2], [3,2]], 3, 3, 2, [1, 2], [[3, 2]])
-    check_one.call([[1,3], [3,2], [2,2]], 1, 2, 2, [1, 3], [[2, 2]])
-    check_one.call([[1,3], [2,3], [3,3]], 1, 1, 3, [1, 3], [])
+    check_one.call([[2, 2], [1, 2], [3, 2]], 3, 3, 2, [1, 2], [[3, 2]])
+    check_one.call([[1, 3], [3, 2], [2, 2]], 1, 2, 2, [1, 3], [[2, 2]])
+    check_one.call([[1, 3], [2, 3], [3, 3]], 1, 1, 3, [1, 3], [])
   end
 
   private def check_one_case(klass, method, data, *method_params, expected_val, open: false)
@@ -529,16 +530,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
       expected_value = best_in(region, x0, x1, y0, by: criterion, among: points - deleted_pts)
       actual_value = pst.send(method, x0, x1, y0)
-
-      [expected_value, actual_value, extra_message]
     else
       extra_message = "(x0, y0) = (#{x0}, #{y0}); deleted #{deleted_list}"
 
       expected_value = best_in(region, x0, y0, by: criterion, among: points - deleted_pts)
       actual_value = pst.send(method, x0, y0)
-
-      [expected_value, actual_value, extra_message]
     end
+    [expected_value, actual_value, extra_message]
   end
 
   ########################################
@@ -589,7 +587,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
     # Just to annoy me, the CallTreePrinter class now does paths differently and in a way
     # that is poorly documented.
-    call_tree_printer.print(path: "profile", profile: "#{tag}")
+    call_tree_printer.print(path: "profile", profile: tag.to_s)
     File.open("profile/stack_#{tag}.html", 'w') {|f| stack_printer.print(f)}
   end
 
@@ -660,16 +658,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       next unless error_message || timeout || method && (expected_value != calculated_value)
 
       pair_data = pairs.map { |p| "[#{p.x},#{p.y}]" }.join(', ')
+      puts "data = [#{pair_data}]"
       if method
-        puts "data = [#{pair_data}]"
         if extra_message
           puts "extra: #{extra_message}"
         end
 
         assert_equal expected_value, calculated_value
       else
-        puts "data = [#{pair_data}]"
-
         assert false
       end
     end
@@ -754,9 +750,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   private def check_calculation(pst, property, dimension, region, *args, enumerate_via_block: false, open: false)
     is_min_pst = pst.is_a? MinPrioritySearchTree
 
-    region.must_be_in [:ne, :nw, :se, :sw, :three_sided]
+    region.must_be_in %i[ne nw se sw three_sided]
     dimension.must_be_in [:x, :y, nil]
-    property.must_be_in [:min, :max, :all]
+    property.must_be_in %i[min max all]
 
     raise 'x-dimension calculations not supported in 3-sided region' if region == :three_sided && dimension == :x
     raise 'dimension must be given unless we are enumerating' if property != :all && !dimension
