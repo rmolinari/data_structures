@@ -197,53 +197,53 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # Analagous tests for the MinPST
 
   def test_min_pst_smallest_y_in_se
-    check_quadrant_calc(min_pst, :min, :y, :se)
+    check_quadrant_calc_pair(min_pst_pair, :smallest_y_in_se)
   end
 
   def test_min_pst_smallest_y_in_open_se
-    check_quadrant_calc(min_pst, :min, :y, :se, open: true)
+    check_quadrant_calc_pair(min_pst_pair, :smallest_y_in_se, open: true)
   end
 
   def test_min_pst_smallest_y_in_sw
-    check_quadrant_calc(min_pst, :min, :y, :sw)
+    check_quadrant_calc_pair(min_pst_pair, :smallest_y_in_sw)
   end
 
   def test_min_pst_smallest_y_in_open_sw
-    check_quadrant_calc(min_pst, :min, :y, :sw, open: true)
+    check_quadrant_calc_pair(min_pst_pair, :smallest_y_in_sw, open: true)
   end
 
   def test_min_pst_smallest_x_in_se
-    check_quadrant_calc(min_pst, :min, :x, :se)
+    check_quadrant_calc_pair(min_pst_pair, :smallest_x_in_se)
   end
 
   def test_min_pst_smallest_x_in_open_se
-    check_quadrant_calc(min_pst, :min, :x, :se, open: true)
+    check_quadrant_calc_pair(min_pst_pair, :smallest_x_in_se, open: true)
   end
 
   def test_min_pst_largest_x_in_sw
-    check_quadrant_calc(min_pst, :max, :x, :sw)
+    check_quadrant_calc_pair(min_pst_pair, :largest_x_in_sw)
   end
 
   def test_min_pst_largest_x_in_open_sw
-    check_quadrant_calc(min_pst, :max, :x, :sw, open: true)
+    check_quadrant_calc_pair(min_pst_pair, :largest_x_in_sw, open: true)
   end
 
   def test_min_pst_smallest_y_in_3_sided
-    check_3_sided_calc(min_pst, :min, :y)
+    check_3_sided_calc_pair(min_pst_pair, :smallest_y_in_3_sided)
   end
 
   def test_min_pst_smallest_y_in_open_3_sided
-    check_3_sided_calc(min_pst, :min, :y, open: true)
+    check_3_sided_calc_pair(min_pst_pair, :smallest_y_in_3_sided, open: true)
   end
 
   def test_min_pst_enumerate_3_sided
-    check_3_sided_calc(min_pst, :all, nil)
-    check_3_sided_calc(min_pst, :all, nil, enumerate_via_block: true)
+    check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided)
+    check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided, enumerate_via_block: true)
   end
 
   def test_min_pst_enumerate_open_3_sided
-    check_3_sided_calc(min_pst, :all, nil, open: true)
-    check_3_sided_calc(min_pst, :all, nil, enumerate_via_block: true, open: true)
+    check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided, open: true)
+    check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided, enumerate_via_block: true, open: true)
   end
 
   ########################################
@@ -558,16 +558,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
     # method = :enumerate_3_sided
     method = :largest_x_in_nw
-    pst = MaxPrioritySearchTree.new(@point_finder.points.shuffle)
+    pst_pair = make_max_pst_pair
     profile(method) do
-      check_quadrant_calc(pst, :max, :y, :nw)
-      # 100.times do
-      #   x0 = rand(@size)
-      #   # x1 = rand(x0..@size)
-      #   y0 = rand(@size)
-      #   # pst.send(method, x0, x1, y0)
-      #   pst.send(method, x0, y0)
-      # end
+      check_quadrant_calc_pair(pst_pair, :max, :y, :nw)
     end
   end
 
@@ -696,12 +689,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   private def max_pst_pair
-    @max_pst_pair ||= begin
-                        pairs = @common_raw_data.shuffle
-                        max_pst = MaxPrioritySearchTree.new(pairs.clone)
-                        simple_pst = SimplePrioritySearchTree.new(pairs.clone)
-                        PSTPair.new(max_pst, simple_pst)
-                      end
+    @max_pst_pair ||= make_max_pst_pair
+  end
+
+  private def make_max_pst_pair
+    pairs = @common_raw_data.shuffle
+    max_pst = MaxPrioritySearchTree.new(pairs.clone)
+    simple_pst = SimplePrioritySearchTree.new(pairs.clone)
+    PSTPair.new(max_pst, simple_pst)
   end
 
   private def dynamic_max_pst
@@ -730,25 +725,20 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @min_pst ||= MinPrioritySearchTree.new(@point_finder.points.shuffle)
   end
 
-  # Check that a MaxPST calculation in a quadrant gives the correct result
-  #
-  # - criterion: :min or :max
-  # - dimension: :x or :y
-  # - region: :ne or :nw
-  # - open: is the region open or closed?
-  private def check_quadrant_calc(pst, criterion, dimension, region, open: false)
-    pst.must_be
-    criterion.must_be_in [:min, :max]
-    dimension.must_be_in [:x, :y]
-    region.must_be_in [:ne, :nw, :se, :sw]
-
-    100.times do
-      x0 = rand(@point_finder.min_x..@point_finder.max_x)
-      y0 = rand(@point_finder.min_x..@point_finder.max_x)
-      check_calculation(pst, criterion, dimension, region, x0, y0, open:)
-    end
+  private def min_pst_pair
+    @min_pst_pair ||= begin
+                        pairs = @common_raw_data.shuffle
+                        min_pst = MinPrioritySearchTree.new(pairs.clone)
+                        simple_pst = SimplePrioritySearchTree.new(pairs.clone)
+                        PSTPair.new(min_pst, simple_pst)
+                      end
   end
 
+  # Check that a MaxPST calculation in a quadrant gives the correct result
+  #
+  # - pst_pair: a PST/SimplePst pair used to perform the calculation
+  # - method: the method to call on the PSTs
+  # - open: is the region open or closed?
   private def check_quadrant_calc_pair(pst_pair, method, open: false)
     simple_pst = pst_pair.simple_pst
     100.times do
@@ -760,20 +750,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   # Check that a MaxPST calculation in a three sided region gives the correct result
   #
-  # - criterion: :max or :all
-  # - dimension: :y or nil
-  private def check_3_sided_calc(pst, criterion, dimension, enumerate_via_block: false, open: false)
-    criterion.must_be_in [:min, :max, :all]
-    dimension.must_be :y if dimension
-
-    100.times do
-      x0 = rand(@point_finder.min_x..@point_finder.max_x)
-      x1 = rand(x0..@point_finder.max_x)
-      y0 = rand(@point_finder.min_x..@point_finder.max_x)
-      check_calculation(pst, criterion, dimension, :three_sided, x0, x1, y0, enumerate_via_block:, open:)
-    end
-  end
-
+  # - pst_pair: a PST/SimplePst pair used to perform the calculation
+  # - method: the method to call on the PSTs
+  # - enumerate_via_block: should the calculation yield to a block?
+  # - open: is the region open or closed?
   private def check_3_sided_calc_pair(pst_pair, method, enumerate_via_block: false, open: false)
     simple_pst = pst_pair.simple_pst
 
@@ -786,59 +766,23 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   private def check_calculation_pair(pst_pair, method, *args, enumerate_via_block: false, open: false)
-    expected_value = pst_pair.simple_pst.send(method, *args, open: open)
-    calculated_value = pst_pair.pst.send(method, *args, open: open)
+    is_min = pst_pair.pst.is_a?(MinPrioritySearchTree)
+
+    # This is a wart
+    expected_value = if is_min && method == :enumerate_3_sided
+                       pst_pair.simple_pst.send(method, *args, open:, for_min_pst: true)
+                     else
+                       pst_pair.simple_pst.send(method, *args, open:)
+                     end
+
+    calculated_value = if enumerate_via_block
+                         result = Set.new
+                         pst_pair.pst.send(method, *args, open:) { |point| result << point }
+                         result
+                       else
+                         pst_pair.pst.send(method, *args, open:)
+                       end
     assert_equal expected_value, calculated_value, "Args: #{args.join(', ')}, open: #{open}"
-  end
-
-  # Check that the PST correctly finds the desired point in a stated region
-  #
-  # property: :min, :max, or :all (for enumerate)
-  # dimension: the dimension we are "optimizing", :x or :y, ignored when property is :all
-  # region: :ne, :nw, :three_sided
-  # args: the args that bound the region
-  # enumerate_via_block: we are enumerating a set of points. Instead of receiving the set as a return value, get them via a block to
-  #       which the called code is expected to yield
-  #
-  # TODO: have it work out the default_result itself.
-  private def check_calculation(pst, property, dimension, region, *args, enumerate_via_block: false, open: false)
-    is_min_pst = pst.is_a? MinPrioritySearchTree
-
-    region.must_be_in %i[ne nw se sw three_sided]
-    dimension.must_be_in [:x, :y, nil]
-    property.must_be_in %i[min max all]
-
-    raise 'x-dimension calculations not supported in 3-sided region' if region == :three_sided && dimension == :x
-    raise 'dimension must be given unless we are enumerating' if property != :all && !dimension
-    raise 'enumeration via a block only makes sense with a property of :all' if enumerate_via_block && property != :all
-
-    if is_min_pst
-      raise 'maximizing in the y-dimension is not supported by a MinPST' if property == :max && dimension == :y
-    else
-      raise 'minimizing in the y-dimension is not supported by a MaxPST' if property == :min && dimension == :y
-    end
-
-    if property == :all
-      method = "enumerate_3_sided"
-      criterion = :all
-    else
-      method_word1 = property == :min ? :smallest : :largest
-      method_word2 = dimension
-      method_word4 = region == :three_sided ? '3_sided' : region
-
-      method = "#{method_word1}_#{method_word2}_in_#{method_word4}".to_sym
-      criterion = "#{property}_#{dimension}".to_sym
-    end
-
-    expected = best_in(region, *args, by: criterion, is_min_pst:, open:)
-    calculated = if enumerate_via_block
-                   vals = Set.new
-                   pst.send(method, *args, open:) { vals << _1 }
-                   vals
-                 else
-                   pst.send(method, *args, open:)
-                 end
-    assert_equal expected, calculated, "Args: #{args.join(', ')}, open: #{open}"
   end
 
   # The "best" value in a given region by a given criterion, typically provided by @point_finder.
@@ -1125,15 +1069,23 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     def smallest_y_in_3_sided(x0, x1, y0, open: false)
-      enumerate_3_sided(x0, x1, y0, open:).min_by(&:y) || Point.new(INFINITY, INFINITY)
+      enumerate_3_sided(x0, x1, y0, open:, for_min_pst: true).min_by(&:y) || Point.new(INFINITY, INFINITY)
     end
 
-    def enumerate_3_sided(x0, x1, y0, open: false)
+    # for_min: is a wart
+    def enumerate_3_sided(x0, x1, y0, open: false, for_min_pst: false)
+      quadrant_vals = if for_min_pst
+                        se_quadrant(x0, y0, open:)
+                      else
+                        ne_quadrant(x0, y0, open:)
+                      end
+
       points = if open
-                 ne_quadrant(x0, y0, open:).reject { |pt| pt.x >= x1 }
+                 quadrant_vals.reject { |pt| pt.x >= x1 }
                else
-                 ne_quadrant(x0, y0, open:).reject { |pt| pt.x > x1 }
+                 quadrant_vals.reject { |pt| pt.x > x1 }
                end
+
       if block_given?
         points.each { |pt| yield pt }
       else
