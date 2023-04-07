@@ -23,9 +23,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def setup
     @size = (ENV['test_size'] || 10_000).to_i
-    raw_data = raw_data(@size)
-    @point_finder = PointFinder.new(raw_data)
-    @dynamic_point_finder = PointFinder.new(raw_data)
+    @common_raw_data = raw_data(@size)
+    @point_finder = PointFinder.new(@common_raw_data)
+    @dynamic_point_finder = PointFinder.new(@common_raw_data)
   end
 
   # I've had some bugs in the testing code where the PST and the point finder(s) have gotten out of sync. This has caused false
@@ -44,6 +44,25 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       @args = args
       @enumerate_via_block = enumerate_via_block
       @open = open
+    end
+  end
+
+  # A pair of a real PST and a corresponding simple one that we can use to check the real one against.
+  class PSTPair
+    attr_reader :pst, :simple_pst
+
+    def initialize(pst, simple_pst)
+      @pst = pst
+      @simple_pst = simple_pst
+    end
+
+    def empty?
+      @pst.empty?
+    end
+
+    def delete_top!
+      top = @pst.delete_top!
+      @simple_pst.delete!(top)
     end
   end
 
@@ -70,118 +89,108 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_max_pst_largest_y_in_ne
-    check_quadrant_calc(max_pst, :max, :y, :ne)
+    check_quadrant_calc_pair(max_pst_pair, :largest_y_in_ne)
   end
 
   def text_max_pst_largest_y_in_open_ne
-    check_quadrant_calc(max_pst, :max, :y, :ne, open: true)
-  end
-
-  def test_max_pst_largest_y_in_open_ne
-    data = [[0, 2], [1, 1], [2, 0]].map { |x, y| Point.new(x, y) }
-    pst = MaxPrioritySearchTree.new(data)
-
-    assert_equal Point.new(1, 1), pst.largest_y_in_ne(0, 0, open: true)
+    check_quadrant_calc_pair(max_pst_pair, :largest_y_in_ne, open: true)
   end
 
   def test_max_pst_largest_y_in_nw
-    check_quadrant_calc(max_pst, :max, :y, :nw)
+    check_quadrant_calc_pair(max_pst_pair, :largest_y_in_nw)
   end
 
   def test_max_pst_largest_y_in_open_nw
-    check_quadrant_calc(max_pst, :max, :y, :nw, open: true)
+    check_quadrant_calc_pair(max_pst_pair, :largest_y_in_nw, open: true)
   end
 
   def test_max_pst_smallest_x_in_ne
-    check_quadrant_calc(max_pst, :min, :x, :ne)
+    check_quadrant_calc_pair(max_pst_pair, :smallest_x_in_ne)
   end
 
   def test_max_pst_smallest_x_in_open_ne
-    check_quadrant_calc(max_pst, :min, :x, :ne, open: true)
+    check_quadrant_calc_pair(max_pst_pair, :smallest_x_in_ne, open: true)
   end
 
   def test_max_pst_largest_x_in_nw
-    check_quadrant_calc(max_pst, :max, :x, :nw)
+    check_quadrant_calc_pair(max_pst_pair, :largest_x_in_nw)
   end
 
   def test_max_pst_largest_x_in_open_nw
-    check_quadrant_calc(max_pst, :max, :x, :nw, open: true)
+    check_quadrant_calc_pair(max_pst_pair, :largest_x_in_nw, open: true)
   end
 
   def test_max_pst_largest_y_in_3_sided
-    check_3_sided_calc(max_pst, :max, :y)
+    check_3_sided_calc_pair(max_pst_pair, :largest_y_in_3_sided)
   end
 
   def test_max_pst_largest_y_in_open_3_sided
-    check_3_sided_calc(max_pst, :max, :y, open: true)
+    check_3_sided_calc_pair(max_pst_pair, :largest_y_in_3_sided, open: true)
   end
 
   def test_max_pst_enumerate_3_sided
-    check_3_sided_calc(max_pst, :all, nil)
-    check_3_sided_calc(max_pst, :all, nil, enumerate_via_block: true)
+    check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided)
+    check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided, enumerate_via_block: true)
   end
 
   def test_max_pst_enumerate_open_3_sided
-    check_3_sided_calc(max_pst, :all, nil, open: true)
-    check_3_sided_calc(max_pst, :all, nil, enumerate_via_block: true, open: true)
+    check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided, open: true)
+    check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided, enumerate_via_block: true, open: true)
   end
 
   ##############################
   # ...and for the "dynamic" version
 
   def test_dynamic_max_pst_largest_y_in_ne
-    before_and_after_deletion do |pst|
-      check_quadrant_calc(pst, :max, :y, :ne)
+    before_and_after_deletion_pair do |pst_pair|
+      check_quadrant_calc_pair(pst_pair, :largest_y_in_ne)
     end
   end
 
   def test_dynamic_max_pst_largest_y_in_nw
-    before_and_after_deletion do |pst|
-      check_quadrant_calc(pst, :max, :y, :nw)
+    before_and_after_deletion_pair do |pst_pair|
+      check_quadrant_calc_pair(pst_pair, :largest_y_in_nw)
     end
   end
 
-  def test_pst_smallest_x_in_ne
-    before_and_after_deletion do |pst|
-      check_quadrant_calc(pst, :min, :x, :ne)
+  def test_dynamic_pst_smallest_x_in_ne
+    before_and_after_deletion_pair do |pst_pair|
+      check_quadrant_calc_pair(pst_pair, :smallest_x_in_ne)
     end
   end
 
-  def test_pst_largest_x_in_nw
-    before_and_after_deletion do |pst|
-      check_quadrant_calc(pst, :max, :x, :nw)
+  def test_dynamic_pst_largest_x_in_nw
+    before_and_after_deletion_pair do |pst_pair|
+      check_quadrant_calc_pair(pst_pair, :largest_x_in_nw)
     end
   end
 
-  def test_pst_largest_y_in_3_sided
-    before_and_after_deletion do |pst|
-      check_3_sided_calc(pst, :max, :y)
+  def test_dynamic_pst_largest_y_in_3_sided
+    before_and_after_deletion_pair do |pst_pair|
+      check_3_sided_calc_pair(pst_pair, :largest_y_in_3_sided)
     end
   end
 
   def test_dynamic_max_pst_enumerate_3_sided
-    before_and_after_deletion do |pst|
-      check_3_sided_calc(pst, :all, nil)
-      check_3_sided_calc(pst, :all, nil, enumerate_via_block: true)
+    before_and_after_deletion_pair do |pst_pair|
+      check_3_sided_calc_pair(pst_pair, :enumerate_3_sided)
+      check_3_sided_calc_pair(pst_pair, :enumerate_3_sided, enumerate_via_block: true)
     end
   end
 
   def test_dynamic_max_pst_enumerate_open_3_sided
-    before_and_after_deletion do |pst|
-      check_3_sided_calc(pst, :all, nil, open: true)
-      check_3_sided_calc(pst, :all, nil, enumerate_via_block: true, open: true)
+    before_and_after_deletion_pair do |pst_pair|
+      check_3_sided_calc_pair(pst_pair, :enumerate_3_sided, open: true)
+      check_3_sided_calc_pair(pst_pair, :enumerate_3_sided, enumerate_via_block: true, open: true)
     end
   end
 
-  private def before_and_after_deletion
-    dynamic_context do
-      pst = dynamic_max_pst
-      yield pst
+  private def before_and_after_deletion_pair
+    pst_pair = dynamic_max_pst_pair
+    yield pst_pair
 
-      deleted_pt = pst.delete_top!
-      @dynamic_point_finder.delete!(deleted_pt)
-      yield pst
-    end
+    pst_pair.delete_top!
+    yield pst_pair
   end
 
   ########################################
@@ -686,6 +695,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @max_pst ||= MaxPrioritySearchTree.new(@point_finder.points.shuffle)
   end
 
+  private def max_pst_pair
+    @max_pst_pair ||= begin
+                        pairs = @common_raw_data.shuffle
+                        max_pst = MaxPrioritySearchTree.new(pairs.clone)
+                        simple_pst = SimplePrioritySearchTree.new(pairs.clone)
+                        PSTPair.new(max_pst, simple_pst)
+                      end
+  end
+
   private def dynamic_max_pst
     @dynamic_max_pst ||= MaxPrioritySearchTree.new(@point_finder.points.shuffle, dynamic: true)
 
@@ -696,6 +714,16 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
 
     @dynamic_max_pst
+  end
+
+  private def dynamic_max_pst_pair
+    if !@dynamic_max_pst_pair || @dynamic_max_pst_pair.empty?
+      pairs = @common_raw_data.shuffle
+      dynamic_max_pst = MaxPrioritySearchTree.new(pairs.clone, dynamic: true)
+      simple_pst = SimplePrioritySearchTree.new(pairs.clone)
+      @dynamic_max_pst_pair = PSTPair.new(dynamic_max_pst, simple_pst)
+    end
+    @dynamic_max_pst_pair
   end
 
   private def min_pst
@@ -721,6 +749,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
+  private def check_quadrant_calc_pair(pst_pair, method, open: false)
+    simple_pst = pst_pair.simple_pst
+    100.times do
+      x0 = rand(simple_pst.min_x..simple_pst.max_x)
+      y0 = rand(simple_pst.min_y..simple_pst.max_y)
+      check_calculation_pair(pst_pair, method, x0, y0, open:)
+    end
+  end
+
   # Check that a MaxPST calculation in a three sided region gives the correct result
   #
   # - criterion: :max or :all
@@ -735,6 +772,23 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       y0 = rand(@point_finder.min_x..@point_finder.max_x)
       check_calculation(pst, criterion, dimension, :three_sided, x0, x1, y0, enumerate_via_block:, open:)
     end
+  end
+
+  private def check_3_sided_calc_pair(pst_pair, method, enumerate_via_block: false, open: false)
+    simple_pst = pst_pair.simple_pst
+
+    100.times do
+      x0 = rand(simple_pst.min_x..simple_pst.max_x)
+      x1 = rand(x0..simple_pst.max_x)
+      y0 = rand(simple_pst.min_y..simple_pst.max_y)
+      check_calculation_pair(pst_pair, method, x0, x1, y0, enumerate_via_block:, open:)
+    end
+  end
+
+  private def check_calculation_pair(pst_pair, method, *args, enumerate_via_block: false, open: false)
+    expected_value = pst_pair.simple_pst.send(method, *args, open: open)
+    calculated_value = pst_pair.pst.send(method, *args, open: open)
+    assert_equal expected_value, calculated_value, "Args: #{args.join(', ')}, open: #{open}"
   end
 
   # Check that the PST correctly finds the desired point in a stated region
@@ -995,11 +1049,180 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # Yield to the block while in "dynamic" context. We check correct return values against the @dynamic_point_finder
   private def dynamic_context
     old_point_finder = @point_finder
-
     @point_finder = @dynamic_point_finder
 
     yield
 
     @point_finder = old_point_finder
+  end
+
+  # Do most of the work of a MaxPST and a MinPST in a very slow way, the simplest way possible. It is used to test expected result.
+  #
+  # We don't support #delete_top!, as we can't easily keep track of what would be at the top of a real PST heap. So we only provide
+  # a #delete! method that deletes a specific point.
+  #
+  # As a convenience we provide min_x, max_x, min_y, and max_y
+  class SimplePrioritySearchTree
+    attr_reader :points, :min_x, :max_x, :min_y, :max_y
+
+    def initialize(points)
+      @points = points
+      @size = @points.size
+
+      @points_by_x = points.sort_by(&:x)
+      @min_x, @max_x = @points_by_x.map(&:x).minmax
+      @min_y, @max_y = points.map(&:y).minmax
+
+      @deletions = []
+    end
+
+    # Say that point has been deleted.
+    def delete!(point)
+      raise "Already deleted" if @deletions.include?(point)
+      raise "Not a point in this PST" unless @points.include?(point)
+
+      @deletions << point
+    end
+
+    def empty?
+      @points.size - @deletions.size == 0
+    end
+
+    def largest_y_in_ne(x0, y0, open: false)
+      ne_quadrant(x0, y0, open:).max_by(&:y) || Point.new(INFINITY, -INFINITY)
+    end
+
+    def smallest_y_in_se(x0, y0, open: false)
+      se_quadrant(x0, y0, open:).min_by(&:y) || Point.new(INFINITY, INFINITY)
+    end
+
+    def largest_y_in_nw(x0, y0, open: false)
+      nw_quadrant(x0, y0, open:).max_by(&:y) || Point.new(-INFINITY, -INFINITY)
+    end
+
+    def smallest_y_in_sw(x0, y0, open: false)
+      sw_quadrant(x0, y0, open:).min_by(&:y) || Point.new(-INFINITY, INFINITY)
+    end
+
+    def smallest_x_in_ne(x0, y0, open: false)
+      ne_quadrant(x0, y0, open:).min_by(&:x) || Point.new(INFINITY, INFINITY)
+    end
+
+    def largest_x_in_nw(x0, y0, open: false)
+      nw_quadrant(x0, y0, open:).max_by(&:x) || Point.new(-INFINITY, INFINITY)
+    end
+
+    def smallest_x_in_se(x0, y0, open: false)
+      se_quadrant(x0, y0, open:).min_by(&:x) || Point.new(INFINITY, -INFINITY)
+    end
+
+    def largest_x_in_sw(x0, y0, open: false)
+      sw_quadrant(x0, y0, open:).max_by(&:x) || Point.new(-INFINITY, -INFINITY)
+    end
+
+    def largest_y_in_3_sided(x0, x1, y0, open: false)
+      enumerate_3_sided(x0, x1, y0, open:).max_by(&:y) || Point.new(INFINITY, -INFINITY)
+    end
+
+    def smallest_y_in_3_sided(x0, x1, y0, open: false)
+      enumerate_3_sided(x0, x1, y0, open:).min_by(&:y) || Point.new(INFINITY, INFINITY)
+    end
+
+    def enumerate_3_sided(x0, x1, y0, open: false)
+      points = if open
+                 ne_quadrant(x0, y0, open:).reject { |pt| pt.x >= x1 }
+               else
+                 ne_quadrant(x0, y0, open:).reject { |pt| pt.x > x1 }
+               end
+      if block_given?
+        points.each { |pt| yield pt }
+      else
+        Set.new points
+      end
+    end
+
+    private
+
+    def ne_quadrant(x0, y0, open: false)
+      if open
+        rightward_points(x0).select { |pair| pair.x != x0 && pair.y > y0 }
+      else
+        rightward_points(x0).select { |pair| pair.y >= y0 }
+      end
+    end
+
+    def nw_quadrant(x0, y0, open: false)
+      if open
+        leftward_points(x0).select { |pair| pair.x != x0 && pair.y > y0 }
+      else
+        leftward_points(x0).select { |pair| pair.y >= y0 }
+      end
+    end
+
+    def se_quadrant(x0, y0, open: false)
+      if open
+        rightward_points(x0).select { |pair| pair.x != x0 && pair.y < y0 }
+      else
+        rightward_points(x0).select { |pair| pair.y <= y0 }
+      end
+    end
+
+    def sw_quadrant(x0, y0, open: false)
+      if open
+        leftward_points(x0).select { |pair| pair.x != x0 && pair.y < y0 }
+      else
+        leftward_points(x0).select { |pair| pair.y <= y0 }
+      end
+    end
+
+    def three_sided_up(x0, x1, y0, open: false)
+      if open
+        ne_quadrant(x0, y0, open:).reject { |pt| pt.x >= x1 }
+      else
+        ne_quadrant(x0, y0, open:).reject { |pt| pt.x > x1 }
+      end
+    end
+
+    def three_sided_down(x0, x1, y0, open: false)
+      if open
+        se_quadrant(x0, y0, open:).reject { |pt| pt.x >= x1 }
+      else
+        se_quadrant(x0, y0, open:).reject { |pt| pt.x > x1 }
+      end
+    end
+
+    # Points (x,y) in @data with x >= x0
+    private def rightward_points(x0)
+      return [] if points.empty?
+
+      points = if x0 <= @min_x
+                 @points_by_x
+               elsif x0 > @max_x
+                 []
+               else
+                 first_idx = @points_by_x.bsearch_index { |v| v.x >= x0 }
+                 @points_by_x[first_idx..]
+               end
+      points - @deletions
+    end
+
+    # Points (x,y) in @data with x <= x0
+    private def leftward_points(x0)
+      return [] if points.empty?
+
+      points = if x0 >= @max_x
+                 @points_by_x
+               elsif x0 < @min_x
+                 []
+               else
+                 first_idx = @points_by_x.bsearch_index { |v| v.x >= x0 }
+                 if @points_by_x[first_idx].x == x0
+                   @points_by_x[..first_idx]
+                 else
+                   @points_by_x[...first_idx]
+                 end
+               end
+      points - @deletions
+    end
   end
 end
