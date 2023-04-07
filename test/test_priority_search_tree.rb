@@ -27,6 +27,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @point_finder = PointFinder.new(raw_data)
     @open_point_finder = PointFinder.new(raw_data, open: true)
     @dynamic_point_finder = PointFinder.new(raw_data)
+    @dynamic_open_point_finder = PointFinder.new(raw_data, open: true)
   end
 
   ########################################
@@ -148,6 +149,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
+  def test_dynamic_max_pst_enumerate_open_3_sided
+    before_and_after_deletion do |pst|
+      check_3_sided_calc(pst, :all, nil, open: true)
+      check_3_sided_calc(pst, :all, nil, enumerate_via_block: true, open: true)
+    end
+  end
+
   private def before_and_after_deletion
     dynamic_context do
       pst = dynamic_max_pst
@@ -155,6 +163,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
       deleted_pt = pst.delete_top!
       @dynamic_point_finder.delete!(deleted_pt)
+      @dynamic_open_point_finder.delete!(deleted_pt)
       yield pst
     end
   end
@@ -255,9 +264,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   def test_bad_inputs_for_max_enumerate_3_sided
-    check_one = lambda do |data, *method_params, actual_vals|
+    check_one = lambda do |data, *method_params, actual_vals, open: false|
       actual_set = Set.new(actual_vals.map { |x, y| Point.new(x, y) })
-      check_one_case(MaxPrioritySearchTree, :enumerate_3_sided, data, *method_params, actual_set)
+      check_one_case(MaxPrioritySearchTree, :enumerate_3_sided, data, *method_params, actual_set, open:)
     end
 
     # LogicErrors
@@ -283,6 +292,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       6, 13, 0,
       [[6, 7], [11, 6], [10, 10], [8, 9], [12, 2], [9, 5], [7, 1], [13, 12]]
     )
+
+    # Open region
+    check_one.call([[4,2], [3,2], [1,3], [2,3]], 1, 2, 3, [], open: true)
   end
 
   def test_bad_inputs_for_largest_x_in_nw
@@ -336,10 +348,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     check_one.call([[1,3], [2,3], [3,3]], 1, 1, 3, [1, 3], [])
   end
 
-  private def check_one_case(klass, method, data, *method_params, expected_val)
+  private def check_one_case(klass, method, data, *method_params, expected_val, open: false)
     calculated_val = Timeout::timeout(timeout_time_s) do
       pst = klass.new(data.map { |x, y| Point.new(x, y) })
-      calculated_val = pst.send(method, *method_params)
+      calculated_val = pst.send(method, *method_params, open:)
     end
     assert_equal expected_val, calculated_val
   end
@@ -386,6 +398,12 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   def test_max_find_bad_input_for_enumerate_3_sided
     search_for_bad_inputs(MaxPrioritySearchTree, :enumerate_3_sided) do |points|
       params_for_find_bad_case(points, :three_sided, :all)
+    end
+  end
+
+  def test_max_find_bad_input_for_enumerate_open_3_sided
+    search_for_bad_inputs(MaxPrioritySearchTree, :enumerate_3_sided, open: true) do |points|
+      params_for_find_bad_case(points, :three_sided, :all, open: true)
     end
   end
 
@@ -454,7 +472,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   # Work out values to return to search_for_bad_inputs
-  private def params_for_find_bad_case(pairs, region, criterion)
+  private def params_for_find_bad_case(pairs, region, criterion, open: false)
     x_min, x_max = pairs.map(&:x).minmax
     y_min, y_max = pairs.map(&:y).minmax
     x0 = rand(x_min..x_max)
@@ -463,10 +481,10 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     # Making all these calls to best_in is slow, but the computer doesn't mind
     if region == :three_sided
       x1 = rand(x0..x_max)
-      expected = best_in(region, x0, x1, y0, by: criterion, among: pairs)
+      expected = best_in(region, x0, x1, y0, by: criterion, among: pairs, open:)
       [[x0, x1, y0], expected]
     else
-      expected = best_in(region, x0, y0, by: criterion, among: pairs)
+      expected = best_in(region, x0, y0, by: criterion, among: pairs, open:)
       [[x0, y0], expected]
     end
   end
@@ -586,7 +604,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #  - expected_value is the value the method should return
   #
   # It is a no-op unless the environment variable find_bad is set
-  private def search_for_bad_inputs(klass, method)
+  private def search_for_bad_inputs(klass, method, open: false)
     return unless find_bad_inputs?
 
     BAD_INPUT_SEARCH_ATTEMPT_LIMIT.times do
@@ -602,7 +620,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
           when Symbol
             method_params, expected_value = yield(pairs)
             pst = klass.new(pairs.clone)
-            calculated_value = pst.send(method, *method_params)
+            calculated_value = pst.send(method, *method_params, open:)
             extra_message = "params = [#{method_params.join(', ')}]"
           when nil
             _pst = klass.new(pairs.clone, verify: true)
@@ -967,10 +985,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # Yield to the block while in "dynamic" context. We check correct return values against the @dynamic_point_finder
   private def dynamic_context
     old_point_finder = @point_finder
+    old_open_point_finder = @open_point_finder
+
     @point_finder = @dynamic_point_finder
+    @open_point_finder = @dynamic_open_point_finder
 
     yield
 
     @point_finder = old_point_finder
+    @open_point_finder = old_open_point_finder
   end
 end
