@@ -34,9 +34,11 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       @pst.empty?
     end
 
+    # delete top from both PSTs and return the deleted value
     def delete_top!
       top = @pst.delete_top!
       @simple_pst.delete!(top)
+      top
     end
   end
 
@@ -303,146 +305,50 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # If a problem is found, the problematic inputs are written to stdout so the problem can be investigated.
   #
-  # They are all no-ops unless the environment variable find_bad is set
+  # They are all no-ops unless the environment variable find_bad is sety
 
   BAD_INPUT_SEARCH_ATTEMPT_LIMIT = 1_000
 
-  def test_max_find_bad_input_for_smallest_x_in_ne
-    search_for_bad_inputs(MaxPrioritySearchTree, :smallest_x_in_ne) do |points|
-      params_for_find_bad_case_pair(points, :smallest_x_in_ne)
+  def test_find_bad_inputs
+    %i[largest_y_in_nw largest_y_in_ne largest_x_in_nw smallest_x_in_ne largest_y_in_3_sided enumerate_3_sided].each do |method|
+      search_for_bad_inputs(:max, method) do |points|
+        params_for_find_bad_case(points, method)
+      end
+    end
+
+    search_for_bad_inputs(:max, nil)
+  end
+
+  def test_dynamic_find_bad_inputs
+    %i[largest_y_in_nw largest_y_in_ne largest_x_in_nw smallest_x_in_ne largest_y_in_3_sided enumerate_3_sided].each do |method|
+      search_for_bad_inputs(:max, method) do |points|
+        params_for_find_bad_case(points, method, dynamic: true)
+      end
     end
   end
 
-  def test_max_find_bad_input_for_largest_y_in_3_sided
-    search_for_bad_inputs(MaxPrioritySearchTree, :largest_y_in_3_sided) do |points|
-      params_for_find_bad_case_pair(points, :largest_y_in_3_sided)
-    end
-  end
-
-  def test_max_find_bad_input_for_enumerate_3_sided
-    search_for_bad_inputs(MaxPrioritySearchTree, :enumerate_3_sided) do |points|
-      params_for_find_bad_case_pair(points, :enumerate_3_sided)
-    end
-  end
-
-  def test_max_find_bad_input_for_enumerate_open_3_sided
-    search_for_bad_inputs(MaxPrioritySearchTree, :enumerate_3_sided, open: true) do |points|
-      params_for_find_bad_case_pair(points, :enumerate_3_sided, open: true)
-    end
-  end
-
-  def test_max_find_bad_input_for_largest_x_in_nw
-    search_for_bad_inputs(MaxPrioritySearchTree, :largest_x_in_nw) do |points|
-      params_for_find_bad_case_pair(points, :largest_x_in_nw)
-    end
-  end
-
-  def test_max_find_bad_input_for_largest_y_in_ne
-    search_for_bad_inputs(MaxPrioritySearchTree, :largest_y_in_ne) do |points|
-      params_for_find_bad_case_pair(points, :largest_y_in_ne)
-    end
-  end
-
-  def test_max_find_bad_input_for_largest_y_in_nw
-    search_for_bad_inputs(MaxPrioritySearchTree, :largest_y_in_nw) do |points|
-      params_for_find_bad_case_pair(points, :largest_y_in_nw)
-    end
-  end
-
-  def test_max_find_bad_input_for_construction
-    search_for_bad_inputs(MaxPrioritySearchTree, nil)
-  end
-
-  def test_dynamic_max_find_bad_input_for_largest_y_in_ne
-    search_for_bad_inputs(
-      nil, # bad design in the method we call
-      ->(points) { params_for_dynamic_find_bad_case_pair(points, :largest_y_in_ne) }
-    )
-  end
-
-  def test_dynamic_max_find_bad_input_for_largest_y_in_nw
-    search_for_bad_inputs(
-      nil, # bad design in the method we call
-      ->(points) { params_for_dynamic_find_bad_case_pair(points, :largest_y_in_nw) }
-    )
-  end
-
-  def test_dynamic_max_find_bad_input_for_smallest_x_in_ne
-    search_for_bad_inputs(
-      nil, # bad design in the method we call
-      ->(points) { params_for_dynamic_find_bad_case_pair(points, :smallest_x_in_ne) }
-    )
-  end
-
-  def test_dynamic_max_find_bad_input_for_largest_x_in_nw
-    search_for_bad_inputs(
-      nil, # bad design in the method we call
-      ->(points) { params_for_dynamic_find_bad_case_pair(points, :smallest_x_in_ne) }
-    )
-  end
-
-  def test_dynamic_max_find_bad_input_for_largest_y_in_three_sided
-    search_for_bad_inputs(
-      nil, # bad design in the method we call
-      ->(points) { params_for_dynamic_find_bad_case_pair(points, :largest_y_in_3_sided) }
-    )
-  end
-
-  def test_dynamic_max_find_bad_input_for_enumerate_in_three_sided
-    search_for_bad_inputs(
-      nil, # bad design in the method we call
-      ->(points) { params_for_dynamic_find_bad_case_pair(points, :enumerate_3_sided) }
-    )
-  end
-
-  private def params_for_find_bad_case_pair(pairs, method, open: false)
+  private def params_for_find_bad_case(pairs, method, dynamic: false)
     x_min, x_max = pairs.map(&:x).minmax
     y_min, y_max = pairs.map(&:y).minmax
     x0 = rand(x_min..x_max)
     y0 = rand(y_min..y_max)
 
-    if method =~ /3_sided/
-      x1 = rand(x0..x_max)
-      expected = SimplePrioritySearchTree.new(pairs).send(method, x0, x1, y0, open:)
-      [[x0, x1, y0], expected]
-    else
-      expected = SimplePrioritySearchTree.new(pairs).send(method, x0, y0, open:)
-      [[x0, y0], expected]
+    if dynamic
+      deletion_count = 0
+      loop do
+        deletion_count += 1
+        break if deletion_count == pairs.size || rand > 0.9
+      end
     end
-  end
-
-  # ...The same idea, but for a dynamic PST in which we are deleting a point before calling a method
-  private def params_for_dynamic_find_bad_case_pair(points, method)
-    x_min, x_max = points.map(&:x).minmax
-    y_min, y_max = points.map(&:y).minmax
-    x0 = rand(x_min..x_max)
-    y0 = rand(y_min..y_max)
-
-    max_pst = MaxPrioritySearchTree.new(points.clone, dynamic: true)
-    simple_pst = SimplePrioritySearchTree.new(points.clone)
-    pst_pair = PSTPair.new(max_pst, simple_pst)
-
-    # Delete some points
-    loop do
-      pst_pair.delete_top!
-      break if pst_pair.empty? || rand > 0.9
-    end
-
-    deleted_list = "[#{simple_pst.deletions.join(', ')}]"
 
     if method =~ /3_sided/
       x1 = rand(x0..x_max)
-      extra_message = "(x0, x1, y0) = (#{x0}, #{x1}, #{y0}); deleted #{deleted_list}"
-      args = [x0, x1, y0]
+      result = { args: [x0, x1, y0] }
     else
-      extra_message = "(x0, y0) = (#{x0}, #{y0}); deleted #{deleted_list}"
-      args = [x0, y0]
+      result = { args: [x0, y0] }
     end
-    expected_value = simple_pst.send(method, *args)
-    actual_value = max_pst.send(method, *args)
-
-    #byebug unless expected_value == actual_value
-    [expected_value, actual_value, extra_message]
+    result[:deletion_count] = deletion_count if dynamic
+    result
   end
 
   ########################################
@@ -494,51 +400,48 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # If we find such data then output the details to stdout and fail an assertion. Otherwise return true.
   #
-  # There are several options for the method argument
-  # - If method.nil? we just construct a PST of the given klass with verification turned on.
-  # - If method is a symbol we construct a PST (without verification) we do several things
-  #   - yield the generated data points to an expected block to get the method parameters to use and the expected value
-  #   - call the given method, and check the answer
-  # - Otherwise it must be a callable object expecting to receive the data points
-  #   - The lambda does whatever it wants and returns two or three things
-  #     - the expected value of the operation
-  #     - the actual value of the operation
-  #     - (optional) an additional message to display if the answers don't agree
+  # It is a no-op unless the environment variable find_bad is set
   #
-  # Use case for a lambda: a dynamic PST that we construct, remove one or more elements from, and then call a method
+  # - flavor is :max or :min
+  # - method is what we call. If it is nil we just construct a PST of the appropriate klass with verification turned on.
   #
   # We try BAD_INPUT_SEARCH_ATTEMPT_LIMIT times. On each attempt we generate a list of (x,y) pairs and yield it to a block from
-  # which we should receive a pair
-  #
-  #    [method_params, expected_value]
-  #
-  # where
-  #  - method_params is an array of the method parameters to pass to #method on the klass instance
-  #  - expected_value is the value the method should return
-  #
-  # It is a no-op unless the environment variable find_bad is set
-  private def search_for_bad_inputs(klass, method, open: false)
+  # which we should receive a hash. It must have a key :args, which are the x and y args we pass to :method. It may also have a key
+  # :deletion_count which means two things:
+  # - the PST we create is dynamic
+  # - before checking the calculation we delete_top! :deletion_count times
+  private def search_for_bad_inputs(flavor, method, open: false)
     return unless find_bad_inputs?
 
     BAD_INPUT_SEARCH_ATTEMPT_LIMIT.times do
       pairs = raw_data(@size).shuffle
-
       timeout = false
 
-      # Scope!
       error_message = calculated_value = extra_message = expected_value = nil
       begin
         Timeout::timeout(timeout_time_s) do
-          case method
-          when Symbol
-            method_params, expected_value = yield(pairs)
-            pst = klass.new(pairs.clone)
-            calculated_value = pst.send(method, *method_params, open:)
-            extra_message = "params = [#{method_params.join(', ')}]"
-          when nil
-            _pst = klass.new(pairs.clone, verify: true)
+          if method
+            params = yield(pairs)
+            dynamic = params[:deletion_count]
+            pst_pair = make_pst_pair(flavor, pairs:, dynamic:)
+            if (c = params[:deletion_count])
+              deletions = []
+              c.times { deletions << pst_pair.delete_top! }
+              extra_message = "params = [#{params[:args].join(', ')}], deletions = [#{deletions.join(', ')}]"
+            else
+              extra_message = "params = [#{params[:args].join(', ')}]"
+            end
+            calculated_value = pst_pair.pst.send(method, *params[:args], open:)
+            expected_value = pst_pair.simple_pst.send(method, *params[:args], open:)
           else
-            expected_value, calculated_value, extra_message = method.call(pairs)
+            case flavor
+            when :max
+              MaxPrioritySearchTree.new(pairs.clone, verify: true)
+            when :min
+              MinPrioritySearchTree.new(pairs.clone, verify: true)
+            else
+              raise "Unknown flavor #{flavor.inspect}"
+            end
           end
         end
       rescue Timeout::Error
@@ -587,9 +490,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @max_pst_pair ||= make_max_pst_pair
   end
 
-  private def make_max_pst_pair(pairs = nil)
-    pairs ||= @common_raw_data.shuffle
-    max_pst = MaxPrioritySearchTree.new(pairs.clone)
+  private def make_pst_pair(flavor, pairs: nil, dynamic: false)
+    case flavor
+    when :max
+      make_max_pst_pair(pairs:, dynamic:)
+    when :min
+      make_min_pst_pair(pairs:, dynamic:)
+    else
+      raise "Unknown flavor #{flavor.inspect}"
+    end
+  end
+
+  private def make_max_pst_pair(pairs: @common_raw_data.shuffle, dynamic: false)
+    max_pst = MaxPrioritySearchTree.new(pairs.clone, dynamic:)
     simple_pst = SimplePrioritySearchTree.new(pairs.clone)
     PSTPair.new(max_pst, simple_pst)
   end
@@ -605,12 +518,13 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   end
 
   private def min_pst_pair
-    @min_pst_pair ||= begin
-                        pairs = @common_raw_data.shuffle
-                        min_pst = MinPrioritySearchTree.new(pairs.clone)
-                        simple_pst = SimplePrioritySearchTree.new(pairs.clone)
-                        PSTPair.new(min_pst, simple_pst)
-                      end
+    @min_pst_pair ||= make_min_pst_pair
+  end
+
+  private def make_min_pst_pair(pairs: @common_raw_data.shuffle, dynamic: false)
+    min_pst = MinPrioritySearchTree.new(pairs.clone, dynamic:)
+    simple_pst = SimplePrioritySearchTree.new(pairs.clone)
+    PSTPair.new(min_pst, simple_pst)
   end
 
   # Check that a MaxPST calculation in a quadrant gives the correct result
