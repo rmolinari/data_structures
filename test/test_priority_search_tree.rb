@@ -62,100 +62,52 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
-  def test_max_pst_largest_y_in_ne
-    check_quadrant_calc_pair(max_pst_pair, :largest_y_in_ne)
+  def test_max_pst_quadrant_calls
+    %i[largest_y_in_ne largest_y_in_nw smallest_x_in_ne largest_x_in_nw].each do |method|
+      [true, false].each do |open|
+        check_quadrant_calc_pair(max_pst_pair, method, open: open)
+      end
+    end
   end
 
-  def text_max_pst_largest_y_in_open_ne
-    check_quadrant_calc_pair(max_pst_pair, :largest_y_in_ne, open: true)
+  def test_max_pst_3_sided_calls
+    [true, false].each do |open|
+      check_3_sided_calc_pair(max_pst_pair, :largest_y_in_3_sided, open:)
+    end
   end
 
-  def test_max_pst_largest_y_in_nw
-    check_quadrant_calc_pair(max_pst_pair, :largest_y_in_nw)
-  end
-
-  def test_max_pst_largest_y_in_open_nw
-    check_quadrant_calc_pair(max_pst_pair, :largest_y_in_nw, open: true)
-  end
-
-  def test_max_pst_smallest_x_in_ne
-    check_quadrant_calc_pair(max_pst_pair, :smallest_x_in_ne)
-  end
-
-  def test_max_pst_smallest_x_in_open_ne
-    check_quadrant_calc_pair(max_pst_pair, :smallest_x_in_ne, open: true)
-  end
-
-  def test_max_pst_largest_x_in_nw
-    check_quadrant_calc_pair(max_pst_pair, :largest_x_in_nw)
-  end
-
-  def test_max_pst_largest_x_in_open_nw
-    check_quadrant_calc_pair(max_pst_pair, :largest_x_in_nw, open: true)
-  end
-
-  def test_max_pst_largest_y_in_3_sided
-    check_3_sided_calc_pair(max_pst_pair, :largest_y_in_3_sided)
-  end
-
-  def test_max_pst_largest_y_in_open_3_sided
-    check_3_sided_calc_pair(max_pst_pair, :largest_y_in_3_sided, open: true)
-  end
-
-  def test_max_pst_enumerate_3_sided
-    check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided)
-    check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided, enumerate_via_block: true)
-  end
-
-  def test_max_pst_enumerate_open_3_sided
-    check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided, open: true)
-    check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided, enumerate_via_block: true, open: true)
+  def test_max_pst_enumerate_3_sided_calls
+    [true, false].each do |open|
+      [true, false].each do |enumerate_via_block|
+        check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
+      end
+    end
   end
 
   ##############################
   # ...and for the "dynamic" version
 
-  def test_dynamic_max_pst_largest_y_in_ne
-    before_and_after_deletion_pair do |pst_pair|
-      check_quadrant_calc_pair(pst_pair, :largest_y_in_ne)
+  def test_dynamic_quadrant_calls
+    %i[largest_y_in_ne largest_y_in_nw smallest_x_in_ne largest_x_in_nw].each do |method|
+      before_and_after_deletion_pair do |pst_pair|
+        check_quadrant_calc_pair(pst_pair, :largest_y_in_ne)
+      end
     end
   end
 
-  def test_dynamic_max_pst_largest_y_in_nw
-    before_and_after_deletion_pair do |pst_pair|
-      check_quadrant_calc_pair(pst_pair, :largest_y_in_nw)
-    end
-  end
-
-  def test_dynamic_pst_smallest_x_in_ne
-    before_and_after_deletion_pair do |pst_pair|
-      check_quadrant_calc_pair(pst_pair, :smallest_x_in_ne)
-    end
-  end
-
-  def test_dynamic_pst_largest_x_in_nw
-    before_and_after_deletion_pair do |pst_pair|
-      check_quadrant_calc_pair(pst_pair, :largest_x_in_nw)
-    end
-  end
-
-  def test_dynamic_pst_largest_y_in_3_sided
+  def test_dynamic_3_sided_calls
     before_and_after_deletion_pair do |pst_pair|
       check_3_sided_calc_pair(pst_pair, :largest_y_in_3_sided)
     end
   end
 
-  def test_dynamic_max_pst_enumerate_3_sided
-    before_and_after_deletion_pair do |pst_pair|
-      check_3_sided_calc_pair(pst_pair, :enumerate_3_sided)
-      check_3_sided_calc_pair(pst_pair, :enumerate_3_sided, enumerate_via_block: true)
-    end
-  end
-
-  def test_dynamic_max_pst_enumerate_open_3_sided
-    before_and_after_deletion_pair do |pst_pair|
-      check_3_sided_calc_pair(pst_pair, :enumerate_3_sided, open: true)
-      check_3_sided_calc_pair(pst_pair, :enumerate_3_sided, enumerate_via_block: true, open: true)
+  def test_dynamic_enumerate_3_sided_calls
+    [true, false].each do |open|
+      [true, false].each do |enumerate_via_block|
+        before_and_after_deletion_pair do |pst_pair|
+          check_3_sided_calc_pair(pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
+        end
+      end
     end
   end
 
@@ -170,54 +122,26 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   ########################################
   # Analagous tests for the MinPST
 
-  def test_min_pst_smallest_y_in_se
-    check_quadrant_calc_pair(min_pst_pair, :smallest_y_in_se)
+  def test_min_pst_quadrant_calls
+    %i[smallest_y_in_se smallest_y_in_sw smallest_x_in_se largest_x_in_sw].each do |method|
+      [true, false].each do |open|
+        check_quadrant_calc_pair(min_pst_pair, method, open: open)
+      end
+    end
   end
 
-  def test_min_pst_smallest_y_in_open_se
-    check_quadrant_calc_pair(min_pst_pair, :smallest_y_in_se, open: true)
+  def test_min_pst_3_sided_calls
+    [true, false].each do |open|
+      check_3_sided_calc_pair(min_pst_pair, :smallest_y_in_3_sided, open:)
+    end
   end
 
-  def test_min_pst_smallest_y_in_sw
-    check_quadrant_calc_pair(min_pst_pair, :smallest_y_in_sw)
-  end
-
-  def test_min_pst_smallest_y_in_open_sw
-    check_quadrant_calc_pair(min_pst_pair, :smallest_y_in_sw, open: true)
-  end
-
-  def test_min_pst_smallest_x_in_se
-    check_quadrant_calc_pair(min_pst_pair, :smallest_x_in_se)
-  end
-
-  def test_min_pst_smallest_x_in_open_se
-    check_quadrant_calc_pair(min_pst_pair, :smallest_x_in_se, open: true)
-  end
-
-  def test_min_pst_largest_x_in_sw
-    check_quadrant_calc_pair(min_pst_pair, :largest_x_in_sw)
-  end
-
-  def test_min_pst_largest_x_in_open_sw
-    check_quadrant_calc_pair(min_pst_pair, :largest_x_in_sw, open: true)
-  end
-
-  def test_min_pst_smallest_y_in_3_sided
-    check_3_sided_calc_pair(min_pst_pair, :smallest_y_in_3_sided)
-  end
-
-  def test_min_pst_smallest_y_in_open_3_sided
-    check_3_sided_calc_pair(min_pst_pair, :smallest_y_in_3_sided, open: true)
-  end
-
-  def test_min_pst_enumerate_3_sided
-    check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided)
-    check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided, enumerate_via_block: true)
-  end
-
-  def test_min_pst_enumerate_open_3_sided
-    check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided, open: true)
-    check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided, enumerate_via_block: true, open: true)
+  def test_min_pst_enumerate_3_sided_calls
+    [true, false].each do |open|
+      [true, false].each do |enumerate_via_block|
+        check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
+      end
+    end
   end
 
   ########################################
@@ -639,6 +563,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
           puts "extra: #{extra_message}"
         end
 
+        # tag = "#{method}(#{args.join(', ')}) #{'/open' if open} #{'/enumerate_via_block' if enumerate_via_block}"
+
         assert_equal expected_value, calculated_value
       else
         assert false
@@ -721,6 +647,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   private def check_calculation_pair(pst_pair, method, *args, enumerate_via_block: false, open: false)
     is_min = pst_pair.pst.is_a?(MinPrioritySearchTree)
 
+    tag = "#{method}(#{args.join(', ')}) #{'/open' if open} #{'/enumerate_via_block' if enumerate_via_block}"
+
     # This is a wart
     expected_value = if is_min && method == :enumerate_3_sided
                        pst_pair.simple_pst.send(method, *args, open:, for_min_pst: true)
@@ -735,7 +663,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
                        else
                          pst_pair.pst.send(method, *args, open:)
                        end
-    assert_equal expected_value, calculated_value, "Args: #{args.join(', ')}, open: #{open}"
+    assert_equal expected_value, calculated_value, tag
   end
 
   # By default we take x values 1, 2, ..., size and choose random integer y values in 1..size.
