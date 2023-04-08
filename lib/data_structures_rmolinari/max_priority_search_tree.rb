@@ -269,6 +269,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       sufficient_x = ->(x) { x <= x0 }
     end
 
+    return best if empty?
+
     # x == x0 or is not sufficient. This test sometimes excludes the other child of a node from consideration.
     exclusionary_x = ->(x) { x == x0 || !sufficient_x.call(x) }
 
