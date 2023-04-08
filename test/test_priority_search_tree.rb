@@ -411,43 +411,43 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
 
   def test_max_find_bad_input_for_smallest_x_in_ne
     search_for_bad_inputs(MaxPrioritySearchTree, :smallest_x_in_ne) do |points|
-      params_for_find_bad_case(points, :ne, :min_x)
+      params_for_find_bad_case_pair(points, :smallest_x_in_ne)
     end
   end
 
   def test_max_find_bad_input_for_largest_y_in_3_sided
     search_for_bad_inputs(MaxPrioritySearchTree, :largest_y_in_3_sided) do |points|
-      params_for_find_bad_case(points, :three_sided, :max_y)
+      params_for_find_bad_case_pair(points, :largest_y_in_3_sided)
     end
   end
 
   def test_max_find_bad_input_for_enumerate_3_sided
     search_for_bad_inputs(MaxPrioritySearchTree, :enumerate_3_sided) do |points|
-      params_for_find_bad_case(points, :three_sided, :all)
+      params_for_find_bad_case_pair(points, :enumerate_3_sided)
     end
   end
 
   def test_max_find_bad_input_for_enumerate_open_3_sided
     search_for_bad_inputs(MaxPrioritySearchTree, :enumerate_3_sided, open: true) do |points|
-      params_for_find_bad_case(points, :three_sided, :all, open: true)
+      params_for_find_bad_case_pair(points, :enumerate_3_sided, open: true)
     end
   end
 
   def test_max_find_bad_input_for_largest_x_in_nw
     search_for_bad_inputs(MaxPrioritySearchTree, :largest_x_in_nw) do |points|
-      params_for_find_bad_case(points, :nw, :max_x)
+      params_for_find_bad_case_pair(points, :largest_x_in_nw)
     end
   end
 
   def test_max_find_bad_input_for_largest_y_in_ne
     search_for_bad_inputs(MaxPrioritySearchTree, :largest_y_in_ne) do |points|
-      params_for_find_bad_case(points, :ne, :max_y)
+      params_for_find_bad_case_pair(points, :largest_y_in_ne)
     end
   end
 
   def test_max_find_bad_input_for_largest_y_in_nw
     search_for_bad_inputs(MaxPrioritySearchTree, :largest_y_in_nw) do |points|
-      params_for_find_bad_case(points, :nw, :max_y)
+      params_for_find_bad_case_pair(points, :largest_y_in_nw)
     end
   end
 
@@ -458,7 +458,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   def test_dynamic_max_find_bad_input_for_largest_y_in_ne
     search_for_bad_inputs(
       nil, # bad design in the method we call
-      ->(points) { params_for_dynamic_find_bad_case(points, :ne, :max_y, :largest_y_in_ne) }
+      ->(points) { params_for_dynamic_find_bad_case_pair(points, :largest_y_in_ne) }
     )
   end
 
@@ -515,6 +515,22 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
+  private def params_for_find_bad_case_pair(pairs, method, open: false)
+    x_min, x_max = pairs.map(&:x).minmax
+    y_min, y_max = pairs.map(&:y).minmax
+    x0 = rand(x_min..x_max)
+    y0 = rand(y_min..y_max)
+
+    if method =~ /3_sided/
+      x1 = rand(x0..x_max)
+      expected = SimplePrioritySearchTree.new(pairs).send(method, x0, x1, y0, open:)
+      [[x0, x1, y0], expected]
+    else
+      expected = SimplePrioritySearchTree.new(pairs).send(method, x0, y0, open:)
+      [[x0, y0], expected]
+    end
+  end
+
   # ...The same idea, but for a dynamic PST in which we are deleting a point before calling a method
   private def params_for_dynamic_find_bad_case(points, region, criterion, method)
     x_min, x_max = points.map(&:x).minmax
@@ -536,15 +552,48 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     if region == :three_sided
       x1 = rand(x0..x_max)
       extra_message = "(x0, x1, y0) = (#{x0}, #{x1}, #{y0}); deleted #{deleted_list}"
-
-      expected_value = best_in(region, x0, x1, y0, by: criterion, among: points - deleted_pts)
-      actual_value = pst.send(method, x0, x1, y0)
+      args = [x0, x1, y0]
     else
       extra_message = "(x0, y0) = (#{x0}, #{y0}); deleted #{deleted_list}"
-
-      expected_value = best_in(region, x0, y0, by: criterion, among: points - deleted_pts)
-      actual_value = pst.send(method, x0, y0)
+      args = [x0, y0]
     end
+    expected_value = best_in(region, *args, by: criterion, among: points - deleted_pts)
+    actual_value = pst.send(method, *args)
+
+    [expected_value, actual_value, extra_message]
+  end
+
+  # ...The same idea, but for a dynamic PST in which we are deleting a point before calling a method
+  private def params_for_dynamic_find_bad_case_pair(points, method)
+    x_min, x_max = points.map(&:x).minmax
+    y_min, y_max = points.map(&:y).minmax
+    x0 = rand(x_min..x_max)
+    y0 = rand(y_min..y_max)
+
+    max_pst = MaxPrioritySearchTree.new(points.clone, dynamic: true)
+    simple_pst = SimplePrioritySearchTree.new(points.clone)
+    pst_pair = PSTPair.new(max_pst, simple_pst)
+
+    # Delete some points
+    loop do
+      pst_pair.delete_top!
+      break if pst_pair.empty? || rand > 0.9
+    end
+
+    deleted_list = "[#{simple_pst.deletions.join(', ')}]"
+
+    if method =~ /3_sided/
+      x1 = rand(x0..x_max)
+      extra_message = "(x0, x1, y0) = (#{x0}, #{x1}, #{y0}); deleted #{deleted_list}"
+      args = [x0, x1, y0]
+    else
+      extra_message = "(x0, y0) = (#{x0}, #{y0}); deleted #{deleted_list}"
+      args = [x0, y0]
+    end
+    expected_value = simple_pst.send(method, *args)
+    actual_value = max_pst.send(method, *args)
+
+    #byebug unless expected_value == actual_value
     [expected_value, actual_value, extra_message]
   end
 
@@ -692,8 +741,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     @max_pst_pair ||= make_max_pst_pair
   end
 
-  private def make_max_pst_pair
-    pairs = @common_raw_data.shuffle
+  private def make_max_pst_pair(pairs = nil)
+    pairs ||= @common_raw_data.shuffle
     max_pst = MaxPrioritySearchTree.new(pairs.clone)
     simple_pst = SimplePrioritySearchTree.new(pairs.clone)
     PSTPair.new(max_pst, simple_pst)
@@ -1007,7 +1056,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   #
   # As a convenience we provide min_x, max_x, min_y, and max_y
   class SimplePrioritySearchTree
-    attr_reader :points, :min_x, :max_x, :min_y, :max_y
+    attr_reader :points, :min_x, :max_x, :min_y, :max_y, :deletions
 
     def initialize(points)
       @points = points
