@@ -67,21 +67,21 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   def test_max_pst_quadrant_calls
     %i[largest_y_in_ne largest_y_in_nw smallest_x_in_ne largest_x_in_nw].each do |method|
       [true, false].each do |open|
-        check_quadrant_calc_pair(max_pst_pair, method, open: open)
+        check_quadrant_calc(max_pst_pair, method, open: open)
       end
     end
   end
 
   def test_max_pst_3_sided_calls
     [true, false].each do |open|
-      check_3_sided_calc_pair(max_pst_pair, :largest_y_in_3_sided, open:)
+      check_3_sided_calc(max_pst_pair, :largest_y_in_3_sided, open:)
     end
   end
 
   def test_max_pst_enumerate_3_sided_calls
     [true, false].each do |open|
       [true, false].each do |enumerate_via_block|
-        check_3_sided_calc_pair(max_pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
+        check_3_sided_calc(max_pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
       end
     end
   end
@@ -92,14 +92,14 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   def test_dynamic_quadrant_calls
     %i[largest_y_in_ne largest_y_in_nw smallest_x_in_ne largest_x_in_nw].each do |method|
       before_and_after_deletion_pair do |pst_pair|
-        check_quadrant_calc_pair(pst_pair, :largest_y_in_ne)
+        check_quadrant_calc(pst_pair, :largest_y_in_ne)
       end
     end
   end
 
   def test_dynamic_3_sided_calls
     before_and_after_deletion_pair do |pst_pair|
-      check_3_sided_calc_pair(pst_pair, :largest_y_in_3_sided)
+      check_3_sided_calc(pst_pair, :largest_y_in_3_sided)
     end
   end
 
@@ -107,7 +107,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     [true, false].each do |open|
       [true, false].each do |enumerate_via_block|
         before_and_after_deletion_pair do |pst_pair|
-          check_3_sided_calc_pair(pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
+          check_3_sided_calc(pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
         end
       end
     end
@@ -127,21 +127,21 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   def test_min_pst_quadrant_calls
     %i[smallest_y_in_se smallest_y_in_sw smallest_x_in_se largest_x_in_sw].each do |method|
       [true, false].each do |open|
-        check_quadrant_calc_pair(min_pst_pair, method, open: open)
+        check_quadrant_calc(min_pst_pair, method, open: open)
       end
     end
   end
 
   def test_min_pst_3_sided_calls
     [true, false].each do |open|
-      check_3_sided_calc_pair(min_pst_pair, :smallest_y_in_3_sided, open:)
+      check_3_sided_calc(min_pst_pair, :smallest_y_in_3_sided, open:)
     end
   end
 
   def test_min_pst_enumerate_3_sided_calls
     [true, false].each do |open|
       [true, false].each do |enumerate_via_block|
-        check_3_sided_calc_pair(min_pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
+        check_3_sided_calc(min_pst_pair, :enumerate_3_sided, open:, enumerate_via_block:)
       end
     end
   end
@@ -363,7 +363,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     method = :largest_x_in_nw
     pst_pair = make_max_pst_pair
     profile(method) do
-      check_quadrant_calc_pair(pst_pair, :max, :y, :nw)
+      check_quadrant_calc(pst_pair, :max, :y, :nw)
     end
   end
 
@@ -532,12 +532,12 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # - pst_pair: a PST/SimplePst pair used to perform the calculation
   # - method: the method to call on the PSTs
   # - open: is the region open or closed?
-  private def check_quadrant_calc_pair(pst_pair, method, open: false)
+  private def check_quadrant_calc(pst_pair, method, open: false)
     simple_pst = pst_pair.simple_pst
     100.times do
       x0 = rand(simple_pst.min_x..simple_pst.max_x)
       y0 = rand(simple_pst.min_y..simple_pst.max_y)
-      check_calculation_pair(pst_pair, method, x0, y0, open:)
+      check_calculation(pst_pair, method, x0, y0, open:)
     end
   end
 
@@ -547,18 +547,18 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # - method: the method to call on the PSTs
   # - enumerate_via_block: should the calculation yield to a block?
   # - open: is the region open or closed?
-  private def check_3_sided_calc_pair(pst_pair, method, enumerate_via_block: false, open: false)
+  private def check_3_sided_calc(pst_pair, method, enumerate_via_block: false, open: false)
     simple_pst = pst_pair.simple_pst
 
     100.times do
       x0 = rand(simple_pst.min_x..simple_pst.max_x)
       x1 = rand(x0..simple_pst.max_x)
       y0 = rand(simple_pst.min_y..simple_pst.max_y)
-      check_calculation_pair(pst_pair, method, x0, x1, y0, enumerate_via_block:, open:)
+      check_calculation(pst_pair, method, x0, x1, y0, enumerate_via_block:, open:)
     end
   end
 
-  private def check_calculation_pair(pst_pair, method, *args, enumerate_via_block: false, open: false)
+  private def check_calculation(pst_pair, method, *args, enumerate_via_block: false, open: false)
     is_min = pst_pair.pst.is_a?(MinPrioritySearchTree)
 
     tag = "#{method}(#{args.join(', ')}) #{'/open' if open} #{'/enumerate_via_block' if enumerate_via_block}"
