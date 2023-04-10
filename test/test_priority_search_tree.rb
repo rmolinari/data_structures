@@ -339,7 +339,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # It is a no-op unless the environment variable find_bad is set
   #
   # - flavor is :max or :min
-  # - method is what we call. If it is nil we just construct a PST of the appropriate klass with verification turned on.
+  # - method is what we call. If it is nil we just construct a PST of the appropriate class with verification turned on.
   #
   # We try BAD_INPUT_SEARCH_ATTEMPT_LIMIT times. On each attempt we generate a list of (x,y) pairs and yield it to a block from
   # which we should receive a hash. It must have a key :args, which are the x and y args we pass to :method. It may also have a key
@@ -349,55 +349,55 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   private def search_for_bad_inputs(flavor, method, open: false)
     return unless find_bad_inputs?
 
-    pairs = timeout = error_message = calculated_value = extra_message = expected_value = nil
+    begin
+      pairs = params = extra_message = nil
 
-    BAD_INPUT_SEARCH_ATTEMPT_LIMIT.times do
-      pairs = raw_data(@size).shuffle
-      timeout = false
+      BAD_INPUT_SEARCH_ATTEMPT_LIMIT.times do
+        pairs = raw_data(@size).shuffle
+        extra_message = params = nil
 
-      begin
-        Timeout.timeout(timeout_time_s) do
-          if method
-            params = yield(pairs)
-            dynamic = params[:deletion_count]
-            pst_pair = make_pst_pair(flavor, pairs:, dynamic:)
-            if (c = params[:deletion_count])
-              deletions = []
-              c.times { deletions << pst_pair.delete_top! }
-              extra_message = "params = [#{params[:args].join(', ')}], deletions = [#{deletions.join(', ')}]"
-            else
-              extra_message = "params = [#{params[:args].join(', ')}]"
-            end
-            calculated_value = pst_pair.pst.send(method, *params[:args], open:)
-            expected_value = pst_pair.simple_pst.send(method, *params[:args], open:)
-          else
-            make_pst(flavor, pairs:, verify: true)
+        if method
+          params = yield(pairs)
+          dynamic = params[:deletion_count]
+          pst_pair = make_pst_pair(flavor, pairs:, dynamic:)
+          if (c = params[:deletion_count])
+            deletions = []
+
+            c.times { deletions << pst_pair.delete_top! }
+            extra_message = "deletions = [#{deletions.join(', ')}]"
           end
+          calculated_value = Timeout.timeout(timeout_time_s) { pst_pair.pst.send(method, *params[:args], open:) }
+          expected_value = pst_pair.simple_pst.send(method, *params[:args], open:)
+          assert_equal expected_value, calculated_value
+        else
+          Timeout.timeout(timeout_time_s) { make_pst(flavor, pairs:, verify: true) }
         end
-      rescue Timeout::Error
-        puts "*\n*\n* >>>>>>>TIMEOUT<<<<<<<<*\n*\n"
-        timeout = true
-      rescue InternalLogicError => e
-        puts "*\n*\n* >>>>>>>ERROR<<<<<<<<*\n*\n#{e.message}"
-        error_message = e.message
       end
+    rescue => e
+      # We might get a timeout, a failure in the equality assertion, or an InternalLogicError from the PST code.
+      header = case e
+               when Timeout::Error
+                 "TIMEOUT"
+               when Test::Unit::AssertionFailedError
+                 "Bad result"
+               when InternalLogicError
+                 "Logic Error"
+               else
+                 # This is something else. Reraise it
+                 raise
+               end
 
-      # TODO: make this logic cleaner. Why repeat ourselves. Maybe throw-datch, or a retry block.
-      break if error_message || timeout || method && (expected_value != calculated_value)
-    end
+      method_desc = if method
+                      "#{method}(#{params[:args].join(', ')}, open: #{open})"
+                    else
+                      "Constructor"
+                    end
 
-    return unless error_message || timeout || method && (expected_value != calculated_value)
+      puts "*\n*\n* >>>>>>> #{header} in #{method_desc}.<<<<<<<<*\n*\n#{e.message}"
 
-    pair_data = pairs.map { |p| "[#{p.x},#{p.y}]" }.join(', ')
-    puts "data = [#{pair_data}]"
-    if method
-      if extra_message
-        puts "extra: #{extra_message}"
-      end
-
-      assert_equal expected_value, calculated_value
-    else
-      assert false
+      pair_data = pairs.map { |p| "[#{p.x},#{p.y}]" }.join(', ')
+      puts "points = [#{pair_data}]"
+      puts "extra: #{extra_message}" if extra_message
     end
   end
 
