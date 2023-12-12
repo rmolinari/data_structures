@@ -2,11 +2,23 @@
 
 ## [Unreleased]
 
+## [0.5.4] 2023-12-12
+
+(Unfortunately this note was added long after the changes were made and my memory of the changes is poor.)
+
+- SegmentTree
+  - Sum version is provided
+- PrioritySearchTree
+  - Open regions
+
+- Some bug fixes
+- Some refactoring of test cases
+
 ## [0.5.1] - [0.5.3]
 
 - Releases to fix some bad gemspec data.
 
-## [0.5.0] 2023-02.03
+## [0.5.0] 2023-02-03
 
 - SegmentTree
   - Reorganize the code into a SegmentTree submodule.
