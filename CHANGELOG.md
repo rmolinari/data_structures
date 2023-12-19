@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.5.5] 2023-12-19
+
+Support Ruby v3.2.
+
 ## [0.5.4] 2023-12-12
 
 (Unfortunately this note was added long after the changes were made and my memory of the changes is poor.)
