@@ -113,4 +113,27 @@ class HeapTest < Test::Unit::TestCase
     assert_equal 2, heap.pop
     assert_equal 3, heap.pop
   end
+
+  def test_heap_delta_priorities
+    test_pop_ordering([1, 2, 3], [2, 3, 1]) do |heap|
+      heap.update_by_delta(1, 3)
+    end
+
+    test_pop_ordering([1, 2, 3], [3, 1, 2]) do |heap|
+      heap.update_by_delta(3, -3)
+    end
+  end
+
+  # Create a new Hash, insert the given items, yield the hash to a block, and then assert that the hash pops the items in the given
+  # order
+  private def test_pop_ordering(inserts, expected_order)
+    heap = Heap.new
+    inserts.each { |v| heap.insert(v) }
+
+    yield heap
+
+    expected_order.each do |v|
+      assert_equal(v, heap.pop)
+    end
+  end
 end

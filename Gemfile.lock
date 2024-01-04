@@ -5,18 +5,18 @@ GEM
     docile (1.4.0)
     must_be (1.1.0)
     power_assert (2.0.3)
-    rake (13.0.6)
-    rake-compiler (1.2.1)
+    rake (13.1.0)
+    rake-compiler (1.2.5)
       rake
-    ruby-prof (1.4.5)
+    ruby-prof (1.6.3)
     simplecov (0.22.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.12.3)
     simplecov_json_formatter (0.1.4)
-    stackprof (0.2.23)
-    test-unit (3.5.7)
+    stackprof (0.2.25)
+    test-unit (3.6.1)
       power_assert
 
 PLATFORMS

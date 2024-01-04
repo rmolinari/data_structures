@@ -101,6 +101,13 @@ class DataStructuresRMolinari::Heap
     @data[root].item
   end
 
+  # Return the priority of the item at the top of the heap
+  def top_priority
+    raise 'Heap is empty!' unless @size.positive?
+
+    @data[root].priority
+  end
+
   # Return the top of the heap and remove it, updating the structure to maintain the necessary properties.
   # @return (see #top)
   def pop
@@ -135,6 +142,21 @@ class DataStructuresRMolinari::Heap
     end
 
     check_heap_property if @debug
+  end
+
+  # Update the priority of the given element by changing the priority by the given amount.
+  #
+  # @param element the item whose priority we are updating. It is an error to update the priority of an element not already in the
+  #   heap
+  # @param the amount by which to change the priority. The existing priority must respond sensibly to += with this value
+  def update_by_delta(element, delta)
+    raise LogicError, 'Cannot update priorities in a non-addressable heap' unless @addressable
+    raise DataError, "Cannot update priority for value #{element} not already in the heap" unless contains?(element)
+
+    idx = @index_of[element]
+    old = @data[idx].priority
+
+    update(element, old + delta)
   end
 
   # Filter the value at index up to its correct location. Algorithm from Edelkamp et. al.

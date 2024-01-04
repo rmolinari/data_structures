@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.5.7] 2024-01-04
+
+- Heap
+  - addd top_priority method
+
+## [0.5.6] 2024-01-04
+
+- Heap
+  - add update_by_delta method
+
 ## [0.5.5] 2023-12-19
 
 Support Ruby v3.2.

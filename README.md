@@ -53,17 +53,19 @@ operations:
 
 - `insert(item, priority)`, insert the given item with the stated priority.
   - By default, items must be distinct.
-- `top`, returning the element with smallest priority
+- `top`, return the element with smallest priority
+- `top_priority`, return the _priority_ of the top element
 - `pop`, return the element with smallest priority and remove it from the structure
 - `update(item, priority)`, update the priority of the given item, which must already be in the heap
+- `update_by_delta(item, delta)`, update the priorityof the given item by adding delta to the priority; the item must already be in the heap
 
-`top` is O(1). The others are O(log n) where n is the number of items in the heap.
+`top` and `top_priority` are O(1). The others are O(log n) where n is the number of items in the heap.
 
 By default we have a min-heap: the top element is the one with smallest priority. A configuration parameter at construction can make
 it a max-heap.
 
-Another configuration parameter allows the creation of a "non-addressable" heap. This makes it impossible to call `update`, but
-allows the insertion of duplicate items (which is sometimes useful) and slightly faster operation overall.
+Another configuration parameter allows the creation of a "non-addressable" heap. This makes it impossible to call `update` or
+`update_by_delta`, but allows the insertion of duplicate items (which is sometimes useful) and slightly faster operation overall.
 
 See https://en.wikipedia.org/wiki/Binary_heap and the paper by Edelkamp, Elmasry, and Katajainen [[EEK2017]](#references).
 
