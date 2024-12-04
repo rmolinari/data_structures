@@ -57,7 +57,7 @@ operations:
 - `top_priority`, return the _priority_ of the top element
 - `pop`, return the element with smallest priority and remove it from the structure
 - `update(item, priority)`, update the priority of the given item, which must already be in the heap
-- `update_by_delta(item, delta)`, update the priorityof the given item by adding delta to the priority; the item must already be in the heap
+- `update_by_delta(item, delta)`, update the priority of the given item by adding delta to the priority; the item must already be in the heap
 
 `top` and `top_priority` are O(1). The others are O(log n) where n is the number of items in the heap.
 
@@ -161,7 +161,7 @@ initializer. Figuring out the details requires some knowledge of the internal me
 cp-algorithms.com is very helpful. See the implementations of the concrete classes `MaxValSegmentTree` and
 `IndexOfMaxValSegmentTree` for examples.
 
-Since there are several concrete "types" and two underlying generic implementions there is a convenience method on the `SegmentTree`
+Since there are several concrete "types" and two underlying generic implementations there is a convenience method on the `SegmentTree`
 module to get instances.
 
 ``` ruby
