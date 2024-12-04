@@ -218,7 +218,7 @@ I'm a bit suprised the improvement isn't larger, but remember that the C code mu
 in the underlying data array, and must access and combine them via Ruby lambdas.
 
 # References
-- [Allan] Allan, J., _CC: Convenient Containers_, https://github.com/JacksonAllan/CC, (retrieved 2023-02-01).
+- [Allan] Allan, J., _CC: Convenient Containers_, https://github.com/JacksonAllan/CC, (retrieved 2024-12-04).
 - [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp
   245–281, https://dl.acm.org/doi/10.1145/62.2160 (retrieved 2022-02-01).
 - [EEK2017] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI
