@@ -173,7 +173,7 @@ data = [1, -3, 2, 1, 5, -9]
 # Get a segment tree instance that will answer "max over this subinterval?" questions about data.
 # Here we get one using the ruby implementation of the generic functionality.
 #
-# Put :index_of_max in place of :map to get an instance that returns "an index of the maximum value
+# Put :index_of_max in place of :max to get an instance that returns "an index of the maximum value
 # over this subinterval".
 #
 # To use the generic code written in C, put :c instead of :ruby.
