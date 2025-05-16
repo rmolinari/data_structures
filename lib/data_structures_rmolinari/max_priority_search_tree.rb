@@ -87,7 +87,7 @@ require_relative 'shared'
 #
 # So, we may say that queries on open regions will work as expected if either
 # - all coordinates of the points in the PST are finite Ruby Floats, or
-# - all coordinates of the points are finite Numeric values and for no such pair of x-values s, t (or pair of y-values) is it such
+# - all coordinates of the points are finite Numeric values and for no such pair of x-values s < t (or pair of y-values) is it true
 #   that +s.to_f.next_float > t+.
 #
 # Otherwise, use this functionality at your own risk, and not at all with coordinates that do not respond reasonably to +to_f+.
