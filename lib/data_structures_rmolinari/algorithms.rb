@@ -15,7 +15,7 @@ module DataStructuresRMolinari::Algorithms
   # Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46 (2013), pp
   # 310-327.
   #
-  # It runs in O(m log n) time, where m is the number of MERs enumerated and n is the number of points in P.  (Contructing the
+  # It runs in O(m log n) time, where m is the number of MERs enumerated and n is the number of points in P.  (Constructing the
   # MaxPST takes O(n log^2 n) time, but m = O(n^2) so we are still O(m log n) overall.)
   #
   # @param points [Array] an array of points in the x-y plane. Each must respond to +x+ and +y+.

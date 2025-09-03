@@ -123,7 +123,7 @@ regions.
 By default these data structures are immutable: once constructed they cannot be changed. But there is a constructor option that
 makes the instance "dynamic". This allows us to delete the element at the root of the tree - the one with largest y value (smallest
 for MinPST) - with the `delete_top!` method. This operation is important in certain algorithms, such as enumerating all maximal
-empty rectangles (see the second paper by De et al[[DMNS2013]](#references)). Note that points can still not be added to the PST in
+empty rectangles (see the second paper by De et al [[DMNS2013]](#references)). Note that points can still not be added to the PST in
 any case, and choosing the dynamic option makes certain internal bookkeeping operations slower.
 
 In [[DMNS2013]](#references) De et al. generalize the in-place structure to a _Min-max Priority Search Tree_ (MinmaxPST) that can
