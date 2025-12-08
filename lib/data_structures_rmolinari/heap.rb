@@ -42,7 +42,6 @@ require_relative 'shared'
 #   DOI 10.1007/s00224-017-9760-2
 #
 # @todo
-#   - let caller see the priority of the top element. Maybe this is useful sometimes.
 #   - allow a priority-calculation lambda to be specified at construction. This would mean client code doesn't have to worry about
 #     it.
 class DataStructuresRMolinari::Heap

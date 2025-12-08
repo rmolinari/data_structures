@@ -195,6 +195,10 @@ The Algorithms submodule contains some algorithms using the data structures.
     [left, right, bottom, top].
   - The algorithm is due to [[DMNS2013]](#references).
 
+- `first_k(enumerable, k)
+  - Given an enumerable, return the first k elements in sorted order.  That is, return the first k (smallest) elements of the sorted
+    version of the enumerable. We use a heap.  Run time is O(n log k), where n is the size of the enumerable.
+
 # C Extensions
 
 As another learning process I have implemented several of these data structures as C extensions. The APIs are the same.

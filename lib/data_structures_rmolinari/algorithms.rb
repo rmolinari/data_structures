@@ -96,4 +96,35 @@ module DataStructuresRMolinari::Algorithms
       end
     end
   end
+
+  # Given an enumerable and a number k, return the k smallest items from the enumerable in ascending order.
+  #
+  # If a block is given, each element is yielded to the block to determin its sort key.  Otherwise each element is its own sort key.
+  #
+  # We use a heap of size k.  Run time is O(n log k).
+  #
+  # TODO: offer to return the best k items unsorted, which will be slightly faster.  This requires changing Heap to produce the
+  # contents all at once.  Probably not worth the trouble.
+  def self.first_k(enumerable, k, &block)
+    heap = DataStructuresRMolinari::Heap.new(max_heap: true, addressable: false)
+
+    enumerable.each do |item|
+      priority = if block_given?
+        yield item
+      else
+        item
+      end
+
+      if heap.size < k
+        heap.insert(item, priority)
+      elsif priority < heap.top_priority
+        heap.pop
+        heap.insert(item, priority)
+      end
+    end
+
+    result = []
+    result << heap.pop until heap.empty?
+    result.reverse
+  end
 end
