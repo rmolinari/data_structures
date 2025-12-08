@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.5.8] 2025-12-08
+
+- Algorithms
+  - #first_k: the smallest k elements of an enumerable, using a Heap internally
+
 ## [0.5.7] 2024-01-04
 
 - Heap
