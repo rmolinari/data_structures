@@ -30,6 +30,8 @@ module DataStructuresRMolinari::Algorithms
     sorted_points = points.sort_by(&:x)
     x_min = sorted_points.first.x
     x_max = sorted_points.last.x
+
+    # This is O(n).  But it also O(m) beacause consecutive pairs of points produce a type 1 rectangle.
     y_min, y_max = sorted_points.map(&:y).minmax
 
     # Enumerate type 1

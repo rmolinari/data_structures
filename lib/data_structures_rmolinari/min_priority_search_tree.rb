@@ -22,7 +22,8 @@ require_relative 'shared'
 #   et al. But we don't do that, as we create a separate array of Points.
 # - Whereas the implementation of MaxPST means that client code gets the same (x, y) objects back in results as it passed into the
 #   contructor, that's not the case here.
-#   - we map each point in the input - which is an object responding to +#x+ and +#y+ - to an instance of +Point+, and will return (different) instances of +Point+ in response to queries.
+#   - we map each point in the input - which is an object responding to +#x+ and +#y+ - to an instance of +Point+, and will return
+#     (different) instances of +Point+ in response to queries.
 #   - client code is unlikely to care, but be aware of this, just in case.
 #
 # Given a set of n points, we can answer the following questions quickly:
