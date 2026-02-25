@@ -94,7 +94,8 @@ require_relative 'shared'
 #
 # References:
 # * E.M. McCreight, _Priority search trees_, SIAM J. Comput., 14(2):257-276, 1985.
-# * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_, 23rd Canadian Conference on Computational Geometry, 2011
+# * M. De, A. Maheshwari, S. C. Nandy, M. Smid, _An In-Place Priority Search Tree_,
+#       23rd Canadian Conference on Computational Geometry, 2011
 class DataStructuresRMolinari::MaxPrioritySearchTree
   # IMPLEMENTATION NOTES
   #
@@ -376,8 +377,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     end
   end
 
-  # A genericized version of the paper's smallest_x_in_ne that can calculate either smallest_x_in_ne or largest_x_in_nw as specifies via a
-  # parameter.
+  # A genericized version of the paper's smallest_x_in_ne that can calculate either smallest_x_in_ne or largest_x_in_nw as specified
+  # via a parameter.
   #
   # Quadrant is either :ne (which gives smallest_x_in_ne) or :nw (which gives largest_x_in_nw).
   #
@@ -778,8 +779,8 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     # My high-level understanding of the algorithm
     # --------------------------------------------
     #
-    # We need to find all elements of Q \intersect P, so it isn't enough, as it was in largest_y_in_3_sided simply to keep track of p and
-    # q. We need to track four nodes, p, p', q', and q which are (with a little handwaving) respectively
+    # We need to find all elements of Q \intersect P, so it isn't enough, as it was in largest_y_in_3_sided simply to keep track of
+    # p and q. We need to track four nodes, p, p', q', and q which are (with a little handwaving) respectively
     #
     # - the rightmost node to the left of Q' = [x0, x1] X [-infinity, infinity],
     # - the leftmost node inside Q',
@@ -1205,7 +1206,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
         raise InternalLogicError, "bad symbol #{z}"
       end
     end
-    return result unless block_given?
+    result unless block_given?
   end
 
   ########################################
