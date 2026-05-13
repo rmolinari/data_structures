@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.files       = FileList['lib/**/*.rb', 'ext/**/*.c', 'ext/**/*.h', 'ext/**/*rb', 'CHANGELOG.md', 'README.md', 'Rakefile']
   s.extensions  = FileList['ext/**/extconf.rb']
   s.license     = 'MIT'
-  s.required_ruby_version = '>= 3.1.3'
+  s.required_ruby_version = '>= 3.4.0'
 
   s.add_runtime_dependency 'must_be', '~> 1.1.0'
 
