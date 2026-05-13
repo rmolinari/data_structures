@@ -5,7 +5,8 @@ module DataStructuresRMolinari::SegmentTree
 end
 
 require_relative 'segment_tree_template'   # Ruby implementation of the generic API
-require_relative 'c_segment_tree_template' # C implementation of the generic API
+require_relative 'c_segment_tree_template' # native extension: loads CSegmentTreeTemplate class
+require_relative 'c_segment_tree_template_impl' # Ruby constructor / Fixnum fast-path wiring
 
 # Segment Tree: various concrete implementations
 #
@@ -28,26 +29,37 @@ module DataStructuresRMolinari
     # - @param data: the array A.
     #   - It must respond to +#size+ and to +#[]+ with non-negative integer arguments.
     # - @param operation: a supported "style" of Segment Tree
-    #   - for now, must be one of these (but you can write your own concrete version)
+    #   - must be one of these (but you can write your own concrete version)
     #     - +:max+: implementing +max_on(i, j)+, returning the maximum value in A(i..j)
     #     - +:index_of_max+: implementing +index_of_max_val_on(i, j)+, returning an index corresponding to the maximum value in
     #       A(i..j).
+    #     - +:sum+: implementing +sum_on(i, j)+
+    #     - +:min+: implementing +min_on(i, j)+
+    #     - +:product+: implementing +product_on(i, j)+
     # - @param lang: the language in which the underlying "template" is written
     #   - +:c+ or +:ruby+
     #   - the C version will run faster but for now may be buggier and harder to debug
     module_function def construct(data, operation, lang)
-      operation.must_be_in [:max, :index_of_max, :sum]
+      operation.must_be_in [:max, :index_of_max, :sum, :min, :product]
       lang.must_be_in [:ruby, :c]
 
       klass = case operation
               when :max then MaxValSegmentTree
               when :index_of_max then IndexOfMaxValSegmentTree
               when :sum then SumSegmentTree
+              when :min then MinValSegmentTree
+              when :product then ProductSegmentTree
               else raise ArgumentError, "Unknown operation #{operation}"
               end
       template = lang == :ruby ? SegmentTreeTemplate : CSegmentTreeTemplate
 
       klass.new(template, data)
+    end
+
+    # True if +data+ is an Array whose elements are all Ruby Fixnums (immediate integers), suitable for the C extension's
+    # fixnum fast path when combined with +:max+, +:min+, +:sum+, or +:product+.
+    module_function def fixnum_fast_path_data?(data)
+      data.is_a?(Array) && CSegmentTreeTemplate.all_fixnums_for_fast_path?(data)
     end
 
     # A segment tree that for an array A(0...n) answers questions of the form "what is the maximum value in the subinterval A(i..j)?"
@@ -64,12 +76,20 @@ module DataStructuresRMolinari
       def initialize(template_klass, data)
         data.must_be_a Enumerable
 
-        @structure = template_klass.new(
-          combine:               ->(a, b) { [a, b].max },
-          single_cell_array_val: ->(i) { data[i] },
-          size:                  data.size,
-          identity:              -Shared::INFINITY
-        )
+        @structure = if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
+                       template_klass.new(
+                         fixnum_op: :max,
+                         data: data,
+                         identity: -Shared::INFINITY
+                       )
+                     else
+                       template_klass.new(
+                         combine:               ->(a, b) { [a, b].max },
+                         single_cell_array_val: ->(i) { data[i] },
+                         size:                  data.size,
+                         identity:              -Shared::INFINITY
+                       )
+                     end
       end
 
       # The maximum value in A(i..j).
@@ -122,12 +142,20 @@ module DataStructuresRMolinari
       def initialize(template_klass, data)
         data.must_be_a Enumerable
 
-        @structure = template_klass.new(
-          combine:               ->(a, b) { a + b },
-          single_cell_array_val: ->(i) { data[i] },
-          size:                  data.size,
-          identity:              0
-        )
+        @structure = if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
+                       template_klass.new(
+                         fixnum_op: :sum,
+                         data: data,
+                         identity: 0
+                       )
+                     else
+                       template_klass.new(
+                         combine:               ->(a, b) { a + b },
+                         single_cell_array_val: ->(i) { data[i] },
+                         size:                  data.size,
+                         identity:              0
+                       )
+                     end
       end
 
       # The sum of the values in A(i..j)
@@ -139,19 +167,66 @@ module DataStructuresRMolinari
       end
     end
 
-    # The underlying functionality of the Segment Tree data type, implemented in C as a Ruby extension.
+    # A segment tree that answers "what is the minimum value in A(i..j)?" in O(log n) time.
+    class MinValSegmentTree
+      extend Forwardable
+
+      def_delegator :@structure, :update_at
+
+      def initialize(template_klass, data)
+        data.must_be_a Enumerable
+
+        @structure = if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
+                       template_klass.new(
+                         fixnum_op: :min,
+                         data: data,
+                         identity: Shared::INFINITY
+                       )
+                     else
+                       template_klass.new(
+                         combine:               ->(a, b) { [a, b].min },
+                         single_cell_array_val: ->(i) { data[i] },
+                         size:                  data.size,
+                         identity:              Shared::INFINITY
+                       )
+                     end
+      end
+
+      def min_on(i, j)
+        @structure.query_on(i, j)
+      end
+    end
+
+    # A segment tree that answers "what is the product of the values in A(i..j)?" in O(log n) time.
     #
-    # See SegmentTreeTemplate for more information.
-    #
-    # Implementation note
-    #
-    # The functionality is entirely written in C. But we write the constructor in Ruby because keyword arguments are difficult to
-    # parse on the C side.
-    class CSegmentTreeTemplate
-      # (see SegmentTreeTemplate::initialize)
-      def initialize(combine:, single_cell_array_val:, size:, identity:)
-        # having sorted out the keyword arguments, pass them more easily to the C layer.
-        c_initialize(combine, single_cell_array_val, size, identity)
+    # The C Fixnum fast path stores aggregates in a +long long+ and raises RangeError on overflow. The Ruby template uses Ruby
+    # integer arithmetic (unbounded).
+    class ProductSegmentTree
+      extend Forwardable
+
+      def_delegator :@structure, :update_at
+
+      def initialize(template_klass, data)
+        data.must_be_a Enumerable
+
+        @structure = if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
+                       template_klass.new(
+                         fixnum_op: :product,
+                         data: data,
+                         identity: 1
+                       )
+                     else
+                       template_klass.new(
+                         combine:               ->(a, b) { a * b },
+                         single_cell_array_val: ->(i) { data[i] },
+                         size:                  data.size,
+                         identity:              1
+                       )
+                     end
+      end
+
+      def product_on(i, j)
+        @structure.query_on(i, j)
       end
     end
   end

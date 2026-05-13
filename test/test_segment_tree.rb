@@ -1,5 +1,9 @@
 require 'test/unit'
-require 'byebug'
+begin
+  require 'byebug'
+rescue LoadError
+  # optional dev dependency
+end
 require 'must_be'
 
 require 'data_structures_rmolinari'
@@ -68,6 +72,59 @@ class SegmentTreeTest < Test::Unit::TestCase
     mutable_data = DATA.clone
     seg_tree = make_one(:sum, :c, mutable_data)
     test_seg_tree_with_updates(seg_tree, :sum_on, mutable_data) { |i, j| mutable_data[i..j].sum }
+  end
+
+  def test_min_val_segment_tree_ruby
+    seg_tree = make_one(:min, :ruby, DATA)
+    test_seg_tree_basic(seg_tree, :min_on, DATA.size) { |i, j| DATA[i..j].min }
+  end
+
+  def test_min_val_segment_tree_with_c
+    seg_tree = make_one(:min, :c, DATA)
+    test_seg_tree_basic(seg_tree, :min_on, DATA.size) { |i, j| DATA[i..j].min }
+  end
+
+  def test_min_val_segment_tree_updates_with_c
+    mutable_data = DATA.clone
+    seg_tree = make_one(:min, :c, mutable_data)
+    test_seg_tree_with_updates(seg_tree, :min_on, mutable_data) { |i, j| mutable_data[i..j].min }
+  end
+
+  SMALL_PRODUCT_DATA = [1, 2, 3, -1, 4, 2].freeze
+
+  def test_product_segment_tree_ruby
+    seg_tree = make_one(:product, :ruby, SMALL_PRODUCT_DATA.dup)
+    test_seg_tree_basic(seg_tree, :product_on, SMALL_PRODUCT_DATA.size) { |i, j| SMALL_PRODUCT_DATA[i..j].reduce(:*) }
+  end
+
+  def test_product_segment_tree_with_c
+    seg_tree = make_one(:product, :c, SMALL_PRODUCT_DATA.dup)
+    test_seg_tree_basic(seg_tree, :product_on, SMALL_PRODUCT_DATA.size) { |i, j| SMALL_PRODUCT_DATA[i..j].reduce(:*) }
+  end
+
+  def test_product_segment_tree_updates_with_c
+    mutable = SMALL_PRODUCT_DATA.dup
+    seg_tree = make_one(:product, :c, mutable)
+    test_seg_tree_with_updates(seg_tree, :product_on, mutable) { |i, j| mutable[i..j].reduce(:*) }
+  end
+
+  def test_fixnum_fast_path_data_predicate
+    assert_equal(true, SegmentTree.fixnum_fast_path_data?(DATA))
+    assert_equal(false, SegmentTree.fixnum_fast_path_data?([1, 2**100, 3]))
+    assert_equal(false, SegmentTree.fixnum_fast_path_data?('not an array'))
+  end
+
+  def test_c_product_overflow_raises
+    big = (1 << 40)
+    data = [big, big]
+    assert_raises(RangeError) { SegmentTree.construct(data, :product, :c) }
+  end
+
+  def test_c_max_generic_path_with_bignum_element
+    data = [1, 2**100, 3]
+    seg_tree = SegmentTree.construct(data, :max, :c)
+    assert_equal(2**100, seg_tree.max_on(0, 2))
+    assert_equal(1, seg_tree.max_on(0, 0))
   end
 
   ########################################

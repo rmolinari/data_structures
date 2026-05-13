@@ -1,1 +1,2 @@
-disjoint_union.o: ../cc.h ../shared.h ../shared.o
+segment_tree_template.o: segment_tree_template.c ../shared.h
+shared.o: ../shared.c ../shared.h

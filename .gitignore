@@ -16,4 +16,6 @@ README.html
 .byebug_history
 tmp/
 *.bundle
+/vendor/
+/ext/*/Makefile
 .aider*
