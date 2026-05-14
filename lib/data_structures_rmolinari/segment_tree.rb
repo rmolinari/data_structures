@@ -62,22 +62,29 @@ module DataStructuresRMolinari
       data.is_a?(Array) && CSegmentTreeTemplate.all_fixnums_for_fast_path?(data)
     end
 
-    # Internal: shared construction for interval folds over +data[i]+ (max, sum, product).
+    # Internal: +FoldIndexedDataTemplate.build+ constructs max/sum/product segment-tree templates; including this module adds
+    # private +template_query_on+ (+max_on+, +sum_on+, +product_on+ are aliased to it on concrete classes).
     module FoldIndexedDataTemplate
-      module_function
-
-      def build(template_klass, data, fixnum_op:, combine:, identity:)
-        data.must_be_a Enumerable
-        if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
-          template_klass.new(fixnum_op: fixnum_op, data: data, identity: identity)
-        else
-          template_klass.new(
-            combine:               combine,
-            single_cell_array_val: ->(i) { data[i] },
-            size:                  data.size,
-            identity:              identity
-          )
+      class << self
+        def build(template_klass, data, fixnum_op:, combine:, identity:)
+          data.must_be_a Array
+          if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
+            template_klass.new(fixnum_op: fixnum_op, data: data, identity: identity)
+          else
+            template_klass.new(
+              combine:               combine,
+              single_cell_array_val: ->(i) { data[i] }, # closure
+              size:                  data.size,
+              identity:              identity
+            )
+          end
         end
+      end
+
+      private
+
+      def template_query_on(i, j)
+        @structure.query_on(i, j)
       end
     end
     private_constant :FoldIndexedDataTemplate
@@ -86,6 +93,7 @@ module DataStructuresRMolinari
     # in O(log n) time.
     class MaxValSegmentTree
       extend Forwardable
+      include FoldIndexedDataTemplate
 
       # Tell the tree that the value at idx has changed
       def_delegator :@structure, :update_at
@@ -104,9 +112,56 @@ module DataStructuresRMolinari
       #
       # The arguments must be integers in 0...(A.size)
       # @return the largest value in A(i..j) or -Infinity if i > j.
-      def max_on(i, j)
-        @structure.query_on(i, j)
+      alias_method :max_on, :template_query_on
+      public :max_on
+    end
+
+    class SumSegmentTree
+      extend Forwardable
+      include FoldIndexedDataTemplate
+
+      # Tell the tree that the value at idx has changed
+      def_delegator :@structure, :update_at
+
+      # @param (see MaxValSegmentTree#initialize)
+      def initialize(template_klass, data)
+        @structure = FoldIndexedDataTemplate.build(template_klass, data,
+                                                   fixnum_op: :sum,
+                                                   combine:   ->(a, b) { a + b },
+                                                   identity:  0)
       end
+
+      # The sum of the values in A(i..j)
+      #
+      # The arguments must be integers in 0...(A.size)
+      # @return the sum of the values in A(i..j) or 0 if i > j.
+      alias_method :sum_on, :template_query_on
+      public :sum_on
+    end
+
+    # A segment tree that answers "what is the product of the values in A(i..j)?" in O(log n) time.
+    #
+    # The C Fixnum fast path stores aggregates in a +long long+ and raises RangeError on overflow. The Ruby template uses Ruby
+    # integer arithmetic (unbounded).
+    class ProductSegmentTree
+      extend Forwardable
+      include FoldIndexedDataTemplate
+
+      def_delegator :@structure, :update_at
+
+      def initialize(template_klass, data)
+        @structure = FoldIndexedDataTemplate.build(template_klass, data,
+                                                   fixnum_op: :product,
+                                                   combine:   ->(a, b) { a * b },
+                                                   identity:  1)
+      end
+
+      # The product of the values in A(i..j)
+      #
+      # The arguments must be integers in 0...(A.size)
+      # @return the product of the values in A(i..j) or 1 if i > j.
+      alias_method :product_on, :template_query_on
+      public :product_on
     end
 
     # A segment tree that for an array A(0...n) answers questions of the form "what is the index of the maximal value in the
@@ -140,29 +195,6 @@ module DataStructuresRMolinari
       end
     end
 
-    class SumSegmentTree
-      extend Forwardable
-
-      # Tell the tree that the value at idx has changed
-      def_delegator :@structure, :update_at
-
-      # @param (see MaxValSegmentTree#initialize)
-      def initialize(template_klass, data)
-        @structure = FoldIndexedDataTemplate.build(template_klass, data,
-                                                   fixnum_op: :sum,
-                                                   combine:   ->(a, b) { a + b },
-                                                   identity:  0)
-      end
-
-      # The sum of the values in A(i..j)
-      #
-      # The arguments must be integers in 0...(A.size)
-      # @return the sum of the values in A(i..j) or 0 if i > j.
-      def sum_on(i, j)
-        @structure.query_on(i, j)
-      end
-    end
-
     # A segment tree that answers "what is the minimum value in A(i..j)?" in O(log n) time.  The functionality is equivalent to the
     # _max_ over the negated values.
     class MinValSegmentTree
@@ -190,27 +222,6 @@ module DataStructuresRMolinari
         # - tell the backing MaxValSegmentTree that the value at idx has changed.
         @negated_data[idx] = -@data[idx]
         @max_segment_tree.update_at(idx)
-      end
-    end
-
-    # A segment tree that answers "what is the product of the values in A(i..j)?" in O(log n) time.
-    #
-    # The C Fixnum fast path stores aggregates in a +long long+ and raises RangeError on overflow. The Ruby template uses Ruby
-    # integer arithmetic (unbounded).
-    class ProductSegmentTree
-      extend Forwardable
-
-      def_delegator :@structure, :update_at
-
-      def initialize(template_klass, data)
-        @structure = FoldIndexedDataTemplate.build(template_klass, data,
-                                                   fixnum_op: :product,
-                                                   combine:   ->(a, b) { a * b },
-                                                   identity:  1)
-      end
-
-      def product_on(i, j)
-        @structure.query_on(i, j)
       end
     end
   end
