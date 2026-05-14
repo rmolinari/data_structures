@@ -62,6 +62,26 @@ module DataStructuresRMolinari
       data.is_a?(Array) && CSegmentTreeTemplate.all_fixnums_for_fast_path?(data)
     end
 
+    # Internal: shared construction for interval folds over +data[i]+ (max, sum, product).
+    module FoldIndexedDataTemplate
+      module_function
+
+      def build(template_klass, data, fixnum_op:, combine:, identity:)
+        data.must_be_a Enumerable
+        if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
+          template_klass.new(fixnum_op: fixnum_op, data: data, identity: identity)
+        else
+          template_klass.new(
+            combine:               combine,
+            single_cell_array_val: ->(i) { data[i] },
+            size:                  data.size,
+            identity:              identity
+          )
+        end
+      end
+    end
+    private_constant :FoldIndexedDataTemplate
+
     # A segment tree that for an array A(0...n) answers questions of the form "what is the maximum value in the subinterval A(i..j)?"
     # in O(log n) time.
     class MaxValSegmentTree
@@ -74,22 +94,10 @@ module DataStructuresRMolinari
       # @param data an object that contains values at integer indices based at 0, via +data[i]+.
       #   - This will usually be an Array, but it could also be a hash or a proc.
       def initialize(template_klass, data)
-        data.must_be_a Enumerable
-
-        @structure = if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
-                       template_klass.new(
-                         fixnum_op: :max,
-                         data: data,
-                         identity: -Shared::INFINITY
-                       )
-                     else
-                       template_klass.new(
-                         combine:               ->(a, b) { [a, b].max },
-                         single_cell_array_val: ->(i) { data[i] },
-                         size:                  data.size,
-                         identity:              -Shared::INFINITY
-                       )
-                     end
+        @structure = FoldIndexedDataTemplate.build(template_klass, data,
+                                                   fixnum_op: :max,
+                                                   combine:   ->(a, b) { [a, b].max },
+                                                   identity:  -Shared::INFINITY)
       end
 
       # The maximum value in A(i..j).
@@ -140,22 +148,10 @@ module DataStructuresRMolinari
 
       # @param (see MaxValSegmentTree#initialize)
       def initialize(template_klass, data)
-        data.must_be_a Enumerable
-
-        @structure = if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
-                       template_klass.new(
-                         fixnum_op: :sum,
-                         data: data,
-                         identity: 0
-                       )
-                     else
-                       template_klass.new(
-                         combine:               ->(a, b) { a + b },
-                         single_cell_array_val: ->(i) { data[i] },
-                         size:                  data.size,
-                         identity:              0
-                       )
-                     end
+        @structure = FoldIndexedDataTemplate.build(template_klass, data,
+                                                   fixnum_op: :sum,
+                                                   combine:   ->(a, b) { a + b },
+                                                   identity:  0)
       end
 
       # The sum of the values in A(i..j)
@@ -207,22 +203,10 @@ module DataStructuresRMolinari
       def_delegator :@structure, :update_at
 
       def initialize(template_klass, data)
-        data.must_be_a Enumerable
-
-        @structure = if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
-                       template_klass.new(
-                         fixnum_op: :product,
-                         data: data,
-                         identity: 1
-                       )
-                     else
-                       template_klass.new(
-                         combine:               ->(a, b) { a * b },
-                         single_cell_array_val: ->(i) { data[i] },
-                         size:                  data.size,
-                         identity:              1
-                       )
-                     end
+        @structure = FoldIndexedDataTemplate.build(template_klass, data,
+                                                   fixnum_op: :product,
+                                                   combine:   ->(a, b) { a * b },
+                                                   identity:  1)
       end
 
       def product_on(i, j)
