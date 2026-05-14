@@ -77,6 +77,21 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     end
   end
 
+  # max_x_in_subtree / min_x_in_subtree used to treat index @size (the last 1-based heap slot) as out-of-tree because of `root >=
+  # @size`. That leaf must contribute its x; otherwise verify_properties and any caller using the last index get ±Infinity.
+  def test_subtree_x_extrema_at_last_heap_index
+    n = 6
+    data = raw_data(n).shuffle
+    pst = MaxPrioritySearchTree.new(data, verify: false)
+    size = pst.instance_variable_get(:@size)
+    last = pst.instance_variable_get(:@data)[size]
+
+    assert_equal last.x, pst.send(:max_x_in_subtree, size),
+                 'max_x_in_subtree at last index must equal that leaf\'s x (not sentinel -Infinity)'
+    assert_equal last.x, pst.send(:min_x_in_subtree, size),
+                 'min_x_in_subtree at last index must equal that leaf\'s x (not sentinel Infinity)'
+  end
+
   def test_max_pst_quadrant_calls
     MAX_PST_QUADRANT_CALLS.each do |method|
       [true, false].each do |open|

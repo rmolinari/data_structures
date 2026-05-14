@@ -1181,7 +1181,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
       left_in = true
     else
       q = root
-      right = 1
+      right = true
     end
 
     while left || left_in || right_in || right
@@ -1436,13 +1436,13 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   end
 
   private def max_x_in_subtree(root)
-    return -Float::INFINITY if root >= @size
+    return -Float::INFINITY if root > @size
 
     [@data[root].x, max_x_in_subtree(left(root)), max_x_in_subtree(right(root))].max
   end
 
   private def min_x_in_subtree(root)
-    return Float::INFINITY if root >= @size
+    return Float::INFINITY if root > @size
 
     [@data[root].x, min_x_in_subtree(left(root)), min_x_in_subtree(right(root))].min
   end
