@@ -108,6 +108,32 @@ class SegmentTreeTest < Test::Unit::TestCase
     test_seg_tree_with_updates(seg_tree, :product_on, mutable) { |i, j| mutable[i..j].reduce(:*) }
   end
 
+  HASH_BACKING = { 0 => -1, 1 => 7, 2 => 1, 3 => -4, 4 => 3 }.freeze
+
+  def test_max_val_segment_tree_hash_backing_ruby
+    seg_tree = make_one(:max, :ruby, HASH_BACKING)
+    test_seg_tree_basic(seg_tree, :max_on, HASH_BACKING.size) { |i, j| (i..j).map { HASH_BACKING[_1] }.max }
+  end
+
+  def test_min_val_segment_tree_hash_backing_ruby
+    seg_tree = make_one(:min, :ruby, HASH_BACKING)
+    test_seg_tree_basic(seg_tree, :min_on, HASH_BACKING.size) { |i, j| (i..j).map { HASH_BACKING[_1] }.min }
+  end
+
+  def test_max_val_indexed_proc_backing_ruby
+    ary = [2, 0, 5, 1, 3]
+    backing = SegmentTree.indexed_proc(ary.size) { |i| ary[i] }
+    seg_tree = SegmentTree.construct(backing, :max, :ruby)
+    test_seg_tree_basic(seg_tree, :max_on, ary.size) { |i, j| ary[i..j].max }
+  end
+
+  def test_min_val_indexed_proc_backing_updates_ruby
+    ary = DATA.take(10).dup
+    backing = SegmentTree.indexed_proc(ary.size) { |i| ary[i] }
+    seg_tree = SegmentTree.construct(backing, :min, :ruby)
+    test_seg_tree_with_updates(seg_tree, :min_on, ary) { |i, j| ary[i..j].min }
+  end
+
   def test_fixnum_fast_path_data_predicate
     assert_equal(true, SegmentTree.fixnum_fast_path_data?(DATA))
     assert_equal(false, SegmentTree.fixnum_fast_path_data?([1, 2**100, 3]))

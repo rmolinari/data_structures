@@ -23,22 +23,26 @@ require_relative 'c_segment_tree_template_impl' # Ruby constructor / Fixnum fast
 # backed either by the pure Ruby SegmentTreeTemplate or its C-based sibling CSegmentTreeTemplate
 module DataStructuresRMolinari
   module SegmentTree
-    # A convenience method to construct a Segment Tree that, for a given array A(0...size), answers questions of the kind given by
-    # operation, using the template written in lang
+    # A convenience method to construct a Segment Tree that, for a given indexed backing store A(0...size), answers questions of the
+    # kind given by operation, using the template written in lang
     #
-    # - @param data: the array A.
-    #   - It must respond to +#size+ and to +#[]+ with non-negative integer arguments.
+    # - @param data: the indexed backing store A.
+    #   - Must respond to #[] with an integer index in 0...size and to #size with a non-negative Integer length.
+    #   - Typically an Array or Hash with keys 0...; a raw Proc does not implement #size, so use
+    #     SegmentTree.indexed_proc(size) { |i| ... } for proc-like access
     # - @param operation: a supported "style" of Segment Tree
     #   - must be one of these (but you can write your own concrete version)
-    #     - +:max+: implementing +max_on(i, j)+, returning the maximum value in A(i..j)
-    #     - +:index_of_max+: implementing +index_of_max_val_on(i, j)+, returning an index corresponding to the maximum value in
+    #     - :max: implementing max_on(i, j), returning the maximum value in A(i..j)
+    #     - :index_of_max: implementing index_of_max_val_on(i, j), returning an index corresponding to the maximum value in
     #       A(i..j).
-    #     - +:sum+: implementing +sum_on(i, j)+
-    #     - +:min+: implementing +min_on(i, j)+
-    #     - +:product+: implementing +product_on(i, j)+
+    #     - :sum: implementing sum_on(i, j)
+    #     - :min: implementing min_on(i, j)
+    #     - :product: implementing product_on(i, j)
     # - @param lang: the language in which the underlying "template" is written
-    #   - +:c+ or +:ruby+
-    #   - the C version will run faster but for now may be buggier and harder to debug
+    #   - :c or :ruby
+    #   - the C version will run faster but is harder to debug
+    #     - if the operation is :max, :sum, or :product and the data is an Array of Fixnums, then the C version will use a "fast
+    #       path" that stores the data in a native C array and thus avoids most Ruby callbacks.
     module_function def construct(data, operation, lang)
       operation.must_be_in [:max, :index_of_max, :sum, :min, :product]
       lang.must_be_in [:ruby, :c]
@@ -56,26 +60,48 @@ module DataStructuresRMolinari
       klass.new(template, data)
     end
 
-    # True if +data+ is an Array whose elements are all Ruby Fixnums (immediate integers), suitable for the C extension's
-    # fixnum fast path when combined with +:max+, +:sum+, or +:product+.
+    # True if data is an Array whose elements are all Ruby Fixnums (immediate integers), suitable for the C extension's fixnum fast
+    # path when combined with :max, :sum, or :product.
     module_function def fixnum_fast_path_data?(data)
       data.is_a?(Array) && CSegmentTreeTemplate.all_fixnums_for_fast_path?(data)
     end
 
-    # Internal: +FoldIndexedDataTemplate.build+ constructs max/sum/product segment-tree templates; including this module adds
-    # private +template_query_on+ (+max_on+, +sum_on+, +product_on+ are aliased to it on concrete classes).
+    # Raises unless data supports segment-tree indexing (#[] with integer keys in 0...size, #size as non-negative Integer).
+    module_function def must_be_indexed_backing!(data)
+      unless data.respond_to?(:[]) && data.respond_to?(:size)
+        raise ArgumentError, 'backing store must respond to #[] (index) and #size (length)'
+      end
+
+      sz = data.size
+      raise ArgumentError, '#size must return a non-negative Integer' unless sz.is_a?(Integer) && !sz.negative?
+    end
+
+    # A small object that responds to #[] passing the index to a block, and responds to #size with the given argument.
+    #
+    # Uuse when the backing store is not an Array or Hash (a plain Proc does not implement #size).
+    module_function def indexed_proc(size, &block)
+      raise ArgumentError, 'block required' unless block
+      raise ArgumentError, 'size must be a non-negative Integer' unless size.is_a?(Integer) && !size.negative?
+
+      Object.new.tap do |o|
+        o.define_singleton_method(:size) { size }
+        o.define_singleton_method(:[]) { |i| block.call(i) }
+      end
+    end
+
+    # Internal: FoldIndexedDataTemplate.build constructs max/sum/product segment-tree templates; including this module adds
+    # private template_query_on (max_on, sum_on, product_on are aliased to it on concrete classes).
     module FoldIndexedDataTemplate
       class << self
         def build(template_klass, data, fixnum_op:, combine:, identity:)
-          data.must_be_a Array
-          if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
-            template_klass.new(fixnum_op: fixnum_op, data: data, identity: identity)
+          SegmentTree.must_be_indexed_backing!(data)
+          if template_klass == CSegmentTreeTemplate && data.is_a?(Array) && SegmentTree.fixnum_fast_path_data?(data)
+            template_klass.new(fixnum_op:, data:, identity:)
           else
+            size = data.size
             template_klass.new(
-              combine:               combine,
-              single_cell_array_val: ->(i) { data[i] }, # closure
-              size:                  data.size,
-              identity:              identity
+              combine:, identity:, size:,
+              single_cell_array_val: ->(i) { data[i] }  # close over the data
             )
           end
         end
@@ -98,9 +124,7 @@ module DataStructuresRMolinari
       # Tell the tree that the value at idx has changed
       def_delegator :@structure, :update_at
 
-      # @param template_klass the "template" class that provides the generic implementation of the Segment Tree functionality.
-      # @param data an object that contains values at integer indices based at 0, via +data[i]+.
-      #   - This will usually be an Array, but it could also be a hash or a proc.
+      # @param data (see DataStructuresRMolinari::SegmentTree.construct)
       def initialize(template_klass, data)
         @structure = FoldIndexedDataTemplate.build(template_klass, data,
                                                    fixnum_op: :max,
@@ -174,7 +198,7 @@ module DataStructuresRMolinari
 
       # @param (see MaxValSegmentTree#initialize)
       def initialize(template_klass, data)
-        data.must_be_a Enumerable
+        SegmentTree.must_be_indexed_backing!(data)
 
         @structure = template_klass.new(
           combine:               ->(p1, p2) { p1[1] >= p2[1] ? p1 : p2 },
@@ -191,25 +215,43 @@ module DataStructuresRMolinari
       #   - If there is more than one entry with that value, return one the indices. There is no guarantee as to which one.
       #   - Return +nil+ if i > j
       def index_of_max_val_on(i, j)
-        @structure.query_on(i, j)&.first # discard the value part of the pair, which is a bookkeeping
+        @structure.query_on(i, j)&.first # discard the value part of the pair, which is just bookkeeping
       end
     end
 
-    # A segment tree that answers "what is the minimum value in A(i..j)?" in O(log n) time.  The functionality is equivalent to the
-    # _max_ over the negated values.
+    # Read-through view: self[i] returns -store[i]. Used by MinValSegmentTree when no materialized negated Array is needed.
+    class NegatedIndexedView
+      def initialize(store)
+        @store = store
+      end
+
+      def size
+        @store.size
+      end
+
+      def [](i)
+        -@store[i]
+      end
+    end
+    private_constant :NegatedIndexedView
+
+    # A segment tree that answers "what is the minimum value in A(i..j)?" in O(log n) time.
+
+    # The functionality is equivalent to the _max_ over the negated values.  There is a bit more bookkeeping on top to support data
+    # mutations.
     class MinValSegmentTree
-
       def initialize(template_klass, data)
-        data.must_be_a Array  # since we expect sanity under #map
-
-        # We need to hang on to these.  We double the memory allocated for the object, but it's worth the simplification we get
-        # elsewhere.
-        #
-        # See #update_at
+        SegmentTree.must_be_indexed_backing!(data)
         @data = data
-        @negated_data = data.map { |x| -x }
 
-        @max_segment_tree = MaxValSegmentTree.new(template_klass, @negated_data)
+        # C fixnum max path requires a real +Array+ of negated Fixnums; otherwise a read-through negated view is enough.
+        @negated_materialized =
+          if data.is_a?(Array) && template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
+            data.map { |x| -x }
+          end
+
+        negated_for_max = @negated_materialized || NegatedIndexedView.new(data)
+        @max_segment_tree = MaxValSegmentTree.new(template_klass, negated_for_max)
       end
 
       def min_on(i, j)
@@ -217,10 +259,7 @@ module DataStructuresRMolinari
       end
 
       def update_at(idx)
-        # We need to do two things:
-        # - update @negated_data to reflect the change.
-        # - tell the backing MaxValSegmentTree that the value at idx has changed.
-        @negated_data[idx] = -@data[idx]
+        @negated_materialized[idx] = -@data[idx] if @negated_materialized
         @max_segment_tree.update_at(idx)
       end
     end
