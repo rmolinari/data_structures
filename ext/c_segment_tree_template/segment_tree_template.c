@@ -42,7 +42,6 @@ static int op_sym_to_mode(VALUE op) {
   if (id == rb_intern("sum")) return ST_MODE_FIXNUM_SUM;
   if (id == rb_intern("product")) return ST_MODE_FIXNUM_PROD;
   rb_raise(rb_eArgError, "unsupported fixnum_op %+" PRIsVALUE, op);
-  return ST_MODE_GENERIC;
 }
 
 static long long fixnum_leaf_ll(VALUE v) {
@@ -90,7 +89,6 @@ static long long combine_ll(st_mode_t mode, long long a, long long b) {
     }
     default:
       rb_raise(eSharedInternalLogicError, "combine_ll called in unexpected mode %d", (int)mode);
-      return 0;
   }
 }
 
