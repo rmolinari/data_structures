@@ -4,7 +4,7 @@
  * More specifically, it is the C version of the SegmentTreeTemplate Ruby class, for which see elsewhere in the repo.
  *
  * When built with c_initialize_fixnum (see Init), the tree stores aggregated numeric values in a long long[] array and
- * performs max/min/sum/product in C without invoking Ruby procs on the query/update hot path. Leaf reads still use the
+ * performs max/sum/product in C without invoking Ruby procs on the query/update hot path. Leaf reads still use the
  * backing Ruby Array (rb_ary_entry) so update_at sees mutations to that array.
  */
 
@@ -17,9 +17,8 @@
 typedef enum {
   ST_MODE_GENERIC = 0,
   ST_MODE_FIXNUM_MAX = 1,
-  ST_MODE_FIXNUM_MIN = 2,
-  ST_MODE_FIXNUM_SUM = 3,
-  ST_MODE_FIXNUM_PROD = 4
+  ST_MODE_FIXNUM_SUM = 2,
+  ST_MODE_FIXNUM_PROD = 3
 } st_mode_t;
 
 typedef struct {
@@ -40,7 +39,6 @@ static int op_sym_to_mode(VALUE op) {
   Check_Type(op, T_SYMBOL);
   ID id = rb_sym2id(op);
   if (id == rb_intern("max")) return ST_MODE_FIXNUM_MAX;
-  if (id == rb_intern("min")) return ST_MODE_FIXNUM_MIN;
   if (id == rb_intern("sum")) return ST_MODE_FIXNUM_SUM;
   if (id == rb_intern("product")) return ST_MODE_FIXNUM_PROD;
   rb_raise(rb_eArgError, "unsupported fixnum_op %+" PRIsVALUE, op);
@@ -64,8 +62,6 @@ static long long combine_ll(st_mode_t mode, long long a, long long b) {
   switch (mode) {
     case ST_MODE_FIXNUM_MAX:
       return a > b ? a : b;
-    case ST_MODE_FIXNUM_MIN:
-      return a < b ? a : b;
     case ST_MODE_FIXNUM_SUM: {
       long long out;
 #if ST_HAS_INT_OVERFLOW_BUILTINS
@@ -347,7 +343,7 @@ static void setup_fixnum(segment_tree_data *st, VALUE data_array, VALUE size_val
 
   st->mode = (st_mode_t)op_sym_to_mode(op);
   st->identity = identity;
-  st->data_array = data_array;
+  st->data_array = data_array;  // We keep a reference to this so we can react to mutations on an update_at() call
   st->combine_lambda = Qnil;
   st->single_cell_array_val_lambda = Qnil;
 

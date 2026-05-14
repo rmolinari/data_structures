@@ -11,14 +11,14 @@ class DataStructuresRMolinari::SegmentTree::CSegmentTreeTemplate
   #
   # Either pass the generic lambda-based configuration (+combine+, +single_cell_array_val+, +size+, +identity+), or pass a Fixnum
   # fast-path configuration (+data+, +fixnum_op+, +identity+) where +data+ is an Array of Fixnums and +fixnum_op+ is one of
-  # +:max+, +:min+, +:sum+, +:product+.
+  # +:max+, +:sum+, or +:product+.
   def initialize(combine: nil, single_cell_array_val: nil, size: nil, identity: nil, data: nil, fixnum_op: nil)
     if fixnum_op
       unless combine.nil? && single_cell_array_val.nil?
         raise ArgumentError, 'combine and single_cell_array_val must not be passed when using fixnum_op'
       end
 
-      fixnum_op.must_be_in [:max, :min, :sum, :product]
+      fixnum_op.must_be_in [:max, :sum, :product]
       raise ArgumentError, 'data must be an Array for fixnum fast path' unless data.is_a?(Array)
       raise ArgumentError, 'size must match data.length' if !size.nil? && size != data.size
 

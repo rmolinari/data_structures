@@ -57,7 +57,7 @@ module DataStructuresRMolinari
     end
 
     # True if +data+ is an Array whose elements are all Ruby Fixnums (immediate integers), suitable for the C extension's
-    # fixnum fast path when combined with +:max+, +:min+, +:sum+, or +:product+.
+    # fixnum fast path when combined with +:max+, +:sum+, or +:product+.
     module_function def fixnum_fast_path_data?(data)
       data.is_a?(Array) && CSegmentTreeTemplate.all_fixnums_for_fast_path?(data)
     end
@@ -167,33 +167,33 @@ module DataStructuresRMolinari
       end
     end
 
-    # A segment tree that answers "what is the minimum value in A(i..j)?" in O(log n) time.
+    # A segment tree that answers "what is the minimum value in A(i..j)?" in O(log n) time.  The functionality is equivalent to the
+    # _max_ over the negated values.
     class MinValSegmentTree
-      extend Forwardable
-
-      def_delegator :@structure, :update_at
 
       def initialize(template_klass, data)
-        data.must_be_a Enumerable
+        data.must_be_a Array  # since we expect sanity under #map
 
-        @structure = if template_klass == CSegmentTreeTemplate && SegmentTree.fixnum_fast_path_data?(data)
-                       template_klass.new(
-                         fixnum_op: :min,
-                         data: data,
-                         identity: Shared::INFINITY
-                       )
-                     else
-                       template_klass.new(
-                         combine:               ->(a, b) { [a, b].min },
-                         single_cell_array_val: ->(i) { data[i] },
-                         size:                  data.size,
-                         identity:              Shared::INFINITY
-                       )
-                     end
+        # We need to hang on to these.  We double the memory allocated for the object, but it's worth the simplification we get
+        # elsewhere.
+        #
+        # See #update_at
+        @data = data
+        @negated_data = data.map { |x| -x }
+
+        @max_segment_tree = MaxValSegmentTree.new(template_klass, @negated_data)
       end
 
       def min_on(i, j)
-        @structure.query_on(i, j)
+        -@max_segment_tree.max_on(i, j)
+      end
+
+      def update_at(idx)
+        # We need to do two things:
+        # - update @negated_data to reflect the change.
+        # - tell the backing MaxValSegmentTree that the value at idx has changed.
+        @negated_data[idx] = -@data[idx]
+        @max_segment_tree.update_at(idx)
       end
     end
 
