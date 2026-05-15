@@ -24,9 +24,22 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   MIN_PST_QUADRANT_CALLS = %i[smallest_y_in_se smallest_y_in_sw smallest_x_in_se largest_x_in_sw].freeze
   ALL_MAX_PST_CALLS = MAX_PST_QUADRANT_CALLS + %i[largest_y_in_3_sided enumerate_3_sided].freeze
 
+  SEED = ENV['SEED'] ? ENV['SEED'].to_i : Random.new_seed
+
   def setup
     @size = (ENV['test_size'] || 10_000).to_i
     @common_raw_data = raw_data(@size)
+  end
+
+  def self.rng
+    @rng ||= begin
+      puts "#{self}: Using seed #{SEED} for random data generation. Define on command line with '$ SEED=<...> [etc]'"
+      Random.new(SEED)
+    end
+  end
+
+  def rng
+    self.class.rng
   end
 
   # A pair of a real PST and a corresponding simple one that we can use to check the real one against.
@@ -326,19 +339,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   private def params_for_find_bad_case(pairs, method, dynamic: false)
     x_min, x_max = pairs.map(&:x).minmax
     y_min, y_max = pairs.map(&:y).minmax
-    x0 = rand(x_min..x_max)
-    y0 = rand(y_min..y_max)
+    x0 = rng.rand(x_min..x_max)
+    y0 = rng.rand(y_min..y_max)
 
     if dynamic
       deletion_count = 0
       loop do
         deletion_count += 1
-        break if deletion_count == pairs.size || rand > 0.9
+        break if deletion_count == pairs.size || rng.rand > 0.9
       end
     end
 
     if method =~ /3_sided/
-      x1 = rand(x0..x_max)
+      x1 = rng.rand(x0..x_max)
       result = { args: [x0, x1, y0] }
     else
       result = { args: [x0, y0] }
@@ -467,8 +480,8 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # - open: is the region open or closed?
   private def check_quadrant_calc(pst_pair, method, open: false)
     100.times do
-      x0 = rand(pst_pair.min_x..pst_pair.max_x)
-      y0 = rand(pst_pair.min_y..pst_pair.max_y)
+      x0 = rng.rand(pst_pair.min_x..pst_pair.max_x)
+      y0 = rng.rand(pst_pair.min_y..pst_pair.max_y)
       check_calculation(pst_pair, method, x0, y0, open:)
     end
   end
@@ -482,9 +495,9 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # - open: is the region open or closed?
   private def check_3_sided_calc(pst_pair, method, enumerate_via_block: false, open: false)
     100.times do
-      x0 = rand(pst_pair.min_x..pst_pair.max_x)
-      x1 = rand(x0..pst_pair.max_x)
-      y0 = rand(pst_pair.min_y..pst_pair.max_y)
+      x0 = rng.rand(pst_pair.min_x..pst_pair.max_x)
+      x1 = rng.rand(x0..pst_pair.max_x)
+      y0 = rng.rand(pst_pair.min_y..pst_pair.max_y)
       check_calculation(pst_pair, method, x0, x1, y0, enumerate_via_block:, open:)
     end
   end
@@ -498,18 +511,19 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     #
     # We don't need it for smallest_y_in_3_sided becasuse we know that it must be for a MinPST.
     expected_value = if is_min && method == :enumerate_3_sided
-                       pst_pair.simple_pst.send(method, *args, open:, for_min_pst: true)
-                     else
-                       pst_pair.simple_pst.send(method, *args, open:)
-                     end
+      pst_pair.simple_pst.send(method, *args, open:, for_min_pst: true)
+    else
+      pst_pair.simple_pst.send(method, *args, open:)
+    end
 
     calculated_value = if enumerate_via_block
-                         result = Set.new
-                         pst_pair.pst.send(method, *args, open:) { |point| result << point }
-                         result
-                       else
-                         pst_pair.pst.send(method, *args, open:)
-                       end
+      result = Set.new
+      pst_pair.pst.send(method, *args, open:) { |point| result << point }
+      result
+    else
+      pst_pair.pst.send(method, *args, open:)
+    end
+
     assert_equal expected_value, calculated_value, tag
   end
 
@@ -518,15 +532,15 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
   # If the environment variable 'floats' is set, instead choose random values in 0..1 for both coordinates.
   private def raw_data(size)
     if ENV['floats']
-      (1..size).map { Point.new(rand, rand) }
+      (1..size).map { Point.new(rng.rand, rng.rand) }
     else
       list = (1..size).to_a
-      y_vals = (1..size).map { rand(1..size) }
+      y_vals = (1..size).map { rng.rand(1..size) }
       list.zip(y_vals).map { Point.new(*_1) }
     end
   end
 
-  # Do most of the work of a MaxPST and a MinPST in a very slow way, the simplest way possible. It is used to test expected result.
+  # Do most of the work of a MaxPST and a MinPST in a very slow way, the simplest way possible. It is used to test expected results.
   #
   # We don't support #delete_top!, as we can't easily keep track of what would be at the top of a real PST heap. So we only provide
   # a #delete! method that deletes a specific point.
@@ -673,7 +687,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     private def rightward_points(x0)
       return [] if points.empty?
 
-      first_idx = @points_by_x.bsearch_index { |v| v.x >= x0 }
+      first_idx = @points_by_x.bsearch_index { |v| v.x >= x0 } || @points_by_x.size
       points = @points_by_x[first_idx..]
       points - @deletions
     end
@@ -682,7 +696,7 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
     private def leftward_points(x0)
       return [] if points.empty?
 
-      first_bad_idx = @points_by_x.bsearch_index { |v| v.x > x0 }
+      first_bad_idx = @points_by_x.bsearch_index { |v| v.x > x0 } || @points_by_x.size
       points = @points_by_x[...first_bad_idx]
       points - @deletions
     end

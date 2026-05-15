@@ -1132,7 +1132,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
           p = right(q_in)
         elsif right_val.x <= x1
           p = left(q_in)
-          p_in = right(q_in) # should this be q_in = right(q_in) ??
+          p_in = right(q_in)
           left_in = true
         else
           p = left(q_in)
@@ -1303,14 +1303,6 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
     return true if i == root
 
     better_y?(parent(i), i)
-
-    # p = parent(i)
-    # return true if @data[i].y < @data[p].y
-    # return false if @data[i].y > @data[p].y
-
-    # # the y values are equal so the tie is broken by x. We are "normal", and in the tree, if our value of x is worse than our
-    # # parent's value
-    # @data[i].x > @data[p].x
   end
 
   ########################################
@@ -1397,7 +1389,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # The smallest floating point number larger than x
   private def slightly_bigger(x)
     x_f = x.to_f
-    raise "#{x} out of Float range" if x_f.infinite?
+    raise DataError, "#{x} out of Float range" if x_f.infinite?
 
     x_f.next_float
   end
@@ -1405,7 +1397,7 @@ class DataStructuresRMolinari::MaxPrioritySearchTree
   # The largest floating point number smaller than x
   private def slightly_smaller(x)
     x_f = x.to_f
-    raise "#{x} out of Float range" if x_f.infinite?
+    raise DataError, "#{x} out of Float range" if x_f.infinite?
 
     x_f.prev_float
   end
