@@ -10,6 +10,11 @@ module Shared
     end
   end
 
+  # Define it in one place so we don't accidently round up here and down there, which would lead to chaos
+  def midpoint(left, right)
+    (left + right) / 2
+  end
+
   # @private
 
   # Used for errors related to logic errors in client code

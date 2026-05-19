@@ -38,6 +38,24 @@ class SegmentTreeTest < Test::Unit::TestCase
     test_seg_tree_with_updates(seg_tree, :index_of_max_val_on, mutable_data) { |i, j| (i..j).max_by { mutable_data[_1] } }
   end
 
+  def test_first_prefix_sum
+    data_size = 100
+    data = (0...data_size).to_a.shuffle
+    prefix_sums = []
+    running_sum = 0
+    (0...data_size).each do |i|
+      running_sum += data[i]
+      prefix_sums << running_sum
+    end
+
+    seg_tree = make_one(:sum, :c, data)
+    (0..4050).each do |target|
+      expected_value = prefix_sums.bsearch_index { _1 >= target }
+      actual_value = seg_tree.index_of_first_large_prefix_sum(target)
+      assert_equal expected_value, actual_value
+    end
+  end
+
   ########################################
   # C implementation
 

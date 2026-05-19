@@ -136,9 +136,4 @@ class DataStructuresRMolinari::SegmentTree::SegmentTreeTemplate
       @tree[tree_idx] = @combine.call(@tree[left], @tree[right])
     end
   end
-
-  # Do it in one place so we don't accidently round up here and down there, which would lead to chaos
-  private def midpoint(left, right)
-    (left + right) / 2
-  end
 end

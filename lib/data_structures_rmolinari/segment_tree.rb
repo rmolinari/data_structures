@@ -92,19 +92,18 @@ module DataStructuresRMolinari
     # Internal: FoldIndexedDataTemplate.build constructs max/sum/product segment-tree templates; including this module adds
     # private template_query_on (max_on, sum_on, product_on are aliased to it on concrete classes).
     module FoldIndexedDataTemplate
-      class << self
-        def build(template_klass, data, fixnum_op:, combine:, identity:)
-          SegmentTree.must_be_indexed_backing!(data)
-          if template_klass == CSegmentTreeTemplate && data.is_a?(Array) && SegmentTree.fixnum_fast_path_data?(data)
-            # fast path
-            template_klass.new(fixnum_op:, data:, identity:)
-          else
-            size = data.size
-            template_klass.new(
-              combine:, identity:, size:,
-              single_cell_array_val: ->(i) { data[i] }  # close over the data
-            )
-          end
+      private def construct_template(template_klass, data, fixnum_op:, combine:, identity:)
+        SegmentTree.must_be_indexed_backing!(data)
+        @length = data.size  # Sometimes useful for concrete implementations with their own methods
+        if template_klass == CSegmentTreeTemplate && data.is_a?(Array) && SegmentTree.fixnum_fast_path_data?(data)
+          # fast path
+          template_klass.new(fixnum_op:, data:, identity:)
+        else
+          size = data.size
+          template_klass.new(
+            combine:, identity:, size:,
+            single_cell_array_val: ->(i) { data[i] }  # close over the data
+          )
         end
       end
 
@@ -127,10 +126,12 @@ module DataStructuresRMolinari
 
       # @param data (see DataStructuresRMolinari::SegmentTree.construct)
       def initialize(template_klass, data)
-        @structure = FoldIndexedDataTemplate.build(template_klass, data,
-                                                   fixnum_op: :max,
-                                                   combine:   ->(a, b) { [a, b].max },
-                                                   identity:  -Shared::INFINITY)
+        @structure = construct_template(
+          template_klass, data,
+          fixnum_op: :max,
+          combine:   ->(a, b) { [a, b].max },
+          identity:  -Shared::INFINITY
+        )
       end
 
       # The maximum value in A(i..j).
@@ -144,16 +145,19 @@ module DataStructuresRMolinari
     class SumSegmentTree
       extend Forwardable
       include FoldIndexedDataTemplate
+      include Shared
 
       # Tell the tree that the value at idx has changed
       def_delegator :@structure, :update_at
 
       # @param (see MaxValSegmentTree#initialize)
       def initialize(template_klass, data)
-        @structure = FoldIndexedDataTemplate.build(template_klass, data,
-                                                   fixnum_op: :sum,
-                                                   combine:   ->(a, b) { a + b },
-                                                   identity:  0)
+        @structure = construct_template(
+          template_klass, data,
+          fixnum_op: :sum,
+          combine:   ->(a, b) { a + b },
+          identity:  0
+        )
       end
 
       # The sum of the values in A(i..j)
@@ -175,10 +179,12 @@ module DataStructuresRMolinari
       def_delegator :@structure, :update_at
 
       def initialize(template_klass, data)
-        @structure = FoldIndexedDataTemplate.build(template_klass, data,
-                                                   fixnum_op: :product,
-                                                   combine:   ->(a, b) { a * b },
-                                                   identity:  1)
+        @structure = construct_template(
+          template_klass, data,
+          fixnum_op: :product,
+          combine:   ->(a, b) { a * b },
+          identity:  1
+        )
       end
 
       # The product of the values in A(i..j)
