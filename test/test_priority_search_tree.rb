@@ -56,10 +56,6 @@ class PrioritySearchTreeTest < Test::Unit::TestCase
       @simple_pst = simple_pst
     end
 
-    def empty?
-      @pst.empty?
-    end
-
     # delete top from both PSTs and return the deleted value
     def delete_top!
       top = @pst.delete_top!
