@@ -166,6 +166,30 @@ module DataStructuresRMolinari
       # @return the sum of the values in A(i..j) or 0 if i > j.
       alias_method :sum_on, :template_query_on
       public :sum_on
+
+      # Assuming all values are non-negative, return the smallest index j such that sum_on(0, j) >= target, or nil if there is no
+      # such index.
+      #
+      # The result will be meaningless if there are negative values in the array.
+      def index_of_first_large_prefix_sum(target)
+        calc_idx_of_first_large_sum(0, @length - 1, target)
+      end
+
+      # The first index j <= right such that sum_on(left, j) >= target, or nil if there is no such index.
+      private def calc_idx_of_first_large_sum(left, right, target)
+        return nil if target > sum_on(left, right) # no such index
+
+        midpoint = midpoint(left, right)
+        left_sum = sum_on(left, midpoint)
+
+        if left_sum >= target
+          return left if left == midpoint
+          return calc_idx_of_first_large_sum(left, midpoint, target)
+        else
+          return nil if midpoint == right
+          return calc_idx_of_first_large_sum(midpoint + 1, right, target - left_sum)
+        end
+      end
     end
 
     # A segment tree that answers "what is the product of the values in A(i..j)?" in O(log n) time.
