@@ -96,6 +96,7 @@ module DataStructuresRMolinari
         def build(template_klass, data, fixnum_op:, combine:, identity:)
           SegmentTree.must_be_indexed_backing!(data)
           if template_klass == CSegmentTreeTemplate && data.is_a?(Array) && SegmentTree.fixnum_fast_path_data?(data)
+            # fast path
             template_klass.new(fixnum_op:, data:, identity:)
           else
             size = data.size
