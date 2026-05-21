@@ -434,6 +434,129 @@ static VALUE segment_tree_update_at(VALUE self, VALUE idx) {
   return Qnil;
 }
 
+/************************************************************
+ * find_leftmost_by_prefix (one tree descent)
+ */
+
+static int compare_ge_from_symbol(VALUE compare) {
+  Check_Type(compare, T_SYMBOL);
+  ID id = rb_sym2id(compare);
+  if (id == rb_intern("ge")) return 1;
+  if (id == rb_intern("le")) return 0;
+  rb_raise(rb_eArgError, "compare must be :ge or :le (got %+" PRIsVALUE ")", compare);
+}
+
+static int crosses_ll(long long agg, long long threshold, int compare_ge) {
+  return compare_ge ? (agg >= threshold) : (agg <= threshold);
+}
+
+static long long identity_ll(segment_tree_data *st) {
+  if (st->mode == ST_MODE_FIXNUM_MAX && RB_FLOAT_TYPE_P(st->identity)) {
+    return LLONG_MIN;
+  }
+  return fixnum_leaf_ll(st->identity);
+}
+
+static int crosses_value(VALUE agg, VALUE threshold, int compare_ge) {
+  if (compare_ge) {
+    return RTEST(rb_funcall(agg, rb_intern(">="), 1, threshold));
+  }
+  return RTEST(rb_funcall(agg, rb_intern("<="), 1, threshold));
+}
+
+static VALUE aggregate_through_left(segment_tree_data *st, VALUE prefix, VALUE left_agg) {
+  return combined_val(st, prefix, left_agg);
+}
+
+static VALUE find_leftmost_walk_ll(segment_tree_data *st, size_t tree_idx, size_t tree_l, size_t tree_r,
+                                   size_t query_l, size_t query_r, long long prefix, long long threshold,
+                                   int compare_ge) {
+  if (tree_r < query_l || tree_l > query_r) {
+    return Qnil;
+  }
+
+  if (tree_l == tree_r) {
+    long long agg = combine_ll(st->mode, prefix, st->tree_ll[tree_idx]);
+    if (crosses_ll(agg, threshold, compare_ge) && tree_l >= query_l) {
+      return ULONG2NUM(tree_l);
+    }
+    return Qnil;
+  }
+
+  size_t mid = midpoint(tree_l, tree_r);
+  size_t l_idx = left_child(tree_idx);
+  long long left_agg = st->tree_ll[l_idx];
+  long long through_left = combine_ll(st->mode, prefix, left_agg);
+
+  if (crosses_ll(through_left, threshold, compare_ge)) {
+    return find_leftmost_walk_ll(st, l_idx, tree_l, mid, query_l, query_r, prefix, threshold, compare_ge);
+  }
+  return find_leftmost_walk_ll(st, right_child(tree_idx), mid + 1, tree_r, query_l, query_r, through_left, threshold,
+                               compare_ge);
+}
+
+static VALUE find_leftmost_walk_generic(segment_tree_data *st, size_t tree_idx, size_t tree_l, size_t tree_r,
+                                        size_t query_l, size_t query_r, VALUE prefix, VALUE threshold,
+                                        int compare_ge) {
+  if (tree_r < query_l || tree_l > query_r) {
+    return Qnil;
+  }
+
+  if (tree_l == tree_r) {
+    VALUE agg = aggregate_through_left(st, prefix, st->tree[tree_idx]);
+    if (crosses_value(agg, threshold, compare_ge) && tree_l >= query_l) {
+      return ULONG2NUM(tree_l);
+    }
+    return Qnil;
+  }
+
+  size_t mid = midpoint(tree_l, tree_r);
+  size_t l_idx = left_child(tree_idx);
+  VALUE left_agg = st->tree[l_idx];
+  VALUE through_left = aggregate_through_left(st, prefix, left_agg);
+
+  if (crosses_value(through_left, threshold, compare_ge)) {
+    return find_leftmost_walk_generic(st, l_idx, tree_l, mid, query_l, query_r, prefix, threshold, compare_ge);
+  }
+  return find_leftmost_walk_generic(st, right_child(tree_idx), mid + 1, tree_r, query_l, query_r, through_left,
+                                    threshold, compare_ge);
+}
+
+static VALUE segment_tree_find_leftmost_by_prefix(VALUE self, VALUE query_l, VALUE query_r, VALUE threshold,
+                                                  VALUE compare) {
+  segment_tree_data *st = unwrapped(self);
+  size_t c_query_l = checked_nonneg_fixnum(query_l);
+  size_t c_query_r = checked_nonneg_fixnum(query_r);
+  int compare_ge = compare_ge_from_symbol(compare);
+
+  if (c_query_r >= st->size) {
+    rb_raise(eSharedDataError, "Bad query interval %lu..%lu (size = %lu)", (unsigned long)c_query_l,
+             (unsigned long)c_query_r, (unsigned long)st->size);
+  }
+
+  if (c_query_l > c_query_r) {
+    return Qnil;
+  }
+
+  if (st->mode == ST_MODE_GENERIC) {
+    VALUE total = determine_val(st, TREE_ROOT, 0, c_query_r, 0, st->size - 1);
+    if (!crosses_value(total, threshold, compare_ge)) {
+      return Qnil;
+    }
+    return find_leftmost_walk_generic(st, TREE_ROOT, 0, st->size - 1, c_query_l, c_query_r, st->identity, threshold,
+                                      compare_ge);
+  }
+
+  {
+    long long t = fixnum_leaf_ll(threshold);
+    long long total = determine_val_ll(st, TREE_ROOT, 0, c_query_r, 0, st->size - 1);
+    if (!crosses_ll(total, t, compare_ge)) {
+      return Qnil;
+    }
+    return find_leftmost_walk_ll(st, TREE_ROOT, 0, st->size - 1, c_query_l, c_query_r, identity_ll(st), t, compare_ge);
+  }
+}
+
 /*
  * CSegmentTreeTemplate.all_fixnums_for_fast_path?(array) -> true/false
  */
@@ -460,6 +583,7 @@ void Init_c_segment_tree_template(void) {
   rb_define_method(cSegmentTreeTemplate, "c_initialize_fixnum", segment_tree_init_fixnum, 4);
   rb_define_method(cSegmentTreeTemplate, "query_on", segment_tree_query_on, 2);
   rb_define_method(cSegmentTreeTemplate, "update_at", segment_tree_update_at, 1);
+  rb_define_method(cSegmentTreeTemplate, "c_find_leftmost_by_prefix", segment_tree_find_leftmost_by_prefix, 4);
   rb_define_singleton_method(cSegmentTreeTemplate, "all_fixnums_for_fast_path?", segment_tree_s_all_fixnums_for_fast_path_p,
                              1);
 }

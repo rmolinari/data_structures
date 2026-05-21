@@ -4,6 +4,7 @@ require_relative 'shared'
 module DataStructuresRMolinari::SegmentTree
 end
 
+require_relative 'find_leftmost_by_prefix'
 require_relative 'segment_tree_template'   # Ruby implementation of the generic API
 require_relative 'c_segment_tree_template' # native extension: loads CSegmentTreeTemplate class
 require_relative 'c_segment_tree_template_impl' # Ruby constructor / Fixnum fast-path wiring
@@ -145,7 +146,6 @@ module DataStructuresRMolinari
     class SumSegmentTree
       extend Forwardable
       include FoldIndexedDataTemplate
-      include Shared
 
       # Tell the tree that the value at idx has changed
       def_delegator :@structure, :update_at
@@ -168,27 +168,11 @@ module DataStructuresRMolinari
       public :sum_on
 
       # Assuming all values are non-negative, return the smallest index j such that sum_on(0, j) >= target, or nil if there is no
-      # such index.
+      # such index. O(log n) via +find_leftmost_by_prefix+ on the backing template.
       #
       # The result will be meaningless if there are negative values in the array.
       def index_of_first_large_prefix_sum(target)
-        calc_idx_of_first_large_sum(0, @length - 1, target)
-      end
-
-      # The first index j <= right such that sum_on(left, j) >= target, or nil if there is no such index.
-      private def calc_idx_of_first_large_sum(left, right, target)
-        return nil if target > sum_on(left, right) # no such index
-
-        midpoint = midpoint(left, right)
-        left_sum = sum_on(left, midpoint)
-
-        if left_sum >= target
-          return left if left == midpoint
-          return calc_idx_of_first_large_sum(left, midpoint, target)
-        else
-          return nil if midpoint == right
-          return calc_idx_of_first_large_sum(midpoint + 1, right, target - left_sum)
-        end
+        @structure.find_leftmost_by_prefix(0, @length - 1, origin: 0, threshold: target, compare: :ge)
       end
     end
 

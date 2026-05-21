@@ -76,6 +76,50 @@ class DataStructuresRMolinari::SegmentTree::SegmentTreeTemplate
     update_val_at(idx, root, 0, @size - 1)
   end
 
+  # Smallest index +j+ in +[query_l, query_r]+ such that the aggregate on +origin..j+ (using +@combine+) crosses +threshold+,
+  # or +nil+ if none exists. One root-to-leaf walk: O(log n).
+  #
+  # @param query_l [Integer] left bound of the search (inclusive)
+  # @param query_r [Integer] right bound of the search (inclusive)
+  # @param origin [Integer] start of the prefix (only +0+ is supported)
+  # @param threshold value compared against the prefix aggregate
+  # @param compare [Symbol, Proc] +:ge+ (+agg >= threshold+), +:le+ (+agg <= threshold+), or a binary Proc
+  #
+  # Preconditions (documented, not fully enforced): prefix aggregates are monotone in +j+ over the search range (e.g.
+  # non-negative values for sum/product; prefix max is monotone for max).
+  def find_leftmost_by_prefix(query_l, query_r, origin: 0, threshold:, compare: :ge)
+    raise ArgumentError, 'origin must be 0' unless origin == 0
+    raise DataError, "Bad query interval #{query_l}..#{query_r} (size = #{@size})" unless (0...@size).cover?(query_l..query_r)
+
+    compare_fn = SegmentTree::FindLeftmostByPrefix.normalize_compare(compare)
+
+    return nil unless compare_fn.call(query_on(0, query_r), threshold)
+
+    find_leftmost_walk(root, 0, @size - 1, query_l, query_r, @identity, compare_fn, threshold)
+  end
+
+  private def find_leftmost_walk(tree_idx, tree_l, tree_r, query_l, query_r, prefix, compare_fn, threshold)
+    return nil if tree_r < query_l || tree_l > query_r
+
+    if tree_l == tree_r
+      agg = @combine.call(prefix, @tree[tree_idx])
+      return tree_l if compare_fn.call(agg, threshold) && tree_l >= query_l
+
+      return nil
+    end
+
+    mid = midpoint(tree_l, tree_r)
+    l_idx = left(tree_idx)
+    left_agg = @tree[l_idx]
+    through_left = @combine.call(prefix, left_agg)
+
+    if compare_fn.call(through_left, threshold)
+      find_leftmost_walk(l_idx, tree_l, mid, query_l, query_r, prefix, compare_fn, threshold)
+    else
+      find_leftmost_walk(right(tree_idx), mid + 1, tree_r, query_l, query_r, through_left, compare_fn, threshold)
+    end
+  end
+
   private def determine_val(tree_idx, left, right, tree_l, tree_r)
     # Does the current tree node exactly serve up the interval we're interested in?
     return @tree[tree_idx] if left == tree_l && right == tree_r
