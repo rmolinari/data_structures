@@ -223,15 +223,15 @@ in the underlying data array, and must access and combine them via Ruby lambdas.
 
 # References
 - [Allan] Allan, J., _CC: Convenient Containers_, https://github.com/JacksonAllan/CC, (retrieved 2024-12-04).
-- [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp
-  245–281, https://dl.acm.org/doi/10.1145/62.2160 (retrieved 2022-02-01).
-- [EEK2017] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI
-  10.1007/s00224-017-9760-2, https://kclpure.kcl.ac.uk/portal/files/87388857/TheoryComputingSzstems.pdf (retrieved 2022-02-02).
-- [McC1985] McCreight, E. M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985,
-  http://www.cs.duke.edu/courses/fall08/cps234/handouts/SMJ000257.pdf (retrieved 2023-02-02).
 - [DMNS2011] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Priority Search Tree_, 23rd Canadian Conference on
   Computational Geometry, 2011, http://www.cs.carleton.ca/~michiel/inplace_pst.pdf (retrieved 2023-02-02).
 - [DMNS2013] De, M., Maheshwari, A., Nandy, S. C., Smid, M., _An In-Place Min-max Priority Search Tree_, Computational Geometry, v46
   (2013), pp 310-327, https://people.scs.carleton.ca/~michiel/MinMaxPST.pdf (retrieved 2023-02-02).
+- [EEK2017] Edelkamp, S., Elmasry, A., Katajainen, J., _Optimizing Binary Heaps_, Theory Comput Syst (2017), vol 61, pp 606-636, DOI
+  10.1007/s00224-017-9760-2, https://kclpure.kcl.ac.uk/portal/files/87388857/TheoryComputingSzstems.pdf (retrieved 2022-02-02).
+- [McC1985] McCreight, E. M., _Priority Search Trees_, SIAM J. Comput., 14(2):257-276, 1985,
+  http://www.cs.duke.edu/courses/fall08/cps234/handouts/SMJ000257.pdf (retrieved 2023-02-02).
+- [TvL1984] Tarjan, Robert E., van Leeuwen, J., _Worst-case Analysis of Set Union Algorithms_, Journal of the ACM, v31:2 (1984), pp
+  245–281, https://dl.acm.org/doi/10.1145/62.2160 (retrieved 2022-02-01).
 
 [^minmaxpst]: See the comments in the fragmentary class `MinMaxPrioritySearchTree` for further details.
